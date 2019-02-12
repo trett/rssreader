@@ -1,9 +1,9 @@
 package com.trett.rss.models;
 
 public class Record {
-    String text;
+    private String text;
 
-    String link;
+    private String link;
 
     public Record(String text, String link) {
         this.text = text;
