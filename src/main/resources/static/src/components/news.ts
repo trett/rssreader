@@ -17,7 +17,7 @@ export default class News extends Vue {
     news: Array<Record> = [];
 
     async refresh(): Promise<void> {
-        const response = await fetch ('/news'); 
+        const response = await fetch ('/feed');
         if (response.status !== 200) {
             throw new Error("Ошибка");
         }
