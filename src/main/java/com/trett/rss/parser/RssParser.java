@@ -10,8 +10,8 @@ import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import java.io.InputStream;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class RssParser {
 
@@ -25,7 +25,7 @@ public class RssParser {
     public Feed parse() throws XMLStreamException {
         Feed feed = new Feed();
         FeedItem feedItem = null;
-        List<FeedItem> feedItems = new LinkedList<>();
+        Set<FeedItem> feedItems = new LinkedHashSet<>();
         XMLInputFactory factory = XMLInputFactory.newInstance();
         factory.setProperty(XMLInputFactory.IS_COALESCING, true);
         XMLEventReader xmlReader = factory.createXMLEventReader(stream);
@@ -48,6 +48,7 @@ public class RssParser {
                         case "item":
                             itemStart = true;
                             feedItem = new FeedItem();
+                            feedItem.setFeed(feed);
                             break;
                     }
                 } else {
@@ -77,7 +78,7 @@ public class RssParser {
                 }
             }
         }
-        feed.setItems(feedItems);
+        feed.setFeedItems(feedItems);
         return feed;
     }
 }

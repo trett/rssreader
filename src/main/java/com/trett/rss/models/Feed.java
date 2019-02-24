@@ -1,15 +1,22 @@
 package com.trett.rss.models;
 
 
-import java.util.List;
+import javax.persistence.*;
+import java.util.Set;
 
+@Entity
 public class Feed {
 
-    String title;
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
 
-    String link;
+    private String title;
 
-    List<FeedItem> items;
+    private String link;
+
+    @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Set<FeedItem> feedItems;
 
     public String getTitle() {
         return title;
@@ -27,11 +34,19 @@ public class Feed {
         this.link = link;
     }
 
-    public List<FeedItem> getItems() {
-        return items;
+    public Set<FeedItem> getFeedItems() {
+        return feedItems;
     }
 
-    public void setItems(List<FeedItem> items) {
-        this.items = items;
+    public void setFeedItems(Set<FeedItem> feedItems) {
+        this.feedItems = feedItems;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 }

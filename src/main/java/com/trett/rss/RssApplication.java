@@ -8,9 +8,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @EnableAutoConfiguration
 public class RssApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(RssApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(RssApplication.class, args);
+    }
 
 }
 
