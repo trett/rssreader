@@ -56,6 +56,7 @@
 					<include>static/index.html</include>
 					<include>static/dist/application.js</include>
 					<include>application.properties</include>
+					<include>static/style.css</include>
 				</includes>
 			</resource>
 		</resources>
