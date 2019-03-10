@@ -57,6 +57,9 @@ export default class News extends Vue {
 
     private async addChannel() {
         console.log(this.newChannel);
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/channel/add");
+        xhr.send(this.newChannel);
         this.showModal = false;
     }
 }

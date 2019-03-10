@@ -2,13 +2,16 @@ package com.trett.rss.controllers;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer;
+import com.trett.rss.dao.ChannelRepository;
 import com.trett.rss.dao.FeedRepository;
+import com.trett.rss.models.Channel;
 import com.trett.rss.models.Feed;
 import com.trett.rss.parser.RssParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequest;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,21 +30,26 @@ public class FeedsController {
 
     private final FeedRepository feedRepository;
 
+    private final ChannelRepository channelRepository;
+
     @Autowired
-    public FeedsController(FeedRepository feedRepository) {
+    public FeedsController(FeedRepository feedRepository, ChannelRepository channelRepository) {
         this.feedRepository = feedRepository;
+        this.channelRepository = channelRepository;
     }
 
     @GetMapping(path = "/refresh")
     @JsonSerialize(using = IndexedListSerializer.class)
     public void refresh() throws IOException, XMLStreamException, URISyntaxException {
         RestTemplate restTemplate = new RestTemplate();
-        ClientHttpRequest request = restTemplate.getRequestFactory()
-                .createRequest(new URI("https://www.flenov.info/site/rss"), HttpMethod.GET);
-        ClientHttpResponse execute = request.execute();
-        try (InputStream inputStream = execute.getBody()) {
-            Feed feed = new RssParser(inputStream).parse();
-            feedRepository.save(feed);
+        ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
+        for (Channel channel : channelRepository.findAll()) {
+            ClientHttpRequest request = requestFactory.createRequest(new URI(channel.getLink()), HttpMethod.GET);
+            ClientHttpResponse execute = request.execute();
+            try (InputStream inputStream = execute.getBody()) {
+                Feed feed = new RssParser(inputStream).parse();
+                feedRepository.save(feed);
+            }
         }
     }
 
