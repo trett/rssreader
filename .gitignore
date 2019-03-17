@@ -25,9 +25,10 @@
 /build/
 
 ### Node ###
-/src/main/resources/static/node_modules/
+/node_modules/
+/target-grunt/
 /src/main/resources/static/dist/*
-/src/main/resources/static/package-lock.json
+package-lock.json
 .vscode/
 mvnw
 mvnw.cmd
