@@ -61,3 +61,12 @@
     -webkit-transform: scale(1.1);
     transform: scale(1.1);
   }
+
+  .read {
+      color: grey;
+  }
+
+  .new {
+      color: #333333;
+      font-weight: bold;
+  }

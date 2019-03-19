@@ -2,8 +2,12 @@ package com.trett.rss.models;
 
 
 import javax.persistence.*;
+import javax.validation.constraints.NotEmpty;
 import java.util.Set;
 
+/**
+ * RSS feed with items
+ */
 @Entity
 public class Feed {
 
@@ -11,12 +15,25 @@ public class Feed {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
+    @NotEmpty
+    private String channelLink;
+
+    @NotEmpty
     private String title;
 
+    @NotEmpty
     private String link;
 
     @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<FeedItem> feedItems;
+
+    public String getChannelLink() {
+        return channelLink;
+    }
+
+    public void setChannelLink(String channelLink) {
+        this.channelLink = channelLink;
+    }
 
     public String getTitle() {
         return title;
@@ -48,5 +65,25 @@ public class Feed {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Feed feed = (Feed) o;
+        return id == feed.id && title.equals(feed.title) && link.equals(feed.link);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (id ^ (id >>> 32));
+        result = 31 * result + title.hashCode();
+        result = 31 * result + link.hashCode();
+        return result;
     }
 }

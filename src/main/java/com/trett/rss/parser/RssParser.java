@@ -22,8 +22,7 @@ public class RssParser {
         this.stream = stream;
     }
 
-    public Feed parse() throws XMLStreamException {
-        Feed feed = new Feed();
+    public Feed parse(Feed feed) throws XMLStreamException {
         FeedItem feedItem = null;
         Set<FeedItem> feedItems = new LinkedHashSet<>();
         XMLInputFactory factory = XMLInputFactory.newInstance();

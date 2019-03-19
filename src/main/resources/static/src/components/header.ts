@@ -7,5 +7,6 @@ import Component from 'vue-class-component'
     `
 })
 export default class Header extends Vue {
+
     message = "Rss reader";
 }

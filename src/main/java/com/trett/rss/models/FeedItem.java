@@ -3,7 +3,12 @@ package com.trett.rss.models;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Size;
 
+/**
+ * RSS feed item
+ */
 @Entity
 public class FeedItem {
 
@@ -11,10 +16,13 @@ public class FeedItem {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
+    @NotEmpty
     private String title;
 
+    @NotEmpty
     private String link;
 
+    @Size(max = 10000)
     @Column(length = 10000)
     private String description;
 
@@ -22,6 +30,8 @@ public class FeedItem {
     @JoinColumn
     @JsonIgnore
     private Feed feed;
+
+    private boolean read;
 
     public long getId() {
         return id;
@@ -61,5 +71,37 @@ public class FeedItem {
 
     public void setFeed(Feed feed) {
         this.feed = feed;
+    }
+
+    public boolean isRead() {
+        return read;
+    }
+
+    public void setRead(boolean read) {
+        this.read = read;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        FeedItem feedItem = (FeedItem) o;
+        return title.equals(feedItem.title) &&
+                link.equals(feedItem.link) &&
+                (description != null ? description.equals(feedItem.description) : feedItem.description == null) &&
+                feed.equals(feedItem.feed);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = title.hashCode();
+        result = 31 * result + link.hashCode();
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + feed.hashCode();
+        return result;
     }
 }

@@ -1,6 +1,6 @@
 import Vue from "vue";
 import Component from "vue-class-component";
-import { Feed } from "../models/feed";
+import {Feed} from "../models/feed";
 import ModalDialog from "./modalDialog";
 
 @Component({
@@ -21,26 +21,27 @@ import ModalDialog from "./modalDialog";
             <div v-for="feed in feeds">
                 <h2>{{ feed.title }}</h2>
                 <li v-for="feedItem in feed.feedItems">
-                    <a :href="feedItem.link">{{feedItem.title}}</a>
+                    <a :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
+                     v-bind:class="{read: feedItem.read, new: !feedItem.read}">{{feedItem.title}}</a>
                 </li>
             </div>
         </div>
     `
 })
-export default class News extends Vue {
+export default class Channels extends Vue {
 
-    public showModal = false;
+    private showModal = false;
 
-    feeds: Array<Feed> = [];
+    private feeds: Array<Feed> = [];
 
-    newChannel = "";
+    private newChannel = "";
 
     async beforeMount(): Promise<void> {
         await this.getNews();
     };
 
-    async refresh(): Promise<void> {
-        const response = await fetch('/refresh');
+    private async refresh(): Promise<void> {
+        const response = await fetch('channels/refresh');
         if (response.status !== 200) {
             throw new Error("Ошибка");
         }
@@ -48,17 +49,22 @@ export default class News extends Vue {
     }
 
     private async getNews(): Promise<void> {
-        const response = await fetch('/news');
+        const response = await fetch('/channels/all');
         if (response.status !== 200) {
             throw new Error("Ошибка");
         }
         this.feeds = await response.json();
     }
 
-    private async addChannel() {
-        console.log(this.newChannel);
+    private async markRead(id: number): Promise<void> {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/channel/add");
+        xhr.open("POST", `/channels/read`);
+        xhr.send(id);
+    }
+
+    private async addChannel() {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/channels/add");
         xhr.send(this.newChannel);
         this.showModal = false;
     }

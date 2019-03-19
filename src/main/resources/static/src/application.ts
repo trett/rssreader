@@ -1,6 +1,6 @@
 import Vue from "vue";
 import Header from "./components/header";
-import News from "./components/news";
+import News from "./components/channels";
 
 let v = new Vue({
     el: "#app",

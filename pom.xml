@@ -49,17 +49,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<resources>
-			<resource>
-				<directory>${basedir}/src/main/resources</directory>
-				<includes>
-					<include>static/index.html</include>
-					<include>static/dist/application.js</include>
-					<include>application.properties</include>
-					<include>static/style.css</include>
-				</includes>
-			</resource>
-		</resources>
 		<plugins>
 			<plugin>
 				<groupId>pl.allegro</groupId>
@@ -67,6 +56,7 @@
 				<version>1.4.1</version>
 				<executions>
 					<execution>
+						<phase>generate-sources</phase>
 						<goals>
 							<goal>create-resources</goal>
 							<goal>npm</goal>
@@ -86,5 +76,16 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
+		<resources>
+			<resource>
+				<directory>${basedir}/src/main/resources</directory>
+				<includes>
+					<include>static/index.html</include>
+					<include>static/dist/application.js</include>
+					<include>application.properties</include>
+					<include>static/style.css</include>
+				</includes>
+			</resource>
+		</resources>
 	</build>
 </project>
