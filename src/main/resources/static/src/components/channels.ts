@@ -21,8 +21,9 @@ import ModalDialog from "./modalDialog";
             <div v-for="feed in feeds">
                 <h2>{{ feed.title }}</h2>
                 <li v-for="feedItem in feed.feedItems">
-                    <a :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
+                    <a :id="'feed-' + feedItem.id" :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
                      v-bind:class="{read: feedItem.read, new: !feedItem.read}">{{feedItem.title}}</a>
+                     <div v-html="feedItem.description"></div>
                 </li>
             </div>
         </div>
@@ -57,15 +58,38 @@ export default class Channels extends Vue {
     }
 
     private async markRead(id: number): Promise<void> {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `/channels/read`);
-        xhr.send(id);
+        const configInit: RequestInit = {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            method: 'POST',
+            body: String(id)
+        };
+        const response = await fetch('/channels/read', configInit);
+
+        if (response.status !== 200) {
+            throw new Error("Ошибка");
+        }
+        const link = document.getElementById(`feed-${id}`);
+        if (link) {
+            link.className = "read";
+        }
     }
 
     private async addChannel() {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/channels/add");
-        xhr.send(this.newChannel);
+        const configInit: RequestInit = {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            method: 'POST',
+            body: this.newChannel
+        };
+        const response = await fetch("/channels/add", configInit);
+        if (response.status !== 200) {
+            throw new Error("Ошибка");
+        }
         this.showModal = false;
     }
 }
