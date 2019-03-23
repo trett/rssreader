@@ -1,17 +1,17 @@
 import Vue from "vue";
-import Header from "./components/header";
-import News from "./components/channels";
+import Vuetify from "vuetify";
+import Channels from "./components/channels";
+
+Vue.use(Vuetify,
+    { iconfont: 'fa' }
+);
 
 let v = new Vue({
     el: "#app",
     template: `
-    <div>
-    <Header></Header>
-    <div><News></News></div>
-        </div>
+        <Channels/>
     `,
     components: {
-        Header,
-        News
+        Channels
     }
 });

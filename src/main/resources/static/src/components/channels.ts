@@ -1,32 +1,54 @@
 import Vue from "vue";
 import Component from "vue-class-component";
 import {Feed} from "../models/feed";
-import ModalDialog from "./modalDialog";
 
 @Component({
-    components: {
-        modalDialog: ModalDialog
-    },
     template: `
-        <div>
-            <button v-on:click="refresh()">Refresh</button>
-            <button v-on:click="showModal = true">Add Channel</button>
-            <modalDialog v-if="showModal" @close="addChannel()">
-                <h3 slot="header">Add channel</h3>
-                <div slot="body">
-                    <p>Put link to rss:</p>
-                    <input v-model="newChannel"/>
-                </div>
-            </modalDialog>
-            <div v-for="feed in feeds">
-                <h2>{{ feed.title }}</h2>
+<v-app>
+    <v-navigation-drawer dark app >
+        <v-list dense class="pt-0" >
+            <v-list-tile v-for="feed in feeds" :key="feed.title" @click="">
+                <v-list-tile-action>
+                    <i class="fa fa-rss" aria-hidden="true"></i>
+                </v-list-tile-action>
+                <v-list-tile-content>
+                    <v-list-tile-title>{{ feed.title }}</v-list-tile-title>
+                </v-list-tile-content>
+            </v-list-tile>
+        </v-list>
+    </v-navigation-drawer> 
+    <v-toolbar app>
+        <v-btn v-on:click="refresh()">Refresh</v-btn>
+        <v-dialog v-model="dialog" persistent max-width="290"> 
+            <template v-slot:activator="{ on }">
+                <v-btn color="primary" dark v-on="on">Add feed</v-btn>
+            </template> 
+            <v-card>
+                <v-card-title class="headline">Add feed</v-card-title>
+                    <v-text-field v-model="newChannel" label="URL" style="margin: 0 5px 0 5px" single-line autofocus>
+                    </v-text-field> 
+                <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="green darken-1" flat @click="dialog = false">Cancel</v-btn>
+                <v-btn color="green darken-1" flat @click="dialog = false; addChannel()">Add</v-btn>
+                </v-card-actions>
+            </v-card> 
+        </v-dialog>
+    </v-toolbar>
+    <v-content>
+        <v-container fluid>
+        <div v-for="(feed, index) in feeds">
                 <li v-for="feedItem in feed.feedItems">
                     <a :id="'feed-' + feedItem.id" :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
-                     v-bind:class="{read: feedItem.read, new: !feedItem.read}">{{feedItem.title}}</a>
-                     <div v-html="feedItem.description"></div>
-                </li>
-            </div>
+                    v-bind:class="{read: feedItem.read, new: !feedItem.read}">{{feedItem.title}}</a>
+                    <div v-html="feedItem.description"></div>
+                <hr style="margin: 10px 0 10px 0"/>
+            </li>
         </div>
+        </v-container>
+    </v-content>
+    <v-footer app>Design by trett &copy; {{ new Date().getFullYear() }}</v-footer>
+</v-app>
     `
 })
 export default class Channels extends Vue {
@@ -36,6 +58,8 @@ export default class Channels extends Vue {
     private feeds: Array<Feed> = [];
 
     private newChannel = "";
+
+    private dialog = false;
 
     async beforeMount(): Promise<void> {
         await this.getNews();
