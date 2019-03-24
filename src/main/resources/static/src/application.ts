@@ -2,15 +2,11 @@ import Vue from "vue";
 import Vuetify from "vuetify";
 import Channels from "./components/channels";
 
-Vue.use(Vuetify,
-    { iconfont: 'fa' }
-);
+Vue.use(Vuetify);
 
 let v = new Vue({
     el: "#app",
-    template: `
-        <Channels/>
-    `,
+    template: ` <Channels/>`,
     components: {
         Channels
     }
