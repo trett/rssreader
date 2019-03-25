@@ -1,6 +1,6 @@
 package com.trett.rss.parser;
 
-import com.trett.rss.models.Feed;
+import com.trett.rss.models.Channel;
 import com.trett.rss.models.FeedItem;
 
 import javax.xml.stream.XMLEventReader;
@@ -22,7 +22,7 @@ public class RssParser {
         this.stream = stream;
     }
 
-    public Feed parse(Feed feed) throws XMLStreamException {
+    public Channel parse(Channel channel) throws XMLStreamException {
         FeedItem feedItem = null;
         Set<FeedItem> feedItems = new LinkedHashSet<>();
         XMLInputFactory factory = XMLInputFactory.newInstance();
@@ -38,16 +38,16 @@ public class RssParser {
                     switch (qName) {
                         case "title":
                             event = xmlReader.nextEvent();
-                            feed.setTitle(event.asCharacters().getData());
+                            channel.setTitle(event.asCharacters().getData());
                             break;
                         case "link":
                             event = xmlReader.nextEvent();
-                            feed.setLink(event.asCharacters().getData());
+                            channel.setLink(event.asCharacters().getData());
                             break;
                         case "item":
                             itemStart = true;
                             feedItem = new FeedItem();
-                            feedItem.setFeed(feed);
+                            feedItem.setChannel(channel);
                             break;
                     }
                 } else {
@@ -77,7 +77,7 @@ public class RssParser {
                 }
             }
         }
-        feed.setFeedItems(feedItems);
-        return feed;
+        channel.setFeedItems(feedItems);
+        return channel;
     }
 }

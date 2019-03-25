@@ -6,7 +6,7 @@ Vue.use(Vuetify);
 
 let v = new Vue({
     el: "#app",
-    template: ` <Channels/>`,
+    template: `<Channels/>`,
     components: {
         Channels
     }

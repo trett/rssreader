@@ -1,28 +1,33 @@
 import Vue from "vue";
 import Component from "vue-class-component";
-import {Feed} from "../models/feed";
+import {Channel} from "../models/channel";
 import {Watch} from "vue-property-decorator";
+import {FeedItem} from "../models/feedItem";
 
 @Component({
     template: `
 <v-app>
     <v-navigation-drawer dark app>
         <v-list dense class="pt-0" >
-            <v-list-tile v-for="feed in feeds" :key="feed.title" @click="">
+            <v-list-tile @click="refresh()">
+                <v-list-tile-action><i class="fa fa-rss" aria-hidden="true"></i></v-list-tile-action>
+                <v-list-tile-content>All channels</v-list-tile-content>
+            </v-list-tile>
+            <v-list-tile v-for="channel in channels" :key="channel.title" @click="getChannel(channel.id)">
                 <v-list-tile-action>
                     <i class="fa fa-rss" aria-hidden="true"></i>
                 </v-list-tile-action>
                 <v-list-tile-content>
-                    <v-list-tile-title>{{ feed.title }}</v-list-tile-title>
+                    <v-list-tile-title>{{ channel.title }}</v-list-tile-title>
                 </v-list-tile-content>
             </v-list-tile>
         </v-list>
     </v-navigation-drawer> 
-    <v-toolbar app>
-        <v-btn v-on:click="refresh()">Refresh</v-btn>
+    <v-toolbar app dense>
+        <v-btn small v-on:click="refresh()">Refresh</v-btn>
         <v-dialog v-model="dialog" persistent max-width="290"> 
             <template v-slot:activator="{ on }">
-                <v-btn color="primary" dark v-on="on">Add feed</v-btn>
+                <v-btn small color="primary" dark v-on="on">Add feed</v-btn>
             </template> 
             <v-card>
                 <v-card-title class="headline">Add feed</v-card-title>
@@ -39,17 +44,14 @@ import {Watch} from "vue-property-decorator";
     <v-content>
         <v-container fluid>
         <v-alert v-model="alert" dismissible color="error" icon="warning" outline> {{alertMessage}} </v-alert>
-        <div v-for="(feed, index) in feeds">
-                <li v-for="feedItem in feed.feedItems">
-                    <a :id="'feed-' + feedItem.id" :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
+            <li v-for="feedItem in data">
+                    <a :id="selectedChannel + '-feed-' + feedItem.id" :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
                     v-bind:class="{read: feedItem.read, new: !feedItem.read}">{{feedItem.title}}</a>
                     <div v-html="feedItem.description"></div>
                 <hr style="margin: 10px 0 10px 0"/>
             </li>
-        </div>
         </v-container>
     </v-content>
-    <v-footer app>Design by trett &copy; {{ new Date().getFullYear() }}</v-footer>
 </v-app>
     `
 })
@@ -57,7 +59,11 @@ export default class Channels extends Vue {
 
     private showModal = false;
 
-    private feeds: Array<Feed> = [];
+    private channels: Array<Channel> = [];
+
+    private selectedChannel = 0;
+
+    private data: Array<FeedItem> = [];
 
     private newChannel = "";
 
@@ -68,7 +74,7 @@ export default class Channels extends Vue {
     private alertMessage = "";
 
     async beforeMount(): Promise<void> {
-        await this.getNews();
+        await this.getAllChannels();
     };
 
     private async refresh(): Promise<void> {
@@ -76,15 +82,27 @@ export default class Channels extends Vue {
         if (response.status !== 200) {
             this.handleError("Something wrong");
         }
-        return this.getNews();
+        return this.getAllChannels();
     }
 
-    private async getNews(): Promise<void> {
+    private async getAllChannels(): Promise<void> {
         const response = await fetch('/channels/all');
         if (response.status !== 200) {
             this.handleError("Can't get feeds");
         }
-        this.feeds = await response.json();
+        this.channels = await response.json();
+        this.selectedChannel = 0;
+        this.channels.forEach(channel => channel.feedItems.forEach(item => this.data.push(item)));
+    }
+
+    private async getChannel(id: number): Promise<void> {
+        const response = await fetch(`/channels/get/${id}`);
+        if (response.status != 200) {
+            this.handleError("Can't get feeds");
+        }
+        const channel: Channel = await response.json();
+        this.selectedChannel = channel.id;
+        this.data = channel.feedItems;
     }
 
     private async markRead(id: number): Promise<void> {
@@ -101,7 +119,7 @@ export default class Channels extends Vue {
         if (response.status !== 200) {
             this.handleError("Can't mark as read");
         }
-        const link = document.getElementById(`feed-${id}`);
+        const link = document.getElementById(`${this.selectedChannel}-feed-${id}`);
         if (link) {
             link.className = "read";
         }

@@ -2,9 +2,10 @@ package com.trett.rss.controllers;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer;
+import com.fasterxml.jackson.databind.ser.std.IterableSerializer;
+import com.trett.rss.dao.ChannelRepository;
 import com.trett.rss.dao.FeedItemRepository;
-import com.trett.rss.dao.FeedRepository;
-import com.trett.rss.models.Feed;
+import com.trett.rss.models.Channel;
 import com.trett.rss.models.FeedItem;
 import com.trett.rss.parser.RssParser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,22 +23,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.LinkedHashSet;
 import java.util.Optional;
-import java.util.Set;
 
 @RestController
 @RequestMapping(path = "/channels")
-public class FeedsController {
+public class ChannelController {
 
-    private final FeedRepository feedRepository;
+    private final ChannelRepository channelRepository;
 
 
     private final FeedItemRepository feedItemRepository;
 
     @Autowired
-    public FeedsController(FeedRepository feedRepository, FeedItemRepository feedItemRepository) {
-        this.feedRepository = feedRepository;
+    public ChannelController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository) {
+        this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
     }
 
@@ -46,22 +45,24 @@ public class FeedsController {
     public void refresh() throws IOException, XMLStreamException, URISyntaxException {
         RestTemplate restTemplate = new RestTemplate();
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
-        for (Feed feed : feedRepository.findAll()) {
-            ClientHttpRequest request = requestFactory.createRequest(URI.create(feed.getChannelLink()), HttpMethod.GET);
+        for (Channel channel : channelRepository.findAll()) {
+            ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()), HttpMethod.GET);
             ClientHttpResponse execute = request.execute();
             try (InputStream inputStream = execute.getBody()) {
-                feedItemRepository.saveAll(new RssParser(inputStream).parse(feed).getFeedItems());
+                feedItemRepository.saveAll(new RssParser(inputStream).parse(channel).getFeedItems());
             }
         }
     }
 
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    @JsonSerialize(using = IndexedListSerializer.class)
-    public Set<Feed> getNews() throws IOException, XMLStreamException, URISyntaxException {
-        Set<Feed> items = new LinkedHashSet<>();
-        Iterable<Feed> all = feedRepository.findAll();
-        all.forEach(items::add);
-        return items;
+    @JsonSerialize(using = IterableSerializer.class)
+    public Iterable<Channel> getNews() throws IOException, XMLStreamException, URISyntaxException {
+        return channelRepository.findAll();
+    }
+
+    @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    public Channel getChannelById(@PathVariable @NotEmpty String id) {
+        return channelRepository.findById(Long.parseLong(id)).orElseGet(null);
     }
 
     @PostMapping(path = "/read")
@@ -78,10 +79,10 @@ public class FeedsController {
         ClientHttpRequest request = new RestTemplate().getRequestFactory()
                 .createRequest(URI.create(link), HttpMethod.GET);
         try (InputStream inputStream = request.execute().getBody()) {
-            Feed feed = new Feed();
-            new RssParser(inputStream).parse(feed);
-            feed.setChannelLink(link);
-            feedRepository.save(feed);
+            Channel channel = new Channel();
+            new RssParser(inputStream).parse(channel);
+            channel.setChannelLink(link);
+            channelRepository.save(channel);
         }
     }
 }

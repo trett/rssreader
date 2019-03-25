@@ -1,6 +1,6 @@
 import {FeedItem} from "./feedItem";
 
-export type Feed = {
+export type Channel = {
 
     id: number,
 

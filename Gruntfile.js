@@ -1,6 +1,6 @@
-const webpackConfig = require('./webpack.config.js');
+const webpackConfig = require('./webpack.config.js')
 
-module.exports = function(grunt) {
+module.exports = function (grunt) {
     grunt.initConfig({
         webpack: {
             options: {
@@ -9,9 +9,9 @@ module.exports = function(grunt) {
             prod: webpackConfig,
             dev: webpackConfig
         }
-    });
+    })
 
-    grunt.loadNpmTasks('grunt-webpack');
+    grunt.loadNpmTasks('grunt-webpack')
     // Default task(s).
-    grunt.registerTask('default', ['webpack']);
-};
+    grunt.registerTask('default', ['webpack'])
+}

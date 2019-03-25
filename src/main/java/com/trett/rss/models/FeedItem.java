@@ -7,7 +7,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Size;
 
 /**
- * RSS feed item
+ * RSS channel item
  */
 @Entity
 public class FeedItem {
@@ -29,7 +29,7 @@ public class FeedItem {
     @ManyToOne
     @JoinColumn
     @JsonIgnore
-    private Feed feed;
+    private Channel channel;
 
     private boolean read;
 
@@ -65,12 +65,12 @@ public class FeedItem {
         this.description = description;
     }
 
-    public Feed getFeed() {
-        return feed;
+    public Channel getChannel() {
+        return channel;
     }
 
-    public void setFeed(Feed feed) {
-        this.feed = feed;
+    public void setChannel(Channel channel) {
+        this.channel = channel;
     }
 
     public boolean isRead() {
@@ -93,7 +93,7 @@ public class FeedItem {
         return title.equals(feedItem.title) &&
                 link.equals(feedItem.link) &&
                 (description != null ? description.equals(feedItem.description) : feedItem.description == null) &&
-                feed.equals(feedItem.feed);
+                channel.equals(feedItem.channel);
     }
 
     @Override
@@ -101,7 +101,7 @@ public class FeedItem {
         int result = title.hashCode();
         result = 31 * result + link.hashCode();
         result = 31 * result + (description != null ? description.hashCode() : 0);
-        result = 31 * result + feed.hashCode();
+        result = 31 * result + channel.hashCode();
         return result;
     }
 }

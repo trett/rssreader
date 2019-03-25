@@ -9,7 +9,7 @@ import java.util.Set;
  * RSS feed with items
  */
 @Entity
-public class Feed {
+public class Channel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -24,7 +24,7 @@ public class Feed {
     @NotEmpty
     private String link;
 
-    @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<FeedItem> feedItems;
 
     public String getChannelLink() {
@@ -75,8 +75,8 @@ public class Feed {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Feed feed = (Feed) o;
-        return id == feed.id && title.equals(feed.title) && link.equals(feed.link);
+        Channel channel = (Channel) o;
+        return id == channel.id && title.equals(channel.title) && link.equals(channel.link);
     }
 
     @Override

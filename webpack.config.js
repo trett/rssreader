@@ -1,6 +1,6 @@
-const path = require('path');
-const webpack = require('webpack');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const path = require('path')
+const webpack = require('webpack')
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
 module.exports = {
     entry: `./src/main/resources/static/src/application.ts`,
@@ -21,7 +21,7 @@ module.exports = {
                         // the "scss" and "sass" values for the lang attribute to the right configs here.
                         // other preprocessors should work out of the box, no loader config like this necessary.
                         'scss': 'vue-style-loader!css-loader!sass-loader',
-                        'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax',
+                        'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax'
                     }
                     // other vue-loader options go here
                 }
@@ -31,7 +31,7 @@ module.exports = {
                 loader: 'ts-loader',
                 exclude: /node_modules/,
                 options: {
-                    appendTsSuffixTo: [/\.vue$/],
+                    appendTsSuffixTo: [/\.vue$/]
                 }
             },
             {
@@ -58,11 +58,12 @@ module.exports = {
     },
     devtool: '#eval-source-map',
     optimization: {}
-};
+}
 
 if (process.env.NODE_ENV === 'production') {
-    module.exports.devtool = '#none';
-    module.exports.optimization.minimizer = (module.exports.optimization.minimizer || []).concat([
+    module.exports.devtool = '#none'
+    module.exports.optimization.minimizer = (module.exports.optimization.minimizer ||
+    []).concat([
         new UglifyJsPlugin({
             cache: true,
             parallel: true,
@@ -75,7 +76,7 @@ if (process.env.NODE_ENV === 'production') {
         }),
         new webpack.DefinePlugin({
             'process.env': {
-                NODE_ENV: "'production'"
+                NODE_ENV: '\'production\''
             }
         }),
         new webpack.LoaderOptionsPlugin({

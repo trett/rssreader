@@ -1,6 +1,6 @@
-import {Feed} from "./feed";
+import {Channel} from "./channel";
 
-export type FeedItem = Feed & {
+export type FeedItem = Channel & {
 
     description: string;
 }
