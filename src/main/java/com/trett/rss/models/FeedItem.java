@@ -22,8 +22,7 @@ public class FeedItem {
     @NotEmpty
     private String link;
 
-    @Size(max = 10000)
-    @Column(length = 10000)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @ManyToOne

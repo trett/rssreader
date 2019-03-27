@@ -2,7 +2,9 @@ package com.trett.rss.parser;
 
 import com.trett.rss.models.Channel;
 import com.trett.rss.models.FeedItem;
+import org.springframework.util.StringUtils;
 
+import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -33,9 +35,14 @@ public class RssParser {
             XMLEvent event = xmlReader.nextEvent();
             if (event.isStartElement()) {
                 StartElement startElement = event.asStartElement();
-                String qName = startElement.getName().getLocalPart();
+                QName name = startElement.getName();
+                // skip all non default namespaces
+                if (!StringUtils.isEmpty(name.getPrefix())) {
+                    continue;
+                }
+                String localPart = name.getLocalPart();
                 if (!itemStart) {
-                    switch (qName) {
+                    switch (localPart) {
                         case "title":
                             event = xmlReader.nextEvent();
                             channel.setTitle(event.asCharacters().getData());
@@ -51,7 +58,7 @@ public class RssParser {
                             break;
                     }
                 } else {
-                    switch (qName) {
+                    switch (localPart) {
                         case "title":
                             event = xmlReader.nextEvent();
                             feedItem.setTitle(event.asCharacters().getData());
