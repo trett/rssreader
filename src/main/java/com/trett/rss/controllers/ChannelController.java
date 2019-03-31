@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer;
 import com.fasterxml.jackson.databind.ser.std.IterableSerializer;
 import com.trett.rss.dao.ChannelRepository;
 import com.trett.rss.dao.FeedItemRepository;
+import com.trett.rss.dao.UserRepository;
 import com.trett.rss.models.Channel;
 import com.trett.rss.models.FeedItem;
+import com.trett.rss.models.User;
 import com.trett.rss.parser.RssParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -23,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.Principal;
 import java.util.Optional;
 
 @RestController
@@ -31,22 +34,26 @@ public class ChannelController {
 
     private final ChannelRepository channelRepository;
 
-
     private final FeedItemRepository feedItemRepository;
 
+    private UserRepository userRepository;
+
     @Autowired
-    public ChannelController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository) {
+    public ChannelController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
+                             UserRepository userRepository) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping(path = "/refresh")
     @JsonSerialize(using = IndexedListSerializer.class)
-    public void refresh() throws IOException, XMLStreamException, URISyntaxException {
+    public void refresh(Principal principal) throws IOException, XMLStreamException, URISyntaxException {
         RestTemplate restTemplate = new RestTemplate();
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
-        for (Channel channel : channelRepository.findAll()) {
-            ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()), HttpMethod.GET);
+        for (Channel channel : channelRepository.findByUser(userRepository.findByPrincipalName(principal.getName()))) {
+            ClientHttpRequest request = requestFactory
+                    .createRequest(URI.create(channel.getChannelLink()), HttpMethod.GET);
             ClientHttpResponse execute = request.execute();
             try (InputStream inputStream = execute.getBody()) {
                 feedItemRepository.saveAll(new RssParser(inputStream).parse(channel).getFeedItems());
@@ -56,8 +63,10 @@ public class ChannelController {
 
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     @JsonSerialize(using = IterableSerializer.class)
-    public Iterable<Channel> getNews() throws IOException, XMLStreamException, URISyntaxException {
-        return channelRepository.findAll();
+    public Iterable<Channel> getNews(Principal principal) throws IOException, XMLStreamException, URISyntaxException {
+        return channelRepository.findByUser(
+                userRepository.findByPrincipalName(principal.getName())
+        );
     }
 
     @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -75,12 +84,14 @@ public class ChannelController {
     }
 
     @PostMapping(path = "/add")
-    public void addFeed(@RequestBody @NotEmpty String link) throws IOException, XMLStreamException {
+    public void addFeed(@RequestBody @NotEmpty String link, Principal principal) throws IOException, XMLStreamException {
         ClientHttpRequest request = new RestTemplate().getRequestFactory()
                 .createRequest(URI.create(link), HttpMethod.GET);
         try (InputStream inputStream = request.execute().getBody()) {
             Channel channel = new Channel();
             new RssParser(inputStream).parse(channel);
+            User user = userRepository.findByPrincipalName(principal.getName());
+            channel.setUser(user);
             channel.setChannelLink(link);
             channelRepository.save(channel);
         }

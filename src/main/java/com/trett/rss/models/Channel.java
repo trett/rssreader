@@ -1,6 +1,8 @@
 package com.trett.rss.models;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
 import java.util.Set;
@@ -26,6 +28,11 @@ public class Channel {
 
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<FeedItem> feedItems;
+
+    @ManyToOne
+    @JoinColumn
+    @JsonIgnore
+    private User user;
 
     public String getChannelLink() {
         return channelLink;
@@ -65,6 +72,14 @@ public class Channel {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     @Override
