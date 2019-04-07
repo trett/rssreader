@@ -1,9 +1,11 @@
 package com.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
+import java.time.LocalDate;
 
 /**
  * RSS channel item
@@ -21,7 +23,10 @@ public class FeedItem {
     @NotEmpty
     private String link;
 
-    @Column(columnDefinition = "TEXT")
+    private LocalDate pubDate;
+
+    @Lob
+    @Type(type = "org.hibernate.type.TextType")
     private String description;
 
     @ManyToOne
@@ -49,6 +54,14 @@ public class FeedItem {
 
     public String getLink() {
         return link;
+    }
+
+    public LocalDate getPubDate() {
+        return pubDate;
+    }
+
+    public void setPubDate(LocalDate pubDate) {
+        this.pubDate = pubDate;
     }
 
     public void setLink(String link) {

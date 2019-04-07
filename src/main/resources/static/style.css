@@ -1,19 +1,31 @@
-  .read {
-      color: grey;
-      text-decoration: none;
-      font-size: x-large;
-  }
+body {
+    font-family: 'Roboto', sans-serif;
+}
 
-  .new {
-      color: #333333;
-      font-weight: bold;
-      text-decoration: none;
-      font-size: x-large;
-  }
-  img{
-      width:100%;
-      height:100%;
-      max-width: 200px;
-      max-height: 200px;
-      object-fit: contain;
-  }
+img {
+    width: 100%;
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: contain;
+}
+
+ul {
+    list-style-type: none;
+}
+
+.read {
+    color: grey;
+    font-size: 24px !important;
+    background-color: #eeeeee;
+    text-decoration: none;
+    display: block;
+}
+
+.new {
+    color: #333333;
+    font-size: 24px !important;
+    background-color: #eeeeee;
+    text-decoration: none;
+    display: block;
+}
+

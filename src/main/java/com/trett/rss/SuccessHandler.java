@@ -25,11 +25,15 @@ import java.util.Map;
 @Component
 public class SuccessHandler implements AuthenticationSuccessHandler {
 
-    @Autowired
-    private OAuth2AuthorizedClientService authorizedClientService;
+    private final OAuth2AuthorizedClientService authorizedClientService;
+
+    private final UserRepository userRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    public SuccessHandler(OAuth2AuthorizedClientService authorizedClientService, UserRepository userRepository) {
+        this.authorizedClientService = authorizedClientService;
+        this.userRepository = userRepository;
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,

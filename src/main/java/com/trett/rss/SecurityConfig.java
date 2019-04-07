@@ -11,8 +11,12 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
+    private final AuthenticationSuccessHandler successHandler;
+
     @Autowired
-    private AuthenticationSuccessHandler successHandler;
+    public SecurityConfig(AuthenticationSuccessHandler successHandler) {
+        this.successHandler = successHandler;
+    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {

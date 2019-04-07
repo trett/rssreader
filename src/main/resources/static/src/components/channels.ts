@@ -3,17 +3,19 @@ import Component from "vue-class-component";
 import {Channel} from "../models/channel";
 import {Watch} from "vue-property-decorator";
 import {FeedItem} from "../models/feedItem";
+import HttpService from "../services/httpService";
 
 @Component({
     template: `
 <v-app>
     <v-navigation-drawer dark app>
-        <v-list dense class="pt-0" >
-            <v-list-tile @click="refresh()">
+        <v-list dense class="pt-0">
+            <v-list-tile @click="refresh()" :class="selectedChannel === 0 ? 'primary--text' : ''">
                 <v-list-tile-action><i class="fa fa-rss" aria-hidden="true"></i></v-list-tile-action>
                 <v-list-tile-content>All channels</v-list-tile-content>
             </v-list-tile>
-            <v-list-tile v-for="channel in channels" :key="channel.title" @click="getChannel(channel.id)">
+            <v-list-tile v-for="channel in channels" :key="channel.title" @click="getChannel(channel.id)"
+                          :class="selectedChannel === channel.id ? 'primary--text' : ''">
                 <v-list-tile-action>
                     <i class="fa fa-rss" aria-hidden="true"></i>
                 </v-list-tile-action>
@@ -24,7 +26,7 @@ import {FeedItem} from "../models/feedItem";
         </v-list>
     </v-navigation-drawer> 
     <v-toolbar app dense>
-        <v-btn small v-on:click="refresh()">Refresh</v-btn>
+        <v-btn small @click="refresh()">Refresh</v-btn>
         <v-dialog v-model="dialog" persistent max-width="290"> 
             <template v-slot:activator="{ on }">
                 <v-btn small color="primary" dark v-on="on">Add feed</v-btn>
@@ -43,13 +45,22 @@ import {FeedItem} from "../models/feedItem";
     </v-toolbar>
     <v-content>
         <v-container fluid>
-        <v-alert v-model="alert" dismissible color="error" icon="warning" outline> {{alertMessage}} </v-alert>
-            <li v-for="feedItem in data">
-                    <a :id="selectedChannel + '-feed-' + feedItem.id" :href="feedItem.link" v-on:click="markRead(feedItem.id)" target="_blank"
-                    v-bind:class="{read: feedItem.read, new: !feedItem.read}">{{feedItem.title}}</a>
-                    <div v-html="feedItem.description"></div>
-                <hr style="margin: 10px 0 10px 0"/>
+        <v-alert :value="errorMessage.length > 0" dismissible color="error" icon="warning" outline>
+                {{ errorMessage }} 
+        </v-alert>
+        <ul>
+            <li v-for="feedItem in data" class="my-3">
+                <a  :id="selectedChannel + '-feed-' + feedItem.id"
+                    :href="feedItem.link"
+                    @click="markRead(feedItem.id)"
+                    target="_blank"
+                    v-bind:class="{read: feedItem.read, new: !feedItem.read}">
+                    {{ feedItem.title }}
+                </a>
+                <p class="font-weight-black subheading">{{ feedItem.pubDate }}</p>
+                <div class="body-2" v-html="feedItem.description"></div>
             </li>
+        </ul>
         </v-container>
     </v-content>
 </v-app>
@@ -69,40 +80,37 @@ export default class Channels extends Vue {
 
     private dialog = false;
 
-    private alert = false;
-
-    private alertMessage = "";
+    private errorMessage = "";
 
     async beforeMount(): Promise<void> {
         await this.getAllChannels();
     };
 
     private async refresh(): Promise<void> {
-        const response = await fetch('channels/refresh');
-        if (response.status !== 200) {
-            this.handleError("Something wrong");
-        }
+        await HttpService.sendRequest('channels/refresh');
         return this.getAllChannels();
     }
 
     private async getAllChannels(): Promise<void> {
-        const response = await fetch('/channels/all');
-        if (response.status !== 200) {
-            this.handleError("Can't get feeds");
+        try {
+            const response = await HttpService.sendRequest('/channels/all');
+            this.channels = await response.json();
+            this.selectedChannel = 0;
+            this.channels.forEach(channel => channel.feedItems.forEach(item => this.data.push(item)));
+        } catch (e) {
+            this.errorMessage = e.message;
         }
-        this.channels = await response.json();
-        this.selectedChannel = 0;
-        this.channels.forEach(channel => channel.feedItems.forEach(item => this.data.push(item)));
     }
 
     private async getChannel(id: number): Promise<void> {
-        const response = await fetch(`/channels/get/${id}`);
-        if (response.status != 200) {
-            this.handleError("Can't get feeds");
+        try {
+            const response = await HttpService.sendRequest(`/channels/get/${id}`);
+            const channel: Channel = await response.json();
+            this.selectedChannel = channel.id;
+            this.data = channel.feedItems;
+        } catch (e) {
+            this.errorMessage = e.message;
         }
-        const channel: Channel = await response.json();
-        this.selectedChannel = channel.id;
-        this.data = channel.feedItems;
     }
 
     private async markRead(id: number): Promise<void> {
@@ -114,10 +122,10 @@ export default class Channels extends Vue {
             method: 'POST',
             body: String(id)
         };
-        const response = await fetch('/channels/read', configInit);
-
-        if (response.status !== 200) {
-            this.handleError("Can't mark as read");
+        try {
+            await HttpService.sendRequest('/channels/read', configInit);
+        } catch (e) {
+            this.errorMessage = e.message;
         }
         const link = document.getElementById(`${this.selectedChannel}-feed-${id}`);
         if (link) {
@@ -134,9 +142,10 @@ export default class Channels extends Vue {
             method: 'POST',
             body: this.newChannel
         };
-        const response = await fetch("/channels/add", configInit);
-        if (response.status !== 200) {
-            this.handleError("Wrong url or service unavailable");
+        try {
+            await HttpService.sendRequest("/channels/add", configInit);
+        } catch (e) {
+            this.errorMessage = e.message;
         }
         this.showModal = false;
         await this.refresh();
@@ -147,10 +156,5 @@ export default class Channels extends Vue {
         if (val) {
             this.newChannel = "";
         }
-    }
-
-    private handleError(message: string): void {
-        this.alertMessage = message;
-        this.alert = true;
     }
 }

@@ -36,7 +36,7 @@ public class ChannelController {
 
     private final FeedItemRepository feedItemRepository;
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Autowired
     public ChannelController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
@@ -84,7 +84,8 @@ public class ChannelController {
     }
 
     @PostMapping(path = "/add")
-    public void addFeed(@RequestBody @NotEmpty String link, Principal principal) throws IOException, XMLStreamException {
+    public void addFeed(@RequestBody @NotEmpty String link, Principal principal)
+            throws IOException, XMLStreamException {
         ClientHttpRequest request = new RestTemplate().getRequestFactory()
                 .createRequest(URI.create(link), HttpMethod.GET);
         try (InputStream inputStream = request.execute().getBody()) {

@@ -14,7 +14,8 @@
     "sourceMap": true,
     "allowJs": true,
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false
   },
   "eslint.validate": [
     "javascript",
