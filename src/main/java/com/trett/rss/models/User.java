@@ -1,5 +1,7 @@
 package com.trett.rss.models;
 
+import com.trett.rss.converter.SettingsConverter;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
 import java.util.Set;
@@ -15,10 +17,15 @@ public class User {
     @NotEmpty
     private String email;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Channel> channels;
 
-    public User() {}
+    @Lob
+    @Convert(converter = SettingsConverter.class)
+    private Settings settings;
+
+    public User() {
+    }
 
     public User(String principalName, String email) {
         this.principalName = principalName;
@@ -47,6 +54,14 @@ public class User {
 
     public void setChannels(Set<Channel> channels) {
         this.channels = channels;
+    }
+
+    public Settings getSettings() {
+        return settings;
+    }
+
+    public void setSettings(Settings settings) {
+        this.settings = settings;
     }
 
     @Override

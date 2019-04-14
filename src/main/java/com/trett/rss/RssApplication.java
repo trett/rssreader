@@ -11,6 +11,5 @@ public class RssApplication {
     public static void main(String[] args) {
         SpringApplication.run(RssApplication.class, args);
     }
-
 }
 

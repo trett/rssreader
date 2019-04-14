@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FeedItemRepository extends CrudRepository<FeedItem, Long> {
+
+    Iterable<FeedItem> findAllByChannelIdOrderByPubDateDesc(Long id);
+
+    Iterable<FeedItem> findAllByChannelIdAndReadIsFalseOrderByPubDateDesc(Long id);
 }

@@ -1,11 +1,12 @@
 package com.trett.rss.models;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * RSS channel item
@@ -23,7 +24,8 @@ public class FeedItem {
     @NotEmpty
     private String link;
 
-    private LocalDate pubDate;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
+    private LocalDateTime pubDate;
 
     @Lob
     @Type(type = "org.hibernate.type.TextType")
@@ -56,16 +58,16 @@ public class FeedItem {
         return link;
     }
 
-    public LocalDate getPubDate() {
+    public void setLink(String link) {
+        this.link = link;
+    }
+
+    public LocalDateTime getPubDate() {
         return pubDate;
     }
 
-    public void setPubDate(LocalDate pubDate) {
+    public void setPubDate(LocalDateTime pubDate) {
         this.pubDate = pubDate;
-    }
-
-    public void setLink(String link) {
-        this.link = link;
     }
 
     public String getDescription() {
@@ -94,25 +96,23 @@ public class FeedItem {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
         FeedItem feedItem = (FeedItem) o;
-        return title.equals(feedItem.title) &&
-                link.equals(feedItem.link) &&
-                (description != null ? description.equals(feedItem.description) : feedItem.description == null) &&
-                channel.equals(feedItem.channel);
+
+        if (!title.equals(feedItem.title)) return false;
+        if (!link.equals(feedItem.link)) return false;
+        if (!pubDate.equals(feedItem.pubDate)) return false;
+        return description.equals(feedItem.description);
     }
 
     @Override
     public int hashCode() {
         int result = title.hashCode();
         result = 31 * result + link.hashCode();
-        result = 31 * result + (description != null ? description.hashCode() : 0);
-        result = 31 * result + channel.hashCode();
+        result = 31 * result + pubDate.hashCode();
+        result = 31 * result + description.hashCode();
         return result;
     }
 }

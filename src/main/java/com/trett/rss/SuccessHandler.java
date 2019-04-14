@@ -1,6 +1,7 @@
 package com.trett.rss;
 
 import com.trett.rss.dao.UserRepository;
+import com.trett.rss.models.Settings;
 import com.trett.rss.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -56,6 +57,7 @@ public class SuccessHandler implements AuthenticationSuccessHandler {
             User user = userRepository.findByPrincipalName(authentication.getName());
             if (user == null) {
                 user = new User(principalName, (String) userAttributes.get("email"));
+                user.setSettings(new Settings());
                 userRepository.save(user);
             }
         }

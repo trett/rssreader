@@ -12,7 +12,7 @@ import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import java.io.InputStream;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -25,7 +25,8 @@ public class RssParser {
         this.stream = stream;
     }
 
-    public Channel parse(Channel channel) throws XMLStreamException {
+    public Channel parse() throws XMLStreamException {
+        Channel channel = new Channel();
         FeedItem feedItem = null;
         Set<FeedItem> feedItems = new LinkedHashSet<>();
         XMLInputFactory factory = XMLInputFactory.newInstance();
@@ -68,7 +69,8 @@ public class RssParser {
                             case "pubDate":
                                 String date = getValueFromEvent(xmlReader.nextEvent());
                                 if (date != null) {
-                                    feedItem.setPubDate(LocalDate.parse(date, DateTimeFormatter.RFC_1123_DATE_TIME));
+                                    feedItem.setPubDate(LocalDateTime.parse(date,
+                                            DateTimeFormatter.RFC_1123_DATE_TIME));
                                 }
                                 break;
                             case "description":
