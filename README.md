@@ -3,7 +3,7 @@
 Written using Spring Boot 2, Hibernate, Vue.js/Vuetify and Typescript 
 
 ## Build and run with Maven
-```mvn sprint-boot:run```
+```mvn spring-boot:run```
 
 ## Heroku deploy
 - install heroku
