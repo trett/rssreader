@@ -20,7 +20,6 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Channel> channels;
 
-    @Lob
     @Convert(converter = SettingsConverter.class)
     private Settings settings;
 

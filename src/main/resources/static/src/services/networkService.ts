@@ -14,6 +14,14 @@ export class NetworkService {
         await this.sendRequest("channel/refresh");
     }
 
+    public static async markChannelAsRead(channelId: string): Promise<void> {
+        await this.sendRequest("/channel/read", this.buildPostRequest(channelId));
+    }
+
+    public static async deleteChannel(channelId: string): Promise<void> {
+        await this.sendRequest("/channel/delete", this.buildPostRequest(channelId));
+    }
+
     public static async getAllFeeds(): Promise<Array<FeedItem>> {
         const response = await this.sendRequest('/feed/all');
         return response.json();
@@ -28,13 +36,17 @@ export class NetworkService {
         await this.sendRequest("/feed/read", this.buildPostRequest(String(id)));
     }
 
-    public static async getSettings(): Promise<Settings> {
+    public static async getSettings(): Promise<string> {
         const response = await this.sendRequest("/settings");
-        return response.json();
+        return response.text();
     }
 
     public static async saveSettings(settings: string): Promise<void> {
         await this.sendRequest("/settings", this.buildPostRequest(settings));
+    }
+
+    public static async deleteOldItems(): Promise<void> {
+        await this.sendRequest("/feed/deleteOldItems", {method: "POST"});
     }
 
     private static async sendRequest(path: string, configInit?: RequestInit): Promise<Response> {
@@ -72,5 +84,5 @@ export type Channel = {
 
 export type Settings = {
     hideRead: boolean;
+    deleteAfter: number
 }
-

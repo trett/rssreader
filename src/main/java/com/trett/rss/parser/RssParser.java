@@ -47,10 +47,10 @@ public class RssParser {
                     if (!itemStart) {
                         switch (localPart) {
                             case "title":
-                                channel.setTitle(getValueFromEvent(xmlReader.nextEvent()));
+                                channel.setTitle(getValueFromReader(xmlReader));
                                 break;
                             case "link":
-                                channel.setLink(getValueFromEvent(xmlReader.nextEvent()));
+                                channel.setLink(getValueFromReader(xmlReader));
                                 break;
                             case "item":
                                 itemStart = true;
@@ -61,20 +61,22 @@ public class RssParser {
                     } else {
                         switch (localPart) {
                             case "title":
-                                feedItem.setTitle(getValueFromEvent(xmlReader.nextEvent()));
+                                feedItem.setTitle(getValueFromReader(xmlReader));
                                 break;
                             case "link":
-                                feedItem.setLink(getValueFromEvent(xmlReader.nextEvent()));
+                                feedItem.setLink(getValueFromReader(xmlReader));
                                 break;
+                            case "guid":
+                                feedItem.setGuid(getValueFromReader(xmlReader));
                             case "pubDate":
-                                String date = getValueFromEvent(xmlReader.nextEvent());
+                                String date = getValueFromReader(xmlReader);
                                 if (date != null) {
                                     feedItem.setPubDate(LocalDateTime.parse(date,
                                             DateTimeFormatter.RFC_1123_DATE_TIME));
                                 }
                                 break;
                             case "description":
-                                feedItem.setDescription(getValueFromEvent(xmlReader.nextEvent()));
+                                feedItem.setDescription(getValueFromReader(xmlReader));
                                 break;
                         }
                     }
@@ -96,9 +98,10 @@ public class RssParser {
         }
     }
 
-    private String getValueFromEvent(XMLEvent event) {
+    private String getValueFromReader(XMLEventReader reader) throws XMLStreamException {
+        XMLEvent event = reader.nextEvent();
         if (event.isCharacters()) {
-            return event.asCharacters().getData();
+            return event.asCharacters().getData().replaceAll("</?script>", "");
         }
         return null;
     }

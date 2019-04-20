@@ -18,11 +18,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,7 +48,6 @@ public class ChannelsController {
 
     @GetMapping(path = "/all")
     public Iterable<Channel> getChannels(Principal principal) {
-        // TODO: hideRead
         return channelRepository.findByUser(userRepository.findByPrincipalName(principal.getName()));
     }
 
@@ -89,5 +90,15 @@ public class ChannelsController {
             channel.setChannelLink(link);
             return channelRepository.save(channel).getId();
         }
+    }
+
+    @PostMapping(path = "/read")
+    public void markAsRead(@RequestBody Long[] ids) {
+        Arrays.stream(ids).forEach(feedItemRepository::markAsReadByChannelId);
+    }
+
+    @PostMapping(path = "/delete")
+    public void delete(@NotNull @RequestBody Long id) {
+        channelRepository.deleteById(id);
     }
 }

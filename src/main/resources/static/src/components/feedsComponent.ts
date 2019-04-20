@@ -2,11 +2,13 @@ import Vue from "vue";
 import Component from "vue-class-component";
 import {Watch} from "vue-property-decorator";
 import {Route} from "vue-router";
+import EventBus from "../eventBus";
 import {FeedItem, NetworkService} from "../services/networkService";
+import SettingsService from "../services/settingsService";
 
 @Component({
     template: `
-        <ul>
+        <ul class="feed-list">
             <li v-for="feedItem in data" class="my-3">
                 <a  :href="feedItem.link"
                     @click="markRead(feedItem.id)"
@@ -24,8 +26,15 @@ export default class FeedsComponent extends Vue {
 
     private data: Array<FeedItem> = [];
 
+    private settingsService: SettingsService;
+
     async beforeMount(): Promise<void> {
+        this.settingsService = new SettingsService();
         await this.getChannels(Number(this.$route.params.id));
+    }
+
+    mounted(): void {
+        EventBus.$on("updateFeeds", async () => await this.getChannels(null));
     }
 
     @Watch('$route')
@@ -35,10 +44,15 @@ export default class FeedsComponent extends Vue {
 
     private async getChannels(id: number | null) {
         try {
-            this.data = id ?
-                (await NetworkService.getFeedsByChannelId(Number(id))) : (await NetworkService.getAllFeeds());
+            const feedItems = id ?
+                await NetworkService.getFeedsByChannelId(Number(id)) : await NetworkService.getAllFeeds();
+            this.data = (await this.settingsService.getSettings()).hideRead ?
+                feedItems.filter(feedItem => !feedItem.read) : feedItems;
+            if (!this.data.length) {
+                EventBus.$emit("info", "No feeds. Refresh later");
+            }
         } catch (e) {
-            Vue.prototype.$setError(e.message);
+            EventBus.$emit("error", e.message);
         }
     }
 
@@ -46,7 +60,7 @@ export default class FeedsComponent extends Vue {
         try {
             await NetworkService.markRead(id);
         } catch (e) {
-            Vue.prototype.$setError(e.message);
+            EventBus.$emit("error", e.message);
         }
         this.data.forEach(item => {
             if (item.id === id) {

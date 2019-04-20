@@ -1,33 +1,62 @@
 import Vue from "vue";
 import Component from "vue-class-component";
 import {Watch} from "vue-property-decorator";
+import EventBus from "../eventBus";
 import {NetworkService, Settings} from "../services/networkService";
+import SettingsService from "../services/settingsService";
 
 @Component({
     template: `
-        <v-checkbox v-model="hideRead" label="Show only unread" :true-value="true"></v-checkbox>
+        <v-layout row wrap>
+            <v-flex xs12>
+                <v-checkbox v-model="hideRead" label="Show only unread" :true-value="true" mask="##"></v-checkbox>
+            </v-flex>
+            <v-flex xs2>
+                <v-text-field v-model="deleteAfter" mask="##" placeholder="7" label="Days to keep feeds"></v-text-field>
+             </v-flex>
+             <v-flex xs3>
+                <v-btn @click="deleteOldItems()">Clean feeds</v-btn>
+            </v-flex>
+            <v-flex xs12>
+                <v-btn color="primary" @click="saveSettings()">Save</v-btn>
+            </v-flex>
+        </v-layout>
     `
 })
 export default class SettingsComponent extends Vue {
 
     private hideRead = false;
 
+    private deleteAfter = 7;
+
     private settings: Settings;
 
+    private settingsService: SettingsService;
+
     async beforeMount(): Promise<void> {
+        this.settingsService = new SettingsService();
         try {
-            this.settings = await NetworkService.getSettings();
+            this.settings = await this.settingsService.getSettings();
         } catch (e) {
-            Vue.prototype.$setError(e.message);
+            EventBus.$emit("error", e.message);
         }
         this.hideRead = this.settings.hideRead;
+        this.deleteAfter = this.settings.deleteAfter;
     }
 
     @Watch("hideRead")
-    private async onHideReadChanged(oldVal: boolean, newVal: boolean): Promise<void> {
+    private onHideReadChanged(oldVal: boolean, newVal: boolean): void {
         if (oldVal !== newVal) {
             this.settings.hideRead = this.hideRead.toString() === "true";
-            return NetworkService.saveSettings(JSON.stringify(this.settings))
         }
+    }
+
+    private async saveSettings(): Promise<void> {
+        this.settings.deleteAfter = this.deleteAfter;
+        return this.settingsService.setSettings(JSON.stringify(this.settings));
+    }
+
+    private async deleteOldItems(): Promise<void> {
+        return NetworkService.deleteOldItems();
     }
 }

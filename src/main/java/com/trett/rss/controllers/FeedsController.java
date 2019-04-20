@@ -12,11 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @RestController
@@ -40,36 +43,42 @@ public class FeedsController {
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     @JsonSerialize(using = IterableSerializer.class)
     public List<FeedItem> getNews(Principal principal) {
-        return StreamSupport
+        Stream<FeedItem> feedItemStream = StreamSupport
                 .stream(channelRepository
                         .findByUser(userRepository.findByPrincipalName(principal.getName())).spliterator(), false)
                 .flatMap(channel -> channel.getFeedItems().stream())
-                .collect(Collectors.toList());
+                .sorted(Comparator.comparing(FeedItem::getPubDate).reversed());
+        if (userRepository.findByPrincipalName(principal.getName()).getSettings().isHideRead()) {
+            return feedItemStream.filter(feedItem -> !feedItem.isRead()).collect(Collectors.toList());
+        }
+        return feedItemStream.collect(Collectors.toList());
     }
 
     @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public Iterable<FeedItem> getFeedsByChannelId(@PathVariable @NotEmpty String id, Principal principal) {
+    public Iterable<FeedItem> getFeedsByChannelId(@PathVariable @NotNull Long id, Principal principal) {
         User user = userRepository.findByPrincipalName(principal.getName());
-        long channelId = Long.parseLong(id);
         boolean hasChannel = false;
         for (Channel channel : user.getChannels()) {
-            hasChannel |= channelId == channel.getId();
+            hasChannel |= id == channel.getId();
         }
         if (!hasChannel) {
             throw new RuntimeException("Channel not found");
         }
-        return user.getSettings().isHideRead() ?
-                feedItemRepository.findAllByChannelIdAndReadIsFalseOrderByPubDateDesc(channelId) :
-                feedItemRepository.findAllByChannelIdOrderByPubDateDesc(channelId);
-
+        return feedItemRepository.findAllByChannelIdOrderByPubDateDesc(id);
     }
 
     @PostMapping(path = "/read")
-    public void setRead(@RequestBody @NotEmpty String id) {
-        Optional<FeedItem> feedItem = feedItemRepository.findById(Long.parseLong(id));
+    public void setRead(@RequestBody @NotNull Long id) {
+        Optional<FeedItem> feedItem = feedItemRepository.findById(id);
         feedItem.ifPresent(item -> {
             item.setRead(true);
             feedItemRepository.save(item);
         });
+    }
+
+    @PostMapping("/deleteOldItems")
+    public void deleteOldItems(Principal principal) {
+        int deleteAfter = userRepository.findByPrincipalName(principal.getName()).getSettings().getDeleteAfter();
+        feedItemRepository.deleteFeedsOlderThan(LocalDateTime.now().minusDays(deleteAfter));
     }
 }

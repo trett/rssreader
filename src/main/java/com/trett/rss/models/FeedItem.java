@@ -19,6 +19,9 @@ public class FeedItem {
     private long id;
 
     @NotEmpty
+    private String guid;
+
+    @NotEmpty
     private String title;
 
     @NotEmpty
@@ -44,6 +47,14 @@ public class FeedItem {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public String getGuid() {
+        return guid;
+    }
+
+    public void setGuid(String guid) {
+        this.guid = guid;
     }
 
     public String getTitle() {
@@ -101,18 +112,11 @@ public class FeedItem {
 
         FeedItem feedItem = (FeedItem) o;
 
-        if (!title.equals(feedItem.title)) return false;
-        if (!link.equals(feedItem.link)) return false;
-        if (!pubDate.equals(feedItem.pubDate)) return false;
-        return description.equals(feedItem.description);
+        return guid.equals(feedItem.guid);
     }
 
     @Override
     public int hashCode() {
-        int result = title.hashCode();
-        result = 31 * result + link.hashCode();
-        result = 31 * result + pubDate.hashCode();
-        result = 31 * result + description.hashCode();
-        return result;
+        return guid.hashCode();
     }
 }

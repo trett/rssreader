@@ -29,3 +29,6 @@ ul {
     display: block;
 }
 
+.feed-list {
+    padding: 0;
+}
