@@ -70,19 +70,20 @@ export class NetworkService {
 }
 
 export type FeedItem = Channel & {
-    pubDate: string;
-    description: string;
-    read: boolean;
+    pubDate: string,
+    description: string,
+    read: boolean,
+    channelId: number
 }
 
 export type Channel = {
     id: number,
-    title: string;
-    link: string;
+    title: string,
+    link: string,
     feedItems: Array<FeedItem>;
 }
 
 export type Settings = {
-    hideRead: boolean;
+    hideRead: boolean,
     deleteAfter: number
 }

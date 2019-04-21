@@ -6,7 +6,6 @@ import com.trett.rss.dao.ChannelRepository;
 import com.trett.rss.dao.FeedItemRepository;
 import com.trett.rss.dao.UserRepository;
 import com.trett.rss.models.Channel;
-import com.trett.rss.models.FeedItem;
 import com.trett.rss.models.User;
 import com.trett.rss.parser.RssParser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +24,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
 import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = "/channel")
@@ -62,15 +59,7 @@ public class ChannelsController {
                         .createRequest(URI.create(channel.getChannelLink()), HttpMethod.GET);
                 ClientHttpResponse execute = request.execute();
                 try (InputStream inputStream = execute.getBody()) {
-                    Set<FeedItem> feedItems =
-                            new RssParser(inputStream)
-                                    .parse()
-                                    .getFeedItems()
-                                    .stream()
-                                    .filter(item -> !channel.getFeedItems().contains(item))
-                                    .peek(feedItem -> feedItem.setChannel(channel))
-                                    .collect(Collectors.toSet());
-                    feedItemRepository.saveAll(feedItems);
+                    feedItemRepository.saveAll(new RssParser(inputStream).geeNewFeeds(channel));
                 }
             }
         } catch (Exception e) {

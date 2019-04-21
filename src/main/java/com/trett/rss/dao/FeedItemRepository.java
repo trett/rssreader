@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Repository
 public interface FeedItemRepository extends CrudRepository<FeedItem, Long> {
 
-    Iterable<FeedItem> findAllByChannelIdOrderByPubDateDesc(Long id);
+    Iterable<FeedItem> findByChannelIdOrderByPubDateDesc(Long id);
 
     @Transactional
     @Modifying

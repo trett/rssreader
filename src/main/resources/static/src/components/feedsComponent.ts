@@ -8,18 +8,21 @@ import SettingsService from "../services/settingsService";
 
 @Component({
     template: `
-        <ul class="feed-list">
-            <li v-for="feedItem in data" class="my-3">
-                <a  :href="feedItem.link"
-                    @click="markRead(feedItem.id)"
-                    target="_blank"
-                    v-bind:class="{read: feedItem.read, new: !feedItem.read}">
-                    {{ feedItem.title }}
-                </a>
-                <p class="font-weight-black body-2">{{ feedItem.pubDate }}</p>
-                <div class="body-2" v-html="feedItem.description"></div>
-            </li>
-        </ul>
+        <p v-if="!data.length" class="text-md-center" style="color: #666666">No feeds. Refresh later</p>
+        <template v-else>
+            <ul class="feed-list">
+                <li v-for="feedItem in data" class="my-3">
+                    <a  :href="feedItem.link"
+                        @click="markRead(feedItem.id)"
+                        target="_blank"
+                        v-bind:class="{read: feedItem.read, new: !feedItem.read}">
+                        {{ feedItem.title }}
+                    </a>
+                    <p class="font-weight-black body-2">{{ feedItem.pubDate }}</p>
+                    <div class="body-2" v-html="feedItem.description"></div>
+                </li>
+            </ul>
+        </template>
     `
 })
 export default class FeedsComponent extends Vue {
@@ -30,27 +33,24 @@ export default class FeedsComponent extends Vue {
 
     async beforeMount(): Promise<void> {
         this.settingsService = new SettingsService();
-        await this.getChannels(Number(this.$route.params.id));
+        return this.setChannel(this.$route.params.id || "");
     }
 
     mounted(): void {
-        EventBus.$on("updateFeeds", async () => await this.getChannels(null));
+        EventBus.$on("updateFeeds", async () => await this.setChannel(this.$route.params.id || ""));
     }
 
     @Watch('$route')
     private async onRouteUpdate(to: Route, from: Route, next: Function): Promise<void> {
-        await this.getChannels(Number(to.params.id))
+        return this.setChannel(to.params.id || "");
     }
 
-    private async getChannels(id: number | null) {
+    private async setChannel(id: string) {
         try {
             const feedItems = id ?
                 await NetworkService.getFeedsByChannelId(Number(id)) : await NetworkService.getAllFeeds();
             this.data = (await this.settingsService.getSettings()).hideRead ?
                 feedItems.filter(feedItem => !feedItem.read) : feedItems;
-            if (!this.data.length) {
-                EventBus.$emit("info", "No feeds. Refresh later");
-            }
         } catch (e) {
             EventBus.$emit("error", e.message);
         }

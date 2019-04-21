@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RssParser {
 
@@ -96,6 +97,15 @@ public class RssParser {
         } catch (Exception e) {
             throw new RuntimeException("Can't parse feed");
         }
+    }
+
+    public Set<FeedItem> geeNewFeeds(Channel channel) throws XMLStreamException {
+        return parse()
+                .getFeedItems()
+                .stream()
+                .filter(item -> !channel.getFeedItems().contains(item))
+                .peek(feedItem -> feedItem.setChannel(channel))
+                .collect(Collectors.toSet());
     }
 
     private String getValueFromReader(XMLEventReader reader) throws XMLStreamException {

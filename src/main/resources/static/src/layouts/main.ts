@@ -90,7 +90,6 @@ export default class Main extends Vue {
     async beforeMount(): Promise<void> {
         try {
             this.channels = await NetworkService.getChannels();
-            return this.refresh();
         } catch (e) {
             EventBus.$emit("error", e.message);
         }
@@ -98,7 +97,8 @@ export default class Main extends Vue {
 
     private async refresh(): Promise<void> {
         try {
-            return NetworkService.updateChannels();
+            await NetworkService.updateChannels();
+            return this.update();
         } catch (e) {
             EventBus.$emit("error", e.message);
         }
@@ -107,7 +107,7 @@ export default class Main extends Vue {
     private async addChannel(): Promise<void> {
         try {
             const channelId = await NetworkService.addChannel(this.newChannel);
-            this.channels = await NetworkService.getChannels();
+            await this.update();
             this.$router.push({path: `/channel/${channelId}`});
         } catch (e) {
             EventBus.$emit("error", e.message);
@@ -134,11 +134,20 @@ export default class Main extends Vue {
         }
         try {
             await NetworkService.deleteChannel(String(channel.id));
-            this.channels = await NetworkService.getChannels();
+            await this.update();
             this.$router.push({path: "/"});
         } catch (e) {
             EventBus.$emit("error", e.message);
         }
+    }
+
+    private async update(): Promise<void> {
+        try {
+            this.channels = await NetworkService.getChannels();
+        } catch (e) {
+            EventBus.$emit("error", e.message);
+        }
+        EventBus.$emit("updateFeeds");
     }
 
     @Watch("dialog")

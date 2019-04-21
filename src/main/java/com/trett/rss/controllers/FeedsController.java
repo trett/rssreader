@@ -64,7 +64,7 @@ public class FeedsController {
         if (!hasChannel) {
             throw new RuntimeException("Channel not found");
         }
-        return feedItemRepository.findAllByChannelIdOrderByPubDateDesc(id);
+        return feedItemRepository.findByChannelIdOrderByPubDateDesc(id);
     }
 
     @PostMapping(path = "/read")

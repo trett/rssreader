@@ -23,11 +23,6 @@ export default class AlertComponent extends Vue {
             this.alertType = "error";
             this.message = message
         });
-        EventBus.$on("info", (message: string) => {
-            this.alert = true;
-            this.alertType = "info";
-            this.message = message
-        });
     }
 
     private close(): void {

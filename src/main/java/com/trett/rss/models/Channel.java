@@ -26,7 +26,7 @@ public class Channel {
     @NotEmpty
     private String link;
 
-    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<FeedItem> feedItems;
 
     @ManyToOne
