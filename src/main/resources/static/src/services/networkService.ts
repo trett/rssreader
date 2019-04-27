@@ -1,71 +1,80 @@
 export class NetworkService {
 
     public static async getChannels(): Promise<Array<Channel>> {
-        const response = await this.sendRequest("/channel/all");
+        const response = await this.httpGet("/channel/all");
         return response.json();
     }
 
     public static async addChannel(channel: string): Promise<Number> {
-        const response = await this.sendRequest("/channel/add", this.buildPostRequest(channel));
+        const response = await this.httpPost("/channel/add", channel);
         return response.json();
     }
 
     public static async updateChannels(): Promise<void> {
-        await this.sendRequest("channel/refresh");
-    }
-
-    public static async markChannelAsRead(channelId: string): Promise<void> {
-        await this.sendRequest("/channel/read", this.buildPostRequest(channelId));
+        await this.httpGet("channel/refresh");
     }
 
     public static async deleteChannel(channelId: string): Promise<void> {
-        await this.sendRequest("/channel/delete", this.buildPostRequest(channelId));
+        await this.httpPost("/channel/delete", channelId);
     }
 
     public static async getAllFeeds(): Promise<Array<FeedItem>> {
-        const response = await this.sendRequest('/feed/all');
+        const response = await this.httpGet('/feed/all');
         return response.json();
     }
 
-    public static async getFeedsByChannelId(id: number): Promise<Array<FeedItem>> {
-        const response = await this.sendRequest(`/feed/get/${id}`);
+    public static async getFeedsByChannelId(id: string): Promise<Array<FeedItem>> {
+        const response = await this.httpGet(`/feed/get/${id}`);
         return response.json();
     }
 
-    public static async markRead(id: number): Promise<void> {
-        await this.sendRequest("/feed/read", this.buildPostRequest(String(id)));
+    public static async markRead(ids: Array<string>): Promise<void> {
+        await this.httpPost("/feed/read", JSON.stringify(ids));
     }
 
     public static async getSettings(): Promise<string> {
-        const response = await this.sendRequest("/settings");
+        const response = await this.httpGet("/settings");
         return response.text();
     }
 
     public static async saveSettings(settings: string): Promise<void> {
-        await this.sendRequest("/settings", this.buildPostRequest(settings));
+        await this.httpPost("/settings", settings);
     }
 
     public static async deleteOldItems(): Promise<void> {
-        await this.sendRequest("/feed/deleteOldItems", {method: "POST"});
+        await this.httpPost("/feed/deleteOldItems");
     }
 
-    private static async sendRequest(path: string, configInit?: RequestInit): Promise<Response> {
+    private static async httpPost(path: string, body?: string): Promise<Response> {
+        const configInit = {
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            method: "POST",
+            body: body,
+            redirect: "follow",
+            credentials: "include"
+        };
+        return this.sendRequest(path, configInit);
+    }
+
+    private static async httpGet(path: string): Promise<Response> {
+        const configInit = {
+            method: "GET",
+            mode: "no-cors",
+            redirect: "follow",
+            credentials: "include"
+        };
+        return this.sendRequest(path, configInit);
+    }
+
+    private static async sendRequest(path: string, configInit: any): Promise<Response> {
         const response = await fetch(path, configInit);
         if (response.status !== 200) {
             throw Error(response.headers.get("errorMessage") as string);
         }
         return response;
-    }
-
-    private static buildPostRequest(body: string): RequestInit {
-        return {
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            method: 'POST',
-            body: body
-        };
     }
 }
 
@@ -77,7 +86,7 @@ export type FeedItem = Channel & {
 }
 
 export type Channel = {
-    id: number,
+    id: string,
     title: string,
     link: string,
     feedItems: Array<FeedItem>;

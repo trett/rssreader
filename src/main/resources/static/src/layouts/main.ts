@@ -65,7 +65,7 @@ import {Channel, NetworkService} from "../services/networkService";
             </v-card> 
         </v-dialog>
         <v-spacer></v-spacer>
-        <v-btn icon @click="markChannelRead()">
+        <v-btn icon @click="markAllAsRead()">
             <v-icon>fa-chevron-down</v-icon>
         </v-btn>
     </v-toolbar>
@@ -114,18 +114,8 @@ export default class Main extends Vue {
         }
     }
 
-    private async markChannelRead(): Promise<void> {
-        const channelId = this.$route.params.id;
-        try {
-            if (channelId) {
-                await NetworkService.markChannelAsRead(JSON.stringify([channelId]));
-            } else if (confirm("Mark all channels as read?")) {
-                await NetworkService.markChannelAsRead(JSON.stringify(this.channels.map(channel => channel.id)));
-            }
-        } catch (e) {
-            EventBus.$emit("error", e.message);
-        }
-        EventBus.$emit("updateFeeds");
+    private async markAllAsRead(): Promise<void> {
+        EventBus.$emit("markAllAsRead");
     }
 
     private async deleteChannel(channel: Channel): Promise<void> {
@@ -133,9 +123,9 @@ export default class Main extends Vue {
             return;
         }
         try {
-            await NetworkService.deleteChannel(String(channel.id));
-            await this.update();
+            await NetworkService.deleteChannel(channel.id);
             this.$router.push({path: "/"});
+            await this.update();
         } catch (e) {
             EventBus.$emit("error", e.message);
         }

@@ -49,13 +49,13 @@ public class ScheduledTasks {
         RestTemplate restTemplate = new RestTemplate();
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         logger.info("Starting update feeds at " + LocalDateTime.now());
-        for (Channel channel : channelRepository.findAll()) {
+        for (Channel channel : channelRepository.findAllEager()) {
             ClientHttpRequest request = requestFactory
                     .createRequest(URI.create(channel.getChannelLink()), HttpMethod.GET);
             ClientHttpResponse execute = request.execute();
             try (InputStream inputStream = execute.getBody()) {
                 Set<FeedItem> feedItems = new RssParser(inputStream).geeNewFeeds(channel);
-                logger.info(MessageFormat.format("{0} items was update for {1} channel",
+                logger.info(MessageFormat.format("{0} items was update for ''{1}''",
                         feedItems.size(), channel.getTitle()));
                 feedItemRepository.saveAll(feedItems);
             }

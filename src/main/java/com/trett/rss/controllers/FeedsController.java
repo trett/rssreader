@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.constraints.NotNull;
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -68,12 +68,10 @@ public class FeedsController {
     }
 
     @PostMapping(path = "/read")
-    public void setRead(@RequestBody @NotNull Long id) {
-        Optional<FeedItem> feedItem = feedItemRepository.findById(id);
-        feedItem.ifPresent(item -> {
-            item.setRead(true);
-            feedItemRepository.save(item);
-        });
+    public void setRead(@RequestBody @NotNull Long[] ids) {
+        Iterable<FeedItem> feedItems = feedItemRepository.findAllById(Arrays.asList(ids));
+        feedItems.forEach(item -> item.setRead(true));
+        feedItemRepository.saveAll(feedItems);
     }
 
     @PostMapping("/deleteOldItems")

@@ -7,6 +7,7 @@ import org.hibernate.annotations.Type;
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * RSS channel item
@@ -112,11 +113,11 @@ public class FeedItem {
 
         FeedItem feedItem = (FeedItem) o;
 
-        return guid.equals(feedItem.guid);
+        return Objects.equals(getGuid(), feedItem.getGuid());
     }
 
     @Override
     public int hashCode() {
-        return guid.hashCode();
+        return Objects.hash(getGuid());
     }
 }

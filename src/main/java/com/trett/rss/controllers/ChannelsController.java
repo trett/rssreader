@@ -81,11 +81,6 @@ public class ChannelsController {
         }
     }
 
-    @PostMapping(path = "/read")
-    public void markAsRead(@RequestBody Long[] ids) {
-        Arrays.stream(ids).forEach(feedItemRepository::markAsReadByChannelId);
-    }
-
     @PostMapping(path = "/delete")
     public void delete(@NotNull @RequestBody Long id) {
         channelRepository.deleteById(id);

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -26,7 +27,7 @@ public class Channel {
     @NotEmpty
     private String link;
 
-    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<FeedItem> feedItems;
 
     @ManyToOne
@@ -91,14 +92,15 @@ public class Channel {
             return false;
         }
         Channel channel = (Channel) o;
-        return id == channel.id && title.equals(channel.title) && link.equals(channel.link);
+        return id == getId() && Objects.equals(getTitle(), channel.getTitle()) &&
+                Objects.equals(getLink(), channel.getLink());
     }
 
     @Override
     public int hashCode() {
         int result = (int) (id ^ (id >>> 32));
-        result = 31 * result + title.hashCode();
-        result = 31 * result + link.hashCode();
+        result = 31 * result + Objects.hash(title.hashCode());
+        result = 31 * result + Objects.hash(link.hashCode());
         return result;
     }
 }
