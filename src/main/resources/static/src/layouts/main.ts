@@ -71,6 +71,9 @@ import {Channel, NetworkService} from "../services/networkService";
     </v-toolbar>
     <v-content>
         <v-container fluid>
+            <div class="text-xs-center" v-if="loading">
+                <v-progress-circular slot="extension" :indeterminate="true" class="ma-0"></v-progress-circular> 
+            </div>
             <alert></alert>
             <confirm ref="confirm"></confirm>
             <router-view></router-view>
@@ -84,6 +87,8 @@ export default class Main extends Vue {
     private channels: Array<Channel> = [];
 
     private newChannel = "";
+    
+    private loading = false;
 
     private dialog = false;
 
@@ -94,6 +99,11 @@ export default class Main extends Vue {
             EventBus.$emit("error", e.message);
         }
     };
+    
+    mounted(): void {
+        EventBus.$on("loading", () => this.loading = true);
+        EventBus.$on("loadOff", () => this.loading = false);
+    }
 
     private async refresh(): Promise<void> {
         try {

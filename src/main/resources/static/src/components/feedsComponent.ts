@@ -8,7 +8,7 @@ import SettingsService from "../services/settingsService";
 
 @Component({
     template: `
-        <p v-if="!data.length" class="text-md-center" style="color: #666666">No feeds. Refresh later</p>
+        <p v-if="!data.length" class="text-xs-center" style="color: #666666">No feeds. Refresh later</p>
         <template v-else>
             <ul class="feed-list">
                 <li v-for="feedItem in data" class="my-3">

@@ -1,3 +1,5 @@
+import EventBus from "../eventBus"
+
 export class NetworkService {
 
     public static async getChannels(): Promise<Array<Channel>> {
@@ -70,7 +72,9 @@ export class NetworkService {
     }
 
     private static async sendRequest(path: string, configInit: any): Promise<Response> {
+        EventBus.$emit("loading");
         const response = await fetch(path, configInit);
+        EventBus.$emit("loadOff");
         if (response.status !== 200) {
             throw Error(response.headers.get("errorMessage") as string);
         }

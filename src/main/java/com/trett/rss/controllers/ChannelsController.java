@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
-import java.util.Arrays;
+import java.util.stream.StreamSupport;
 
 @RestController
 @RequestMapping(path = "/channel")
@@ -75,6 +75,10 @@ public class ChannelsController {
         try (InputStream inputStream = request.execute().getBody()) {
             Channel channel = new RssParser(inputStream).parse();
             User user = userRepository.findByPrincipalName(principal.getName());
+            if (StreamSupport.stream(channelRepository.findByUser(user).spliterator(), false)
+                    .anyMatch(channel::equals)) {
+                throw new RuntimeException("Channel already exist");
+            }
             channel.setUser(user);
             channel.setChannelLink(link);
             return channelRepository.save(channel).getId();
