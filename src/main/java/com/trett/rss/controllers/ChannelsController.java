@@ -29,18 +29,21 @@ import java.util.stream.StreamSupport;
 @RequestMapping(path = "/channel")
 public class ChannelsController {
 
-    private final ChannelRepository channelRepository;
+    private ChannelRepository channelRepository;
 
-    private final FeedItemRepository feedItemRepository;
+    private FeedItemRepository feedItemRepository;
 
-    private final UserRepository userRepository;
+    private UserRepository userRepository;
+
+    private RestTemplate restTemplate;
 
     @Autowired
     public ChannelsController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository, RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
+        this.restTemplate = restTemplate;
     }
 
     @GetMapping(path = "/all")
@@ -51,7 +54,6 @@ public class ChannelsController {
     @GetMapping(path = "/refresh")
     @JsonSerialize(using = IndexedListSerializer.class)
     public void refresh(Principal principal) {
-        RestTemplate restTemplate = new RestTemplate();
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         try {
             for (Channel channel : channelRepository.findByUser(userRepository.findByPrincipalName(principal.getName()))) {
@@ -63,14 +65,14 @@ public class ChannelsController {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Can't update feeds. Please try later");
+            throw new RuntimeException("Can't update feeds. Please try later", e);
         }
     }
 
     @PostMapping(path = "/add")
     public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
             throws IOException, XMLStreamException {
-        ClientHttpRequest request = new RestTemplate().getRequestFactory()
+        ClientHttpRequest request = restTemplate.getRequestFactory()
                 .createRequest(URI.create(link), HttpMethod.GET);
         try (InputStream inputStream = request.execute().getBody()) {
             Channel channel = new RssParser(inputStream).parse();

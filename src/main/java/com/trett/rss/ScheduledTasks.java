@@ -33,10 +33,14 @@ public class ScheduledTasks {
 
     private FeedItemRepository feedItemRepository;
 
+    private RestTemplate restTemplate;
+
     @Autowired
-    public ScheduledTasks(ChannelRepository channelRepository, FeedItemRepository feedItemRepository) {
+    public ScheduledTasks(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
+                          RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
+        this.restTemplate = restTemplate;
     }
 
     /**
@@ -46,7 +50,6 @@ public class ScheduledTasks {
      */
     @Scheduled(cron = "0 0 * * * ?")
     public void updateFeeds() throws XMLStreamException, IOException {
-        RestTemplate restTemplate = new RestTemplate();
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         logger.info("Starting update feeds at " + LocalDateTime.now());
         for (Channel channel : channelRepository.findAllEager()) {

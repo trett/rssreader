@@ -16,7 +16,7 @@ import SettingsService from "../services/settingsService";
                         @click="markRead([feedItem.id])"
                         target="_blank"
                         v-bind:class="{read: feedItem.read, new: !feedItem.read}">
-                        {{ feedItem.title }}
+                        {{ feedItem.title || (feedItem.description.substring(0, 50) + '...') }}
                     </a>
                     <p class="font-weight-black body-2">{{ feedItem.pubDate }}</p>
                     <div class="body-2" v-html="feedItem.description"></div>

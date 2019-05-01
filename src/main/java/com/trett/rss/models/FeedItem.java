@@ -22,7 +22,6 @@ public class FeedItem {
     @NotEmpty
     private String guid;
 
-    @NotEmpty
     private String title;
 
     @NotEmpty

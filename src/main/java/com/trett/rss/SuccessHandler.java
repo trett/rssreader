@@ -26,9 +26,9 @@ import java.util.Map;
 @Component
 public class SuccessHandler implements AuthenticationSuccessHandler {
 
-    private final OAuth2AuthorizedClientService authorizedClientService;
+    private OAuth2AuthorizedClientService authorizedClientService;
 
-    private final UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
     public SuccessHandler(OAuth2AuthorizedClientService authorizedClientService, UserRepository userRepository) {

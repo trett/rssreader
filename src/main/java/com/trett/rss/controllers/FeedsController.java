@@ -26,11 +26,11 @@ import java.util.stream.StreamSupport;
 @RequestMapping(path = "/feed")
 public class FeedsController {
 
-    private final ChannelRepository channelRepository;
+    private ChannelRepository channelRepository;
 
-    private final FeedItemRepository feedItemRepository;
+    private FeedItemRepository feedItemRepository;
 
-    private final UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
     public FeedsController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,

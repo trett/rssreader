@@ -14,7 +14,7 @@ public class SettingsConverter implements AttributeConverter<Settings, String> {
         try {
             return new ObjectMapper().writeValueAsString(attribute);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Parse error");
+            throw new RuntimeException("Parse error", e);
         }
     }
 
@@ -23,7 +23,7 @@ public class SettingsConverter implements AttributeConverter<Settings, String> {
         try {
             return new ObjectMapper().readValue(dbData, Settings.class);
         } catch (IOException e) {
-            throw new RuntimeException("Parse error");
+            throw new RuntimeException("Parse error", e);
         }
     }
 }

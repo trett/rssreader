@@ -95,7 +95,7 @@ public class RssParser {
             channel.setFeedItems(feedItems);
             return channel;
         } catch (Exception e) {
-            throw new RuntimeException("Can't parse feed");
+            throw new RuntimeException("Can't parse feed", e);
         }
     }
 

@@ -11,7 +11,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    private final AuthenticationSuccessHandler successHandler;
+    private AuthenticationSuccessHandler successHandler;
 
     @Autowired
     public SecurityConfig(AuthenticationSuccessHandler successHandler) {
