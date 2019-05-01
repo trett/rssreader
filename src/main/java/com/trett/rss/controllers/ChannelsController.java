@@ -1,7 +1,5 @@
 package com.trett.rss.controllers;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer;
 import com.trett.rss.dao.ChannelRepository;
 import com.trett.rss.dao.FeedItemRepository;
 import com.trett.rss.dao.UserRepository;
@@ -52,7 +50,6 @@ public class ChannelsController {
     }
 
     @GetMapping(path = "/refresh")
-    @JsonSerialize(using = IndexedListSerializer.class)
     public void refresh(Principal principal) {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         try {
