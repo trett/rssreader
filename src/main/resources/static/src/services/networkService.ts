@@ -1,15 +1,16 @@
-import EventBus from "../eventBus"
+import axios, {AxiosRequestConfig, AxiosResponse} from "axios";
+import EventBus from "../eventBus";
 
 export class NetworkService {
 
     public static async getChannels(): Promise<Array<Channel>> {
         const response = await this.httpGet("/channel/all");
-        return response.json();
+        return response.data;
     }
 
     public static async addChannel(channel: string): Promise<Number> {
         const response = await this.httpPost("/channel/add", channel);
-        return response.json();
+        return response.data;
     }
 
     public static async updateChannels(): Promise<void> {
@@ -22,12 +23,12 @@ export class NetworkService {
 
     public static async getAllFeeds(): Promise<Array<FeedItem>> {
         const response = await this.httpGet('/feed/all');
-        return response.json();
+        return response.data;
     }
 
     public static async getFeedsByChannelId(id: string): Promise<Array<FeedItem>> {
         const response = await this.httpGet(`/feed/get/${id}`);
-        return response.json();
+        return response.data;
     }
 
     public static async markRead(ids: Array<string>): Promise<void> {
@@ -36,7 +37,7 @@ export class NetworkService {
 
     public static async getSettings(): Promise<string> {
         const response = await this.httpGet("/settings");
-        return response.text();
+        return JSON.stringify(response.data);
     }
 
     public static async saveSettings(settings: string): Promise<void> {
@@ -47,37 +48,35 @@ export class NetworkService {
         await this.httpPost("/feed/deleteOldItems");
     }
 
-    private static async httpPost(path: string, body?: string): Promise<Response> {
-        const configInit = {
+    private static async httpPost(path: string, data?: string): Promise<AxiosResponse<any>> {
+        const configInit: AxiosRequestConfig = {
             headers: {
                 "Accept": "application/json",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
             },
             method: "POST",
-            body: body,
-            redirect: "follow",
-            credentials: "include"
+            baseURL: "/api",
+            data: data
         };
         return this.sendRequest(path, configInit);
     }
 
-    private static async httpGet(path: string): Promise<Response> {
-        const configInit = {
+    private static async httpGet(path: string): Promise<AxiosResponse<any>> {
+        const configInit: AxiosRequestConfig = {
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
             method: "GET",
-            mode: "no-cors",
-            redirect: "follow",
-            credentials: "include"
+            baseURL: "/api"
         };
         return this.sendRequest(path, configInit);
     }
 
-    private static async sendRequest(path: string, configInit: any): Promise<Response> {
+    private static async sendRequest(path: string, configInit: AxiosRequestConfig): Promise<AxiosResponse<any>> {
         EventBus.$emit("loading");
-        const response = await fetch(path, configInit);
+        const response = await axios(path, configInit);
         EventBus.$emit("loadOff");
-        if (response.status !== 200) {
-            throw Error(response.headers.get("errorMessage") as string);
-        }
         return response;
     }
 }

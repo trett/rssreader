@@ -24,7 +24,7 @@ import java.security.Principal;
 import java.util.stream.StreamSupport;
 
 @RestController
-@RequestMapping(path = "/channel")
+@RequestMapping(path = "/api/channel")
 public class ChannelsController {
 
     private ChannelRepository channelRepository;
@@ -69,18 +69,22 @@ public class ChannelsController {
     @PostMapping(path = "/add")
     public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
             throws IOException, XMLStreamException {
-        ClientHttpRequest request = restTemplate.getRequestFactory()
-                .createRequest(URI.create(link), HttpMethod.GET);
-        try (InputStream inputStream = request.execute().getBody()) {
-            Channel channel = new RssParser(inputStream).parse();
-            User user = userRepository.findByPrincipalName(principal.getName());
-            if (StreamSupport.stream(channelRepository.findByUser(user).spliterator(), false)
-                    .anyMatch(channel::equals)) {
-                throw new RuntimeException("Channel already exist");
+        try {
+            ClientHttpRequest request = restTemplate.getRequestFactory()
+                    .createRequest(URI.create(link), HttpMethod.GET);
+            try (InputStream inputStream = request.execute().getBody()) {
+                Channel channel = new RssParser(inputStream).parse();
+                User user = userRepository.findByPrincipalName(principal.getName());
+                if (StreamSupport.stream(channelRepository.findByUser(user).spliterator(), false)
+                        .anyMatch(channel::equals)) {
+                    throw new RuntimeException("Channel already exist");
+                }
+                channel.setUser(user);
+                channel.setChannelLink(link);
+                return channelRepository.save(channel).getId();
             }
-            channel.setUser(user);
-            channel.setChannelLink(link);
-            return channelRepository.save(channel).getId();
+        } catch (IOException e) {
+            throw new RuntimeException("URL is not valid");
         }
     }
 

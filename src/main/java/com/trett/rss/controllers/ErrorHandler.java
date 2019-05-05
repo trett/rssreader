@@ -13,7 +13,7 @@ public class ErrorHandler {
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<Object> handleConflict(Exception e, WebRequest request) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("errorMessage", e.getMessage());
+        headers.set("error-message", e.getMessage());
         return new ResponseEntity<>(e, headers, HttpStatus.BAD_REQUEST);
     }
 }

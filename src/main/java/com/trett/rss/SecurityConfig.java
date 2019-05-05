@@ -27,10 +27,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .csrf().disable()
                 .authorizeRequests()
-                .anyRequest().authenticated()
+                .antMatchers("/", "/api/**")
+                .authenticated()
                 .and()
                 .oauth2Login()
-                .successHandler(successHandler);
+                .successHandler(successHandler)
+                .and()
+                .exceptionHandling()
+                .authenticationEntryPoint(new CustomEntryPoint("/oauth2/authorization/google"));
     }
 }
 

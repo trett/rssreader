@@ -32,9 +32,9 @@ public class RssParser {
         Set<FeedItem> feedItems = new LinkedHashSet<>();
         XMLInputFactory factory = XMLInputFactory.newInstance();
         factory.setProperty(XMLInputFactory.IS_COALESCING, true);
-        XMLEventReader xmlReader = factory.createXMLEventReader(stream);
         boolean itemStart = false;
         try {
+            XMLEventReader xmlReader = factory.createXMLEventReader(stream);
             while (xmlReader.hasNext()) {
                 XMLEvent event = xmlReader.nextEvent();
                 if (event.isStartElement()) {

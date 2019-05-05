@@ -31,4 +31,3 @@ public class RssApplication {
         return restTemplate;
     }
 }
-

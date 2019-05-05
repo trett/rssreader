@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @RestController
-@RequestMapping(path = "/feed")
+@RequestMapping(path = "/api/feed")
 public class FeedsController {
 
     private ChannelRepository channelRepository;
