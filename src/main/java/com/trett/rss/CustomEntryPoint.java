@@ -14,8 +14,8 @@ public class CustomEntryPoint extends LoginUrlAuthenticationEntryPoint {
 
     private static final String X_REQUESTED_WITH = "X-Requested-With";
 
-    CustomEntryPoint(String loginFormUrl) {
-        super(loginFormUrl);
+    CustomEntryPoint() {
+        super("/oauth2/authorization/google");
     }
 
     @Override

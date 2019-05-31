@@ -5,18 +5,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    private AuthenticationSuccessHandler successHandler;
-
     @Autowired
-    public SecurityConfig(AuthenticationSuccessHandler successHandler) {
-        this.successHandler = successHandler;
-    }
+    private OidcUserService userInfoService;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -31,10 +28,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authenticated()
                 .and()
                 .oauth2Login()
-                .successHandler(successHandler)
+                .userInfoEndpoint()
+                .oidcUserService(userInfoService)
+                .and()
+                .successHandler(new SimpleUrlAuthenticationSuccessHandler())
                 .and()
                 .exceptionHandling()
-                .authenticationEntryPoint(new CustomEntryPoint("/oauth2/authorization/google"));
+                .authenticationEntryPoint(new CustomEntryPoint());
     }
 }
 

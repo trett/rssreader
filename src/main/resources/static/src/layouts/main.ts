@@ -11,7 +11,7 @@ import {Channel, NetworkService} from "../services/networkService";
     },
     template: `
 <v-app>
-    <v-navigation-drawer dark app>
+    <v-navigation-drawer dark app v-model="drawer">
         <v-list dense class="pt-0">
             <v-list-tile to="/settings" exact="true" exact-active-class="/settings">
                 <v-list-tile-avatar>
@@ -42,6 +42,9 @@ import {Channel, NetworkService} from "../services/networkService";
         </v-list>
     </v-navigation-drawer> 
     <v-toolbar app dense>
+        <v-btn icon @click.stop="drawer = !drawer">
+            <v-icon>fa-bars</v-icon>
+        </v-btn>
         <v-btn icon @click="refresh()">
               <v-icon>cached</v-icon>
         </v-btn>
@@ -91,6 +94,8 @@ export default class Main extends Vue {
     private loading = false;
 
     private dialog = false;
+
+    private drawer = null;
 
     async beforeMount(): Promise<void> {
         try {
