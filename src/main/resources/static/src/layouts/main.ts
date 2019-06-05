@@ -19,13 +19,13 @@ import {Channel, NetworkService} from "../services/networkService";
                 </v-list-tile-avatar>
                 <v-list-tile-content>Settings</v-list-tile-content>
             </v-list-tile>
-            <v-list-tile to="/" exact="true" exact-active-class="/">
+            <v-list-tile :to="{path: '/', query: {t: + new Date()}}" exact="true" exact-active-class="/">
                 <v-list-tile-avatar>
                     <v-icon>fa-rss</v-icon>
                 </v-list-tile-avatar>
                 <v-list-tile-content>All channels</v-list-tile-content>
             </v-list-tile>
-            <v-list-tile v-for="channel in channels" :key="channel.title" :to="'/channel/' + channel.id"
+            <v-list-tile v-for="channel in channels" :key="channel.title" :to="{path: '/channel/' + channel.id, query: {t: + new Date()}}"
                             exact="true" :exact-active-class="'/channel' + channel.id"">
                 <v-list-tile-avatar>
                     <v-icon>fa-rss</v-icon>
