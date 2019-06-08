@@ -9,26 +9,6 @@ img {
     object-fit: contain;
 }
 
-ul {
-    list-style-type: none;
-}
-
 .read {
-    color: lightgrey;
-    font-size: 24px !important;
-    background-color: #eeeeee;
-    text-decoration: none;
-    display: block;
-}
-
-.new {
-    color: #333333;
-    font-size: 24px !important;
-    background-color: #eeeeee;
-    text-decoration: none;
-    display: block;
-}
-
-.feed-list {
-    padding: 0;
+    color: #948e8e !important;
 }

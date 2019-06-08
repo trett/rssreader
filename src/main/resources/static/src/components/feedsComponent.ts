@@ -8,21 +8,25 @@ import SettingsService from "../services/settingsService";
 
 @Component({
     template: `
-        <p v-if="!data.length" class="text-xs-center" style="color: #666666">No feeds. Refresh later</p>
-        <template v-else>
-            <ul class="feed-list">
-                <li v-for="feedItem in data" class="my-3">
-                    <a  :href="feedItem.link"
-                        @click="markRead([feedItem.id])"
-                        target="_blank"
-                        v-bind:class="{read: feedItem.read, new: !feedItem.read}">
-                        {{ feedItem.title || (feedItem.description.substring(0, 50) + '...') }}
-                    </a>
-                    <p class="font-weight-black body-2">{{ feedItem.pubDate }}</p>
-                    <div class="body-2" v-html="feedItem.description"></div>
-                </li>
-            </ul>
-        </template>
+        <p v-if="!data.length" class="text-xs-center display-1" style="color: #666666">No feeds. Refresh later</p>
+        <v-container v-else fluid grid-list-md pa-0>
+            <v-layout row wrap>
+                <template v-for="feedItem in data">
+                    <v-flex xs12>
+                        <v-card tag="a"
+                                @click="markRead([feedItem.id]); window.open(feedItem.link, '_blank')"
+                                elevation="5"
+                                v-bind:class="{read: feedItem.read}">
+                            <v-card-title class="title">
+                                {{ feedItem.title || (feedItem.description.substring(0, 50) + '...') }}
+                            </v-card-title>
+                            <v-card-text v-html="feedItem.description"></v-card-text>
+                            <v-card-actions class="body-2">{{feedItem.pubDate}}</v-card-actions>
+                        </v-card>
+                    </v-flex>
+                </template>
+            </v-layout>
+        </v-container>
     `
 })
 export default class FeedsComponent extends Vue {

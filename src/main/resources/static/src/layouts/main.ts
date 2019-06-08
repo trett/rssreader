@@ -69,7 +69,7 @@ import {Channel, NetworkService} from "../services/networkService";
         </v-dialog>
         <v-spacer></v-spacer>
         <v-btn icon @click="markAllAsRead()">
-            <v-icon>fa-chevron-down</v-icon>
+            <v-icon>fa-check</v-icon>
         </v-btn>
     </v-toolbar>
     <v-content>
