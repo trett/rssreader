@@ -26,9 +26,8 @@ Vue.use(Router);
 const router = new Router({
     routes: [
         {
-            path: '/',
+            path: '*',
             component: FeedsComponent,
-            props: {id: null}
         },
         {
             path: '/channel/:id',

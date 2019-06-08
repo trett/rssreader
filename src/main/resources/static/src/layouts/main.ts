@@ -13,20 +13,20 @@ import {Channel, NetworkService} from "../services/networkService";
 <v-app>
     <v-navigation-drawer dark app v-model="drawer">
         <v-list dense class="pt-0">
-            <v-list-tile to="/settings" exact="true" exact-active-class="/settings">
+            <v-list-tile to="/settings" exact>
                 <v-list-tile-avatar>
                     <v-icon>fa-pencil-square-o</v-icon>
                 </v-list-tile-avatar>
                 <v-list-tile-content>Settings</v-list-tile-content>
             </v-list-tile>
-            <v-list-tile :to="{path: '/', query: {t: + new Date()}}" exact="true" exact-active-class="/">
+            <v-list-tile key="all" :to="{path: '/channel/all', query: {t: + new Date()}}">
                 <v-list-tile-avatar>
                     <v-icon>fa-rss</v-icon>
                 </v-list-tile-avatar>
                 <v-list-tile-content>All channels</v-list-tile-content>
             </v-list-tile>
-            <v-list-tile v-for="channel in channels" :key="channel.title" :to="{path: '/channel/' + channel.id, query: {t: + new Date()}}"
-                            exact="true" :exact-active-class="'/channel' + channel.id"">
+            <v-list-tile v-for="channel in channels" :key="channel.title"
+                        :to="{path: '/channel/' + channel.id, query: {t: + new Date()}}">
                 <v-list-tile-avatar>
                     <v-icon>fa-rss</v-icon>
                 </v-list-tile-avatar>
@@ -50,7 +50,7 @@ import {Channel, NetworkService} from "../services/networkService";
         </v-btn>
         <v-dialog v-model="dialog" persistent max-width="500"> 
             <template v-slot:activator="{ on }">
-                <v-btn icon color="light-green" v-on="on">
+                <v-btn icon v-on="on">
                     <v-icon dark>add</v-icon>
                 </v-btn>
             </template> 
