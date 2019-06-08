@@ -109,6 +109,7 @@
                 <directory>${basedir}/src/main/resources</directory>
                 <includes>
                     <include>static/index.html</include>
+                    <include>static/error.html</include>
                     <include>static/dist/application.js</include>
                     <include>application.properties</include>
                     <include>static/style.css</include>
