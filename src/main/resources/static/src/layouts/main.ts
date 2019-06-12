@@ -11,6 +11,13 @@ import {Channel, NetworkService} from "../services/networkService";
     },
     template: `
 <v-app>
+ <v-container bg fill-height text-xs-center v-if="loading">
+        <v-layout row wrap align-center>
+            <v-flex>
+                <v-progress-circular slot="extension" :indeterminate="true" size="64"></v-progress-circular> 
+            </v-flex>
+        </v-layout>
+      </v-container>
     <v-navigation-drawer dark app v-model="drawer">
         <v-list dense class="pt-0">
             <v-list-tile to="/settings" exact>
@@ -74,9 +81,6 @@ import {Channel, NetworkService} from "../services/networkService";
     </v-toolbar>
     <v-content>
         <v-container fluid>
-            <div class="text-xs-center" v-if="loading">
-                <v-progress-circular slot="extension" :indeterminate="true" class="ma-0"></v-progress-circular> 
-            </div>
             <alert></alert>
             <confirm ref="confirm"></confirm>
             <router-view></router-view>

@@ -15,7 +15,7 @@ import SettingsService from "../services/settingsService";
                     <v-flex xs12>
                         <v-card tag="a"
                                 @click="markRead([feedItem.id]); window.open(feedItem.link, '_blank')"
-                                elevation="5"
+                                elevation="3"
                                 v-bind:class="{read: feedItem.read}">
                             <v-card-title class="title">
                                 {{ feedItem.title || (feedItem.description.substring(0, 50) + '...') }}
