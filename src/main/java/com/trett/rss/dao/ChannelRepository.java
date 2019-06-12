@@ -11,6 +11,6 @@ public interface ChannelRepository extends CrudRepository<Channel, Long> {
 
     Iterable<Channel> findByUser(User user);
 
-    @Query("SELECT DISTINCT c FROM Channel c JOIN FETCH c.feedItems")
-    Iterable<Channel> findAllEager();
+    @Query("SELECT DISTINCT c FROM Channel c JOIN FETCH c.feedItems WHERE c.user = ?1")
+    Iterable<Channel> findByUserEager(User user);
 }

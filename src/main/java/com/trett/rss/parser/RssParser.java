@@ -99,13 +99,11 @@ public class RssParser {
         }
     }
 
-    public Set<FeedItem> geeNewFeeds(Channel channel) throws XMLStreamException {
-        return parse()
-                .getFeedItems()
-                .stream()
-                .filter(item -> !channel.getFeedItems().contains(item))
-                .peek(feedItem -> feedItem.setChannel(channel))
-                .collect(Collectors.toSet());
+    public Set<FeedItem> getNewFeeds(Channel channel, int deleteAfter) throws XMLStreamException {
+        return parse().getFeedItems().stream()
+                .filter(item -> !channel.getFeedItems().contains(item)
+                        && item.getPubDate().isAfter(LocalDateTime.now().minusDays(deleteAfter)))
+                .peek(feedItem -> feedItem.setChannel(channel)).collect(Collectors.toSet());
     }
 
     private String getValueFromReader(XMLEventReader reader) throws XMLStreamException {

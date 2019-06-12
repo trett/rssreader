@@ -53,12 +53,15 @@ public class ChannelsController {
     public void refresh(Principal principal) {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         try {
-            for (Channel channel : channelRepository.findByUser(userRepository.findByPrincipalName(principal.getName()))) {
-                ClientHttpRequest request = requestFactory
-                        .createRequest(URI.create(channel.getChannelLink()), HttpMethod.GET);
+            for (Channel channel : channelRepository
+                    .findByUser(userRepository.findByPrincipalName(principal.getName()))) {
+                ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
+                        HttpMethod.GET);
                 ClientHttpResponse execute = request.execute();
+                int deleteAfter = userRepository.findByPrincipalName(principal.getName()).getSettings()
+                        .getDeleteAfter();
                 try (InputStream inputStream = execute.getBody()) {
-                    feedItemRepository.saveAll(new RssParser(inputStream).geeNewFeeds(channel));
+                    feedItemRepository.saveAll(new RssParser(inputStream).getNewFeeds(channel, deleteAfter));
                 }
             }
         } catch (Exception e) {
