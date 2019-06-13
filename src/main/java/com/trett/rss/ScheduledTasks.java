@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.util.Iterator;
 import java.util.Set;
 
 @Component
@@ -42,7 +41,7 @@ public class ScheduledTasks {
 
     @Autowired
     public ScheduledTasks(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
-            UserRepository userRepository, RestTemplate restTemplate) {
+                          UserRepository userRepository, RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
@@ -51,7 +50,7 @@ public class ScheduledTasks {
 
     /**
      * Update all channels every hour
-     * 
+     *
      * @throws XMLStreamException
      * @throws IOException
      */
@@ -59,13 +58,9 @@ public class ScheduledTasks {
     public void updateFeeds() throws XMLStreamException, IOException {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         logger.info("Starting update feeds at " + LocalDateTime.now());
-        Iterator<User> userIterator = userRepository.findAll().iterator();
-        while (userIterator.hasNext()) {
-            User user = userIterator.next();
+        for (User user : userRepository.findAll()) {
             logger.info("Starting update feeds for user: " + user.getPrincipalName());
-            Iterator<Channel> channelIterator = channelRepository.findByUserEager(user).iterator();
-            while (channelIterator.hasNext()) {
-                Channel channel = channelIterator.next();
+            for (Channel channel : channelRepository.findByUserEager(user)) {
                 ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
                         HttpMethod.GET);
                 ClientHttpResponse execute = request.execute();
@@ -87,10 +82,17 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 0 * * ?")
     public void deleteFeeds() {
         logger.info("Starting delete old feeds");
-        Iterable<User> users = userRepository.findAll();
-        users.forEach(user -> {
+        userRepository.findAll().forEach(user -> {
             logger.info("delete feeds for user: " + user.getPrincipalName());
-            feedItemRepository.deleteFeedsOlderThan(LocalDateTime.now().minusDays(user.getSettings().getDeleteAfter()));
+            channelRepository.findByUserEager(user)
+                    .forEach(channel ->
+                            channel.getFeedItems()
+                                    .stream()
+                                    .filter(feedItem ->
+                                            feedItem.getPubDate()
+                                                    .isBefore(LocalDateTime.now()
+                                                            .minusDays(user.getSettings().getDeleteAfter())))
+                                    .forEach(feedItem -> feedItemRepository.delete(feedItem)));
         });
         logger.info("End of delete old feeds");
     }

@@ -76,7 +76,13 @@ public class FeedsController {
 
     @PostMapping("/deleteOldItems")
     public void deleteOldItems(Principal principal) {
-        int deleteAfter = userRepository.findByPrincipalName(principal.getName()).getSettings().getDeleteAfter();
-        feedItemRepository.deleteFeedsOlderThan(LocalDateTime.now().minusDays(deleteAfter));
+        User user = userRepository.findByPrincipalName(principal.getName());
+        channelRepository.findByUserEager(user).forEach(channel -> channel
+                .getFeedItems()
+                .stream()
+                .filter(feedItem ->
+                        feedItem.getPubDate()
+                                .isBefore(LocalDateTime.now().minusDays(user.getSettings().getDeleteAfter())))
+                .forEach(feedItem -> feedItemRepository.delete(feedItem)));
     }
 }
