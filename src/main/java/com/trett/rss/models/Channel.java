@@ -2,10 +2,11 @@ package com.trett.rss.models;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -88,19 +89,24 @@ public class Channel {
         if (this == o) {
             return true;
         }
+
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
         Channel channel = (Channel) o;
-        return id == getId() && Objects.equals(getTitle(), channel.getTitle()) &&
-                Objects.equals(getLink(), channel.getLink());
+        return new EqualsBuilder()
+                .append(getId(), channel.getId())
+                .append(getTitle(), channel.getTitle())
+                .append(getLink(), channel.getLink())
+                .isEquals();
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (id ^ (id >>> 32));
-        result = 31 * result + Objects.hash(title.hashCode());
-        result = 31 * result + Objects.hash(link.hashCode());
-        return result;
+        return new HashCodeBuilder(17, 37)
+                .append(getId())
+                .append(getTitle())
+                .append(getLink())
+                .toHashCode();
     }
 }

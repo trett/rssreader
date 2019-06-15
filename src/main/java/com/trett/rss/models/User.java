@@ -1,6 +1,8 @@
 package com.trett.rss.models;
 
 import com.trett.rss.converter.SettingsConverter;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
@@ -65,19 +67,27 @@ public class User {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         User user = (User) o;
 
-        if (!principalName.equals(user.principalName)) return false;
-        return email.equals(user.email);
+        return new EqualsBuilder()
+                .append(getPrincipalName(), user.getPrincipalName())
+                .append(getEmail(), user.getEmail())
+                .isEquals();
     }
 
     @Override
     public int hashCode() {
-        int result = principalName.hashCode();
-        result = 31 * result + email.hashCode();
-        return result;
+        return new HashCodeBuilder(17, 37)
+                .append(getPrincipalName())
+                .append(getEmail())
+                .toHashCode();
     }
 }

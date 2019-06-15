@@ -83,7 +83,7 @@ public class ScheduledTasks {
     public void deleteFeeds() {
         logger.info("Starting delete old feeds");
         userRepository.findAll().forEach(user -> {
-            logger.info("delete feeds for user: " + user.getPrincipalName());
+            logger.info("Delete feeds for user: " + user.getPrincipalName());
             channelRepository.findByUserEager(user)
                     .forEach(channel ->
                             channel.getFeedItems()
@@ -92,6 +92,7 @@ public class ScheduledTasks {
                                             feedItem.getPubDate()
                                                     .isBefore(LocalDateTime.now()
                                                             .minusDays(user.getSettings().getDeleteAfter())))
+                                    .peek(feedItem -> logger.info("Deleting feed: " + feedItem.getGuid()))
                                     .forEach(feedItem -> feedItemRepository.delete(feedItem)));
         });
         logger.info("End of delete old feeds");
