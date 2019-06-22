@@ -16,7 +16,6 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -70,8 +69,7 @@ public class ChannelsController {
     }
 
     @PostMapping(path = "/add")
-    public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
-            throws IOException, XMLStreamException {
+    public Long addFeed(@RequestBody @NotEmpty String link, Principal principal) throws IOException {
         try {
             ClientHttpRequest request = restTemplate.getRequestFactory()
                     .createRequest(URI.create(link), HttpMethod.GET);

@@ -55,7 +55,7 @@ public class ScheduledTasks {
      * @throws IOException
      */
     @Scheduled(cron = "0 0 * * * ?")
-    public void updateFeeds() throws XMLStreamException, IOException {
+    public void updateFeeds() throws IOException {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         logger.info("Starting update feeds at " + LocalDateTime.now());
         for (User user : userRepository.findAll()) {
