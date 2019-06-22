@@ -46,8 +46,7 @@ public class RssParser {
                 FeedItem feedItem = new FeedItem();
                 feedItem.setGuid(entry.getUri());
                 feedItem.setChannel(channel);
-                feedItem.setDescription(Optional.ofNullable(entry.getDescription())
-                        .map(SyndContent::getValue).orElse(""));
+                feedItem.setDescription(extractDescription(entry));
                 feedItem.setTitle(entry.getTitle());
                 feedItem.setPubDate(extractDate(entry));
                 feedItem.setLink(entry.getLink());
@@ -66,6 +65,17 @@ public class RssParser {
                 .filter(item -> !channel.getFeedItems().contains(item)
                         && item.getPubDate().isAfter(LocalDateTime.now().minusDays(deleteAfter)))
                 .peek(feedItem -> feedItem.setChannel(channel)).collect(Collectors.toSet());
+    }
+
+    private String extractDescription(SyndEntry entry) {
+        Optional<SyndContent> description = Optional.ofNullable(entry.getDescription());
+        if (!description.isPresent()) {
+            List<SyndContent> contents = entry.getContents();
+            if (contents != null && !contents.isEmpty()) {
+                description = Optional.of(contents.get(0));
+            }
+        }
+        return description.map(SyndContent::getValue).orElse("");
     }
 
     private LocalDateTime extractDate(SyndEntry entry) {
