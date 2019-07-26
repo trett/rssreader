@@ -55,21 +55,26 @@ public class ScheduledTasks {
      * @throws IOException
      */
     @Scheduled(cron = "0 0 * * * ?")
-    public void updateFeeds() throws IOException {
+    public void updateFeeds() {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         logger.info("Starting update feeds at " + LocalDateTime.now());
         for (User user : userRepository.findAll()) {
             logger.info("Starting update feeds for user: " + user.getPrincipalName());
             for (Channel channel : channelRepository.findByUserEager(user)) {
-                ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
-                        HttpMethod.GET);
-                ClientHttpResponse execute = request.execute();
-                try (InputStream inputStream = execute.getBody()) {
-                    Set<FeedItem> feedItems = new RssParser(inputStream).getNewFeeds(channel,
-                            user.getSettings().getDeleteAfter());
-                    logger.info(MessageFormat.format("{0} items was update for ''{1}''", feedItems.size(),
-                            channel.getTitle()));
-                    feedItemRepository.saveAll(feedItems);
+                try {
+                    ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
+                            HttpMethod.GET);
+                    ClientHttpResponse execute = request.execute();
+                    try (InputStream inputStream = execute.getBody()) {
+                        Set<FeedItem> feedItems = new RssParser(inputStream).getNewFeeds(channel,
+                                user.getSettings().getDeleteAfter());
+                        logger.info(MessageFormat.format("{0} items was update for ''{1}''", feedItems.size(),
+                                channel.getTitle()));
+                        feedItemRepository.saveAll(feedItems);
+                    }
+                } catch (Exception e) {
+                    // logging and update next channel
+                    logger.info("Error occured during parse channel: " + channel.getTitle(), e);
                 }
             }
         }

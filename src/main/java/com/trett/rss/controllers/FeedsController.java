@@ -8,6 +8,9 @@ import com.trett.rss.dao.UserRepository;
 import com.trett.rss.models.Channel;
 import com.trett.rss.models.FeedItem;
 import com.trett.rss.models.User;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +29,8 @@ import java.util.stream.StreamSupport;
 @RequestMapping(path = "/api/feed")
 public class FeedsController {
 
+    private Logger logger = LoggerFactory.getLogger(FeedsController.class);
+
     private ChannelRepository channelRepository;
 
     private FeedItemRepository feedItemRepository;
@@ -34,7 +39,7 @@ public class FeedsController {
 
     @Autowired
     public FeedsController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
-                           UserRepository userRepository) {
+            UserRepository userRepository) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
@@ -43,21 +48,26 @@ public class FeedsController {
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     @JsonSerialize(using = IterableSerializer.class)
     public List<FeedItem> getNews(Principal principal) {
+        String userName = principal.getName();
+        logger.info("Retrieving all feeds for principal: " + userName);
         Stream<FeedItem> feedItemStream = StreamSupport
-                .stream(channelRepository
-                        .findByUser(userRepository.findByPrincipalName(principal.getName())).spliterator(), false)
+                .stream(channelRepository.findByUser(userRepository.findByPrincipalName(userName)).spliterator(), false)
                 .flatMap(channel -> channel.getFeedItems().stream())
                 .sorted(Comparator.comparing(FeedItem::getPubDate).reversed());
-        if (userRepository.findByPrincipalName(principal.getName()).getSettings().isHideRead()) {
+        if (userRepository.findByPrincipalName(userName).getSettings().isHideRead()) {
             return feedItemStream.filter(feedItem -> !feedItem.isRead()).collect(Collectors.toList());
         }
-        return feedItemStream.collect(Collectors.toList());
+        List<FeedItem> items = feedItemStream.collect(Collectors.toList());
+        logger.info("Retrived " + items.size() + " feeds");
+        return items;
     }
 
     @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public Iterable<FeedItem> getFeedsByChannelId(@PathVariable @NotNull Long id, Principal principal) {
+        logger.info("Retrieving feeds for channel: " + id);
         User user = userRepository.findByPrincipalName(principal.getName());
         boolean hasChannel = false;
+        // checking rights for channel
         for (Channel channel : user.getChannels()) {
             hasChannel |= id == channel.getId();
         }
@@ -69,6 +79,7 @@ public class FeedsController {
 
     @PostMapping(path = "/read")
     public void setRead(@RequestBody @NotNull Long[] ids) {
+        logger.info("Marking feeds with ids " + Arrays.toString(ids) + " as read");
         Iterable<FeedItem> feedItems = feedItemRepository.findAllById(Arrays.asList(ids));
         feedItems.forEach(item -> item.setRead(true));
         feedItemRepository.saveAll(feedItems);
@@ -76,13 +87,13 @@ public class FeedsController {
 
     @PostMapping("/deleteOldItems")
     public void deleteOldItems(Principal principal) {
-        User user = userRepository.findByPrincipalName(principal.getName());
-        channelRepository.findByUserEager(user).forEach(channel -> channel
-                .getFeedItems()
-                .stream()
-                .filter(feedItem ->
-                        feedItem.getPubDate()
+        String userName = principal.getName();
+        logger.info("Deleting old feeds for principal: " + userName);
+        User user = userRepository.findByPrincipalName(userName);
+        channelRepository.findByUserEager(user)
+                .forEach(channel -> channel.getFeedItems().stream()
+                        .filter(feedItem -> feedItem.getPubDate()
                                 .isBefore(LocalDateTime.now().minusDays(user.getSettings().getDeleteAfter())))
-                .forEach(feedItem -> feedItemRepository.delete(feedItem)));
+                        .forEach(feedItem -> feedItemRepository.delete(feedItem)));
     }
 }
