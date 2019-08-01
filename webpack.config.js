@@ -1,6 +1,7 @@
 const path = require('path')
 const webpack = require('webpack')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
+const TSLintPlugin = require('tslint-webpack-plugin');
 
 module.exports = {
     entry: `./src/main/resources/static/src/application.ts`,
@@ -13,18 +14,27 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.vue$/,
-                loader: 'vue-loader',
-                options: {
-                    loaders: {
-                        // Since sass-loader (weirdly) has SCSS as its default parse mode, we map
-                        // the "scss" and "sass" values for the lang attribute to the right configs here.
-                        // other preprocessors should work out of the box, no loader config like this necessary.
-                        'scss': 'vue-style-loader!css-loader!sass-loader',
-                        'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax'
+                test: /\.s(c|a)ss$/,
+                use: [
+                    'vue-style-loader',
+                    'css-loader',
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                            implementation: require('sass'),
+                            fiber: require('fibers'),
+                            indentedSyntax: true // optional
+                        }
                     }
-                    // other vue-loader options go here
-                }
+                ]
+            },
+            {
+                test: /\.css$/i,
+                use: ['style-loader', 'css-loader']
+            },
+            {
+                test: /\.(png|woff|woff2|eot|ttf|svg)$/,
+                loader: 'url-loader?limit=100000'
             },
             {
                 test: /\.tsx?$/,
@@ -56,6 +66,11 @@ module.exports = {
     performance: {
         hints: false
     },
+    plugins: [
+        new TSLintPlugin({
+            files: ['./src/**/*.ts']
+        })
+    ],
     devtool: '#eval-source-map',
     optimization: {}
 }

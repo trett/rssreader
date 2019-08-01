@@ -3,82 +3,83 @@ import Component from "vue-class-component";
 import {Watch} from "vue-property-decorator";
 import AlertComponent from "../components/alertComponent";
 import EventBus from "../eventBus";
-import {Channel, NetworkService} from "../services/networkService";
+import {IChannel, NetworkService} from "../services/networkService";
 
 @Component({
     components: {
-        alert: AlertComponent
+        alert: AlertComponent,
     },
     template: `
 <v-app>
- <v-container bg fill-height text-xs-center v-if="loading">
-        <v-layout row wrap align-center>
-            <v-flex>
-                <v-progress-circular slot="extension" :indeterminate="true" size="64"></v-progress-circular> 
-            </v-flex>
-        </v-layout>
-      </v-container>
-    <v-navigation-drawer dark app v-model="drawer">
-        <v-list dense class="pt-0">
-            <v-list-tile to="/settings" exact>
-                <v-list-tile-avatar>
-                    <v-icon>fa-pencil-square-o</v-icon>
-                </v-list-tile-avatar>
-                <v-list-tile-content>Settings</v-list-tile-content>
-            </v-list-tile>
-            <v-list-tile key="all" :to="{path: '/channel/all', query: {t: + new Date()}}">
-                <v-list-tile-avatar>
-                    <v-icon>fa-rss</v-icon>
-                </v-list-tile-avatar>
-                <v-list-tile-content>All channels</v-list-tile-content>
-            </v-list-tile>
-            <v-list-tile v-for="channel in channels" :key="channel.title"
+    <v-overlay :value="loading">
+      <v-progress-circular indeterminate size="64"></v-progress-circular>
+    </v-overlay>
+    <v-navigation-drawer v-model="drawer" app dark width="300">
+        <v-list dense nav sub-header>
+            <v-list-item to="/settings" exact>
+                <v-list-item-action>
+                    <v-icon small>fa-edit</v-icon>
+                </v-list-item-action>
+                <v-list-item-content>
+                    <v-list-item-title>Settings</v-list-item-title>
+                </v-list-item-content>
+            </v-list-item>
+            <v-list-item key="all" :to="{path: '/channel/all', query: {t: + new Date()}}">
+                <v-list-item-action>
+                    <v-icon small>fa-rss</v-icon>
+                </v-list-item-action>
+                <v-list-item-content>
+                    <v-list-item-title>All channels</v-list-item-title>
+                </v-list-item-content>
+            </v-list-item>
+                <v-divider></v-divider>
+                <v-subheader>Channels</v-subheader>
+            <v-list-item v-for="channel in channels" :key="channel.title"
                         :to="{path: '/channel/' + channel.id, query: {t: + new Date()}}">
-                <v-list-tile-avatar>
-                    <v-icon>fa-rss</v-icon>
-                </v-list-tile-avatar>
-                <v-list-tile-content>
-                    <v-list-tile-title>{{ channel.title }}</v-list-tile-title>
-                </v-list-tile-content>
-                <v-list-tile-action>
-                    <v-btn icon ripple @click="deleteChannel(channel)">
-                        <v-icon color="grey lighten-1">fa-trash-o</v-icon>
+                <v-list-item-action>
+                    <v-icon small>fa-rss</v-icon>
+                </v-list-item-action>
+                <v-list-item-content>
+                    <v-list-item-title v-text="channel.title"></v-list-item-title>
+                </v-list-item-content>
+                <v-list-item-action>
+                    <v-btn small icon @click="deleteChannel(channel)" height="24">
+                        <v-icon color="grey lighten-1">delete</v-icon>
                     </v-btn>
-                </v-list-tile-action>
-            </v-list-tile>
+                </v-list-item-action>
+            </v-list-item>
         </v-list>
-    </v-navigation-drawer> 
-    <v-toolbar app dense>
-        <v-btn icon @click.stop="drawer = !drawer">
-            <v-icon>fa-bars</v-icon>
-        </v-btn>
+    </v-navigation-drawer>
+    <v-app-bar app dense>
+        <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         <v-btn icon @click="refresh()">
               <v-icon>cached</v-icon>
         </v-btn>
-        <v-dialog v-model="dialog" persistent max-width="500"> 
+        <v-dialog v-model="dialog" persistent max-width="500">
             <template v-slot:activator="{ on }">
                 <v-btn icon v-on="on">
                     <v-icon dark>add</v-icon>
                 </v-btn>
-            </template> 
+            </template>
             <v-card>
                 <v-container>
                     <v-card-title class="headline">Add feed</v-card-title>
-                        <v-text-field v-model="newChannel" label="URL" style="margin: 0 5px 0 5px" single-line autofocus>
-                        </v-text-field> 
+                        <v-text-field v-model="newChannel" label="URL" single-line autofocus
+                            style="margin: 0 5px 0 5px">
+                        </v-text-field>
                     <v-card-actions>
                         <v-spacer></v-spacer>
-                        <v-btn color="green darken-1" flat @click="dialog = false;">Cancel</v-btn>
-                        <v-btn color="green darken-1" flat @click="dialog = false; addChannel()">Add</v-btn>
+                        <v-btn color="green darken-1" text @click="dialog = false;">Cancel</v-btn>
+                        <v-btn color="green darken-1" text @click="dialog = false; addChannel()">Add</v-btn>
                     </v-card-actions>
                 </v-container>
-            </v-card> 
+            </v-card>
         </v-dialog>
         <v-spacer></v-spacer>
         <v-btn icon @click="markAllAsRead()">
-            <v-icon>fa-check</v-icon>
+            <v-icon>check</v-icon>
         </v-btn>
-    </v-toolbar>
+    </v-app-bar>
     <v-content>
         <v-container fluid>
             <alert></alert>
@@ -87,29 +88,29 @@ import {Channel, NetworkService} from "../services/networkService";
         </v-container>
     </v-content>
 </v-app>
-`
+`,
 })
 export default class Main extends Vue {
 
-    private channels: Array<Channel> = [];
+    private channels: IChannel[] = [];
 
     private newChannel = "";
-    
+
     private loading = false;
 
     private dialog = false;
 
     private drawer = null;
 
-    async beforeMount(): Promise<void> {
+    public async beforeMount(): Promise<void> {
         try {
             this.channels = await NetworkService.getChannels();
         } catch (e) {
             EventBus.$emit("error", e.message);
         }
-    };
-    
-    mounted(): void {
+    }
+
+    public mounted(): void {
         EventBus.$on("loading", () => this.loading = true);
         EventBus.$on("loadOff", () => this.loading = false);
     }
@@ -137,7 +138,7 @@ export default class Main extends Vue {
         EventBus.$emit("markAllAsRead");
     }
 
-    private async deleteChannel(channel: Channel): Promise<void> {
+    private async deleteChannel(channel: IChannel): Promise<void> {
         if (!confirm(`Do you really want to delete ${channel.title}?`)) {
             return;
         }

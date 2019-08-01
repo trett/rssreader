@@ -4,10 +4,18 @@ import EventBus from "../eventBus";
 
 @Component({
     template: `
-        <v-alert v-model="alert" dismissible :type="alertType" outline @input="close()">
+        <v-alert v-model="alert"
+                 dismissible
+                 dense
+                 colored-border
+                 :type="alertType"
+                 :color="alertType"
+                 border="left"
+                 elevation="2"
+                 @input="close()">
             {{ message }}
         </v-alert>
-    `
+    `,
 })
 export default class AlertComponent extends Vue {
 
@@ -17,11 +25,11 @@ export default class AlertComponent extends Vue {
 
     private message = "";
 
-    mounted(): void {
+    public mounted(): void {
         EventBus.$on("error", (message: string) => {
             this.alert = true;
             this.alertType = "error";
-            this.message = message
+            this.message = message;
         });
     }
 

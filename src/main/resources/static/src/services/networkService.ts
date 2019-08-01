@@ -3,12 +3,12 @@ import EventBus from "../eventBus";
 
 export class NetworkService {
 
-    public static async getChannels(): Promise<Array<Channel>> {
+    public static async getChannels(): Promise<IChannel[]> {
         const response = await this.httpGet("/channel/all");
         return response.data;
     }
 
-    public static async addChannel(channel: string): Promise<Number> {
+    public static async addChannel(channel: string): Promise<number> {
         const response = await this.httpPost("/channel/add", channel);
         return response.data;
     }
@@ -21,17 +21,17 @@ export class NetworkService {
         await this.httpPost("/channel/delete", channelId);
     }
 
-    public static async getAllFeeds(): Promise<Array<FeedItem>> {
-        const response = await this.httpGet('/feed/all');
+    public static async getAllFeeds(): Promise<FeedItem[]> {
+        const response = await this.httpGet("/feed/all");
         return response.data;
     }
 
-    public static async getFeedsByChannelId(id: string): Promise<Array<FeedItem>> {
+    public static async getFeedsByChannelId(id: string): Promise<FeedItem[]> {
         const response = await this.httpGet(`/feed/get/${id}`);
         return response.data;
     }
 
-    public static async markRead(ids: Array<string>): Promise<void> {
+    public static async markRead(ids: string[]): Promise<void> {
         await this.httpPost("/feed/read", JSON.stringify(ids));
     }
 
@@ -53,11 +53,10 @@ export class NetworkService {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest"
+                "X-Requested-With": "XMLHttpRequest",
             },
             method: "POST",
-            baseURL: "/api",
-            data: data
+            data,
         };
         return this.sendRequest(path, configInit);
     }
@@ -65,37 +64,46 @@ export class NetworkService {
     private static async httpGet(path: string): Promise<AxiosResponse<any>> {
         const configInit: AxiosRequestConfig = {
             headers: {
-                "X-Requested-With": "XMLHttpRequest"
+                "X-Requested-With": "XMLHttpRequest",
             },
             method: "GET",
-            baseURL: "/api"
         };
         return this.sendRequest(path, configInit);
     }
 
     private static async sendRequest(path: string, configInit: AxiosRequestConfig): Promise<AxiosResponse<any>> {
-        EventBus.$emit("loading");
-        const response = await axios(path, configInit);
-        EventBus.$emit("loadOff");
-        return response;
+        const instance = axios.create({
+            baseURL: "/api",
+        });
+
+        instance.interceptors.request.use(config => {
+            EventBus.$emit("loading");
+            return config;
+        });
+        instance.interceptors.response.use(response => {
+            EventBus.$emit("loadOff");
+            return response;
+        });
+        const answer = await instance(path, configInit);
+        return answer;
     }
 }
 
-export type FeedItem = Channel & {
+export type FeedItem = IChannel & {
     pubDate: string,
     description: string,
     read: boolean,
-    channelId: number
+    channelId: number,
+};
+
+export interface IChannel {
+    id: string;
+    title: string;
+    link: string;
+    feedItems: FeedItem[];
 }
 
-export type Channel = {
-    id: string,
-    title: string,
-    link: string,
-    feedItems: Array<FeedItem>;
-}
-
-export type Settings = {
-    hideRead: boolean,
-    deleteAfter: number
+export interface ISettings {
+    hideRead: boolean;
+    deleteAfter: number;
 }

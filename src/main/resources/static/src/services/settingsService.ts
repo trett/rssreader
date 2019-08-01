@@ -1,4 +1,4 @@
-import {NetworkService, Settings} from "./networkService";
+import {ISettings, NetworkService} from "./networkService";
 
 export default class SettingsService {
 
@@ -7,7 +7,7 @@ export default class SettingsService {
         return NetworkService.saveSettings(settings);
     }
 
-    public async getSettings(): Promise<Settings> {
+    public async getSettings(): Promise<ISettings> {
         let settings = localStorage.getItem("settings");
         if (!settings) {
             settings = await NetworkService.getSettings();

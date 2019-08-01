@@ -2,12 +2,12 @@ import Vue from "vue";
 import Component from "vue-class-component";
 import {Watch} from "vue-property-decorator";
 import EventBus from "../eventBus";
-import {NetworkService, Settings} from "../services/networkService";
+import {ISettings, NetworkService} from "../services/networkService";
 import SettingsService from "../services/settingsService";
 
 @Component({
     template: `
-        <v-layout row wrap>
+        <v-layout wrap>
             <v-flex xs12>
                 <v-checkbox v-model="hideRead" label="Show only unread" :true-value="true" mask="##"></v-checkbox>
             </v-flex>
@@ -21,7 +21,7 @@ import SettingsService from "../services/settingsService";
                 <v-btn color="primary" @click="saveSettings()">Save</v-btn>
             </v-flex>
         </v-layout>
-    `
+    `,
 })
 export default class SettingsComponent extends Vue {
 
@@ -29,11 +29,11 @@ export default class SettingsComponent extends Vue {
 
     private deleteAfter = 7;
 
-    private settings: Settings;
+    private settings: ISettings;
 
     private settingsService: SettingsService;
 
-    async beforeMount(): Promise<void> {
+    public async beforeMount(): Promise<void> {
         this.settingsService = new SettingsService();
         try {
             this.settings = await this.settingsService.getSettings();

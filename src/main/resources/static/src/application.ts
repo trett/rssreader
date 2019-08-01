@@ -1,16 +1,16 @@
 import axios from "axios";
 import Vue from "vue";
 import Router from "vue-router";
-import Vuetify from "vuetify";
 import AlertComponent from "./components/alertComponent";
 import FeedsComponent from "./components/feedsComponent";
 import SettingsComponent from "./components/settingsComponent";
 import EventBus from "./eventBus";
 import Main from "./layouts/main";
+import vuetify from "./plugins/vuetify";
 
-axios.interceptors.response.use(function (response) {
+axios.interceptors.response.use(response => {
     return response;
-}, function (error) {
+}, error => {
     EventBus.$emit("loadOff");
     if (401 === error.response.status) {
         // TODO: temp hack to refresh auth
@@ -20,35 +20,35 @@ axios.interceptors.response.use(function (response) {
     }
 });
 
-Vue.use(Vuetify);
 Vue.use(Router);
 
 const router = new Router({
     routes: [
         {
-            path: '*',
+            path: "*",
             component: FeedsComponent,
         },
         {
-            path: '/channel/:id',
-            component: FeedsComponent
+            path: "/channel/:id",
+            component: FeedsComponent,
         },
         {
-            path: '/settings',
-            component: SettingsComponent
+            path: "/settings",
+            component: SettingsComponent,
         },
         {
-            path: '/error',
-            component: AlertComponent
-        }
-    ]
+            path: "/error",
+            component: AlertComponent,
+        },
+    ],
 });
 
-new Vue({
+const app = new Vue({
     router,
+    vuetify,
     el: "#app",
     template: `<Main></Main>`,
     components: {
-        Main
-    }
+        Main,
+    },
 });
