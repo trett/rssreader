@@ -34,8 +34,7 @@ public class FeedItem {
     @Type(type = "org.hibernate.type.TextType")
     private String description;
 
-    @ManyToOne
-    @JoinColumn
+    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnore
     private Channel channel;
 

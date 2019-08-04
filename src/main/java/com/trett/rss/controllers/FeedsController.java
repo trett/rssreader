@@ -8,7 +8,6 @@ import com.trett.rss.dao.UserRepository;
 import com.trett.rss.models.Channel;
 import com.trett.rss.models.FeedItem;
 import com.trett.rss.models.User;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +38,7 @@ public class FeedsController {
 
     @Autowired
     public FeedsController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
-            UserRepository userRepository) {
+                           UserRepository userRepository) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
@@ -51,7 +50,8 @@ public class FeedsController {
         String userName = principal.getName();
         logger.info("Retrieving all feeds for principal: " + userName);
         Stream<FeedItem> feedItemStream = StreamSupport
-                .stream(channelRepository.findByUser(userRepository.findByPrincipalName(userName)).spliterator(), false)
+                .stream(channelRepository
+                        .findByUserEager(userRepository.findByPrincipalName(userName)).spliterator(), false)
                 .flatMap(channel -> channel.getFeedItems().stream())
                 .sorted(Comparator.comparing(FeedItem::getPubDate).reversed());
         if (userRepository.findByPrincipalName(userName).getSettings().isHideRead()) {
@@ -68,13 +68,17 @@ public class FeedsController {
         User user = userRepository.findByPrincipalName(principal.getName());
         boolean hasChannel = false;
         // checking rights for channel
-        for (Channel channel : user.getChannels()) {
+        for (Channel channel : channelRepository.findByUser(user)) {
             hasChannel |= id == channel.getId();
         }
         if (!hasChannel) {
             throw new RuntimeException("Channel not found");
         }
-        return feedItemRepository.findByChannelIdOrderByPubDateDesc(id);
+        Iterable<FeedItem> feedItems = feedItemRepository.findByChannelIdOrderByPubDateDesc(id);
+        return user.getSettings().isHideRead() ?
+                StreamSupport.stream(feedItems.spliterator(), false)
+                        .filter(item -> !item.isRead()).collect(Collectors.toList()) :
+                feedItems;
     }
 
     @PostMapping(path = "/read")

@@ -82,11 +82,13 @@ if (process.env.NODE_ENV === 'production') {
         new UglifyJsPlugin({
             cache: true,
             parallel: true,
-            sourceMap: true,
             uglifyOptions: {
                 compress: true,
                 ecma: 6,
-                mangle: true
+                mangle: true,
+                output: {
+                    comments: false
+                }
             }
         }),
         new webpack.DefinePlugin({

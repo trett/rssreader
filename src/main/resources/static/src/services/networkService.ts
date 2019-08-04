@@ -1,5 +1,5 @@
-import axios, {AxiosRequestConfig, AxiosResponse} from "axios";
-import EventBus from "../eventBus";
+import {AxiosRequestConfig, AxiosResponse} from "axios";
+import http from "./http";
 
 export class NetworkService {
 
@@ -72,19 +72,7 @@ export class NetworkService {
     }
 
     private static async sendRequest(path: string, configInit: AxiosRequestConfig): Promise<AxiosResponse<any>> {
-        const instance = axios.create({
-            baseURL: "/api",
-        });
-
-        instance.interceptors.request.use(config => {
-            EventBus.$emit("loading");
-            return config;
-        });
-        instance.interceptors.response.use(response => {
-            EventBus.$emit("loadOff");
-            return response;
-        });
-        const answer = await instance(path, configInit);
+        const answer = await http(path, configInit);
         return answer;
     }
 }

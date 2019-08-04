@@ -19,7 +19,7 @@ public class User {
     @NotEmpty
     private String email;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Channel> channels;
 
     @Convert(converter = SettingsConverter.class)

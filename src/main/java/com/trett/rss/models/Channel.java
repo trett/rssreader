@@ -28,11 +28,10 @@ public class Channel {
     @NotEmpty
     private String link;
 
-    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<FeedItem> feedItems;
 
-    @ManyToOne
-    @JoinColumn
+    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnore
     private User user;
 

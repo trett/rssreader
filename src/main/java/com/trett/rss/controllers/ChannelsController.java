@@ -65,7 +65,7 @@ public class ChannelsController {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         try {
             for (Channel channel : channelRepository
-                    .findByUser(userRepository.findByPrincipalName(userName))) {
+                    .findByUserEager(userRepository.findByPrincipalName(userName))) {
                 logger.info("Starting update feeds for channel: " + channel.getTitle());
                 ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
                         HttpMethod.GET);
