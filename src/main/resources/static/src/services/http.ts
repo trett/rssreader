@@ -5,9 +5,9 @@ const http = axios.create({
     baseURL: "/api",
 });
 http.interceptors.response.use(response => {
-    return response;
-}, error => {
     EventBus.$emit("loadOff");
+    return response.data;
+}, error => {
     if (401 === error.response.status) {
         // TODO: temp hack to refresh auth
         window.location.reload(true);
@@ -18,10 +18,6 @@ http.interceptors.response.use(response => {
 http.interceptors.request.use(config => {
     EventBus.$emit("loading");
     return config;
-});
-http.interceptors.response.use(response => {
-    EventBus.$emit("loadOff");
-    return response;
 });
 
 export default http;

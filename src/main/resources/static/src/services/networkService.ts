@@ -4,13 +4,11 @@ import http from "./http";
 export class NetworkService {
 
     public static async getChannels(): Promise<IChannel[]> {
-        const response = await this.httpGet("/channel/all");
-        return response.data;
+        return this.httpGet("/channel/all");
     }
 
     public static async addChannel(channel: string): Promise<number> {
-        const response = await this.httpPost("/channel/add", channel);
-        return response.data;
+        return this.httpPost("/channel/add", channel);
     }
 
     public static async updateChannels(): Promise<void> {
@@ -22,33 +20,30 @@ export class NetworkService {
     }
 
     public static async getAllFeeds(): Promise<FeedItem[]> {
-        const response = await this.httpGet("/feed/all");
-        return response.data;
+        return this.httpGet("/feed/all");
     }
 
     public static async getFeedsByChannelId(id: string): Promise<FeedItem[]> {
-        const response = await this.httpGet(`/feed/get/${id}`);
-        return response.data;
+        return this.httpGet(`/feed/get/${id}`);
     }
 
     public static async markRead(ids: string[]): Promise<void> {
         await this.httpPost("/feed/read", JSON.stringify(ids));
     }
 
-    public static async getSettings(): Promise<string> {
-        const response = await this.httpGet("/settings");
-        return JSON.stringify(response.data);
+    public static async getSettings(): Promise<ISettings> {
+        return this.httpGet("/settings");
     }
 
-    public static async saveSettings(settings: string): Promise<void> {
-        await this.httpPost("/settings", settings);
+    public static async saveSettings(settings: ISettings): Promise<void> {
+        await this.httpPost("/settings", JSON.stringify(settings));
     }
 
     public static async deleteOldItems(): Promise<void> {
         await this.httpPost("/feed/deleteOldItems");
     }
 
-    private static async httpPost(path: string, data?: string): Promise<AxiosResponse<any>> {
+    private static async httpPost(path: string, data?: string): Promise<any> {
         const configInit: AxiosRequestConfig = {
             headers: {
                 "Accept": "application/json",
@@ -61,7 +56,7 @@ export class NetworkService {
         return this.sendRequest(path, configInit);
     }
 
-    private static async httpGet(path: string): Promise<AxiosResponse<any>> {
+    private static async httpGet(path: string): Promise<any> {
         const configInit: AxiosRequestConfig = {
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
@@ -71,9 +66,8 @@ export class NetworkService {
         return this.sendRequest(path, configInit);
     }
 
-    private static async sendRequest(path: string, configInit: AxiosRequestConfig): Promise<AxiosResponse<any>> {
-        const answer = await http(path, configInit);
-        return answer;
+    private static async sendRequest(path: string, configInit: AxiosRequestConfig): Promise<any> {
+        return http(path, configInit);
     }
 }
 

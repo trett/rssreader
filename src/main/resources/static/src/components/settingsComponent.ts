@@ -53,7 +53,7 @@ export default class SettingsComponent extends Vue {
 
     private async saveSettings(): Promise<void> {
         this.settings.deleteAfter = this.deleteAfter;
-        return this.settingsService.setSettings(JSON.stringify(this.settings));
+        return this.settingsService.setSettings(this.settings);
     }
 
     private async deleteOldItems(): Promise<void> {

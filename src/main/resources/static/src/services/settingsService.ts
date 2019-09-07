@@ -2,18 +2,17 @@ import {ISettings, NetworkService} from "./networkService";
 
 export default class SettingsService {
 
-    public async setSettings(settings: string): Promise<void> {
-        localStorage.setItem("settings", settings);
-        return NetworkService.saveSettings(settings);
+    private settings: ISettings;
+
+    public async setSettings(settings: ISettings): Promise<void> {
+        this.settings = settings;
+        return NetworkService.saveSettings(this.settings);
     }
 
     public async getSettings(): Promise<ISettings> {
-        let settings = localStorage.getItem("settings");
-        if (!settings) {
-            settings = await NetworkService.getSettings();
-            localStorage.setItem("settings", settings);
+        if (!this.settings) {
+            this.settings = await NetworkService.getSettings();
         }
-        return JSON.parse(settings);
+        return this.settings;
     }
-
 }
