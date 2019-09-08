@@ -27,7 +27,7 @@
 ### Node ###
 /node_modules/
 /target-grunt/
-/src/main/resources/static/dist/*
+
 package-lock.json
 .vscode/
 mvnw

@@ -1,14 +1,16 @@
 const path = require('path')
 const webpack = require('webpack')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
-const TSLintPlugin = require('tslint-webpack-plugin');
+const TSLintPlugin = require('tslint-webpack-plugin')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const webPath = './src/main/web'
 
 module.exports = {
-    entry: `./src/main/resources/static/src/application.ts`,
+    entry: `${webPath}/src/application.ts`,
     output: {
-        path: path.resolve(__dirname, './src/main/resources/static/dist'),
-        publicPath: `./src/main/resources/static/dist`,
-        filename: 'application.js'
+        path: path.resolve(__dirname, `./target/classes/static/dist`),
+        publicPath: `./dist`,
+        filename: 'application-[hash:6].js',
     },
     mode: 'production',
     module: {
@@ -24,55 +26,59 @@ module.exports = {
                             implementation: require('sass'),
                             fiber: require('fibers'),
                             indentedSyntax: true // optional
-                        }
-                    }
-                ]
+                        },
+                    },
+                ],
             },
             {
                 test: /\.css$/i,
-                use: ['style-loader', 'css-loader']
+                use: ['style-loader', 'css-loader'],
             },
             {
                 test: /\.(png|woff|woff2|eot|ttf|svg)$/,
-                loader: 'url-loader?limit=100000'
+                loader: 'url-loader?limit=100000',
             },
             {
                 test: /\.tsx?$/,
                 loader: 'ts-loader',
                 exclude: /node_modules/,
                 options: {
-                    appendTsSuffixTo: [/\.vue$/]
-                }
+                    appendTsSuffixTo: [/\.vue$/],
+                },
             },
             {
                 test: /\.(png|jpg|gif|svg)$/,
                 loader: 'file-loader',
                 options: {
-                    name: '[name].[ext]?[hash]'
-                }
-            }
-        ]
+                    name: '[name].[ext]?[hash]',
+                },
+            },
+        ],
     },
     resolve: {
         extensions: ['.ts', '.js', '.vue', '.json'],
         alias: {
-            'vue$': 'vue/dist/vue.esm.js'
-        }
+            'vue$': 'vue/dist/vue.esm.js',
+        },
     },
     devServer: {
         historyApiFallback: true,
-        noInfo: true
+        noInfo: true,
     },
     performance: {
-        hints: false
+        hints: false,
     },
     plugins: [
         new TSLintPlugin({
-            files: ['./src/**/*.ts']
-        })
+            files: ['./src/**/*.ts'],
+        }),
+        new HtmlWebpackPlugin({
+            filename: path.join(__dirname , './target/classes/static/index.html'),
+            template: path.join(__dirname , `${webPath}/index.html`),
+        }),
     ],
     devtool: '#eval-source-map',
-    optimization: {}
+    optimization: {},
 }
 
 if (process.env.NODE_ENV === 'production') {
@@ -87,17 +93,17 @@ if (process.env.NODE_ENV === 'production') {
                 ecma: 6,
                 mangle: true,
                 output: {
-                    comments: false
-                }
-            }
+                    comments: false,
+                },
+            },
         }),
         new webpack.DefinePlugin({
             'process.env': {
-                NODE_ENV: '\'production\''
-            }
+                NODE_ENV: '\'production\'',
+            },
         }),
         new webpack.LoaderOptionsPlugin({
-            minimize: true
-        })
+            minimize: true,
+        }),
     ])
 }

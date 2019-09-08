@@ -97,7 +97,7 @@
                 <version>1.4.1</version>
                 <executions>
                     <execution>
-                        <phase>generate-sources</phase>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>create-resources</goal>
                             <goal>npm</goal>
@@ -106,11 +106,36 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <sourceDirectory>${basedir}/src/main/resources/static</sourceDirectory>
+                    <sourceDirectory>${basedir}/src/main/web</sourceDirectory>
                     <gruntOptions>
                         <gruntOption>--verbose</gruntOption>
                     </gruntOptions>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/classes/static</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/main/web</directory>
+                                    <includes>
+                                        <include>error.html</include>
+                                        <include>style.css</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -125,8 +150,8 @@
                 <directory>${basedir}/src/main/resources</directory>
                 <includes>
                     <include>static/index.html</include>
+                    <include>static/dist/*.js</include>
                     <include>static/error.html</include>
-                    <include>static/dist/application.js</include>
                     <include>application.properties</include>
                     <include>static/style.css</include>
                 </includes>

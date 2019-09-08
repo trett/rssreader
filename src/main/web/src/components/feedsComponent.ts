@@ -59,10 +59,8 @@ export default class FeedsComponent extends Vue {
 
     private async setChannelData(id: string) {
         try {
-            const feedItems = !id || id === "all"  ?
+            this.data = !id || id === "all"  ?
                 await NetworkService.getAllFeeds() : await NetworkService.getFeedsByChannelId(id) ;
-            this.data = (await this.settingsService.getSettings()).hideRead ?
-                feedItems.filter(feedItem => !feedItem.read) : feedItems;
         } catch (e) {
             EventBus.$emit("error", e.message);
         }
