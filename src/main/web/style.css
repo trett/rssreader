@@ -8,6 +8,11 @@ img {
 .read {
     color: #948e8e !important;
 }
+
 .unread {
     color: rgba(0,0,0,.87)!important
+}
+
+.feed {
+    display: grid !important;
 }
