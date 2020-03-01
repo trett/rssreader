@@ -1,9 +1,9 @@
 import Vue from "vue";
 import Component from "vue-class-component";
-import {Watch} from "vue-property-decorator";
-import {Route} from "vue-router";
+import { Watch } from "vue-property-decorator";
+import { Route } from "vue-router";
 import EventBus from "../eventBus";
-import {FeedItem, NetworkService} from "../services/networkService";
+import { FeedItem, NetworkService } from "../services/networkService";
 import SettingsService from "../services/settingsService";
 
 @Component({
@@ -17,9 +17,9 @@ import SettingsService from "../services/settingsService";
                                 @click="markRead([feedItem.id]); window.open(feedItem.link, '_blank')"
                                 elevation="3"
                                 v-bind:class="{read: feedItem.read}"
-				v-ripple="false"
-				class="feed">
-                            <v-card-title class="title">
+                                v-ripple="false"
+                                class="feed">
+                            <v-card-title class="title" style="word-break: break-word;">
                                 {{ feedItem.title || (feedItem.description.substring(0, 50) + '...') }}
                             </v-card-title>
                             <v-card-text>
@@ -60,8 +60,8 @@ export default class FeedsComponent extends Vue {
 
     private async setChannelData(id: string) {
         try {
-            this.data = !id || id === "all"  ?
-                await NetworkService.getAllFeeds() : await NetworkService.getFeedsByChannelId(id) ;
+            this.data = !id || id === "all" ?
+                await NetworkService.getAllFeeds() : await NetworkService.getFeedsByChannelId(id);
         } catch (e) {
             EventBus.$emit("error", e.message);
         }
