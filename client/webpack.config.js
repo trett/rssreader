@@ -39,9 +39,9 @@ module.exports = (env, argv) => ({
       },
     plugins: [
         new webpack.EnvironmentPlugin({
-            SERVER_PORT: 8080,
+            CLIENT_PORT: 8080,
             CLIENT_ID: "",
-            API_PORT: 8081,
+            SERVER_PORT: 8082,
           }),
         new HtmlWebpackPlugin({
             template: 'client/src/index.html'

@@ -2,7 +2,7 @@ import axios from "axios";
 import EventBus from "../eventBus";
 import { OAuthService } from "./oauthService";
 
-const apiPort = process.env.API_PORT;
+const apiPort = process.env.SERVER_PORT;
 const http = axios.create({
     baseURL: `http://localhost:${apiPort}/api`,
 });

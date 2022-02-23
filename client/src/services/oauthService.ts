@@ -1,7 +1,5 @@
 export class OAuthService {
 
-    // private static readonly SERVER_PORT = 8080;
-
     public static doAuth(): void {
         if (window.location.hash) {
             const searchParams = new URLSearchParams(window.location.hash.substring(2)); // removing leading ("/#")
@@ -10,7 +8,7 @@ export class OAuthService {
             // check if redirect from oauth
             if (state === "authorized" && accessToken) {
                 localStorage.setItem("access_token", accessToken as string);
-                window.location.href = "http://localhost:" + process.env.SERVER_PORT;
+                window.location.href = "http://localhost:" + process.env.CLIENT_PORT;
                 return;
             }
         }
@@ -31,7 +29,7 @@ export class OAuthService {
         // Parameters to pass to OAuth 2.0 endpoint.
         const params = new Map<string, string>([
             ["client_id", process.env.CLIENT_ID as string],
-            ["redirect_uri", "http://localhost:" + process.env.SERVER_PORT as string],
+            ["redirect_uri", "http://localhost:" + process.env.CLIENT_PORT as string],
             ["response_type", "token"],
             ["scope", "https://www.googleapis.com/auth/drive.metadata.readonly"],
             ["include_granted_scopes", "true"],
