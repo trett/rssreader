@@ -3,6 +3,7 @@ package ru.trett.rss;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
@@ -27,18 +28,19 @@ public class RssApplication {
 
     @Bean
     public RestTemplate restTemplate() {
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory();
         RestTemplate restTemplate = new RestTemplate(factory);
-        HttpClient httpClient = HttpClientBuilder.create()
-                .setRedirectStrategy(new LaxRedirectStrategy())
-                .build();
+        HttpClient httpClient =
+                HttpClientBuilder.create().setRedirectStrategy(new LaxRedirectStrategy()).build();
         factory.setHttpClient(httpClient);
         return restTemplate;
     }
 
     @Bean
     public HttpMessageConverter<Object> createXmlHttpMessageConverter() {
-        MappingJackson2HttpMessageConverter messageConverter = new MappingJackson2HttpMessageConverter();
+        MappingJackson2HttpMessageConverter messageConverter =
+                new MappingJackson2HttpMessageConverter();
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new Hibernate5Module());
         mapper.registerModule(new JavaTimeModule());

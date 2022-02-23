@@ -2,11 +2,13 @@ package ru.trett.rss.models;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import ru.trett.rss.converter.SettingsConverter;
+
+import java.util.Set;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
-import java.util.Set;
 
 @Entity
 public class User {
@@ -16,8 +18,7 @@ public class User {
     @Column(name = "principal_name", unique = true, updatable = false)
     private String principalName;
 
-    @NotEmpty
-    private String email;
+    @NotEmpty private String email;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Channel> channels;
@@ -25,8 +26,7 @@ public class User {
     @Convert(converter = SettingsConverter.class)
     private Settings settings;
 
-    public User() {
-    }
+    public User() {}
 
     public User(String principalName, String email) {
         this.principalName = principalName;

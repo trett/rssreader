@@ -14,18 +14,14 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.UriComponentsBuilder;
-import ru.trett.rss.dao.UserRepository;
-import ru.trett.rss.models.Settings;
-import ru.trett.rss.models.User;
+
+import java.io.IOException;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class TokenAuthenticationFilter extends OncePerRequestFilter {
@@ -36,20 +32,24 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private final String authUrl;
 
     @Autowired
-    public TokenAuthenticationFilter(@NonNull RestTemplate restTemplate, @Value("${auth.url}") String authUrl) {
+    public TokenAuthenticationFilter(
+            @NonNull RestTemplate restTemplate, @Value("${auth.url}") String authUrl) {
         this.restTemplate = restTemplate;
         this.authUrl = authUrl;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String token = request.getHeader(HttpHeaders.AUTHORIZATION);
         try {
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(authUrl).queryParam("access_token", token);
+            UriComponentsBuilder builder =
+                    UriComponentsBuilder.fromUriString(authUrl).queryParam("access_token", token);
             String uriString = builder.toUriString();
             LOGGER.info(uriString);
-            ResponseEntity<UserInfo> userInfo = restTemplate.getForEntity(uriString, UserInfo.class);
+            ResponseEntity<UserInfo> userInfo =
+                    restTemplate.getForEntity(uriString, UserInfo.class);
             Authentication authentication =
                     new CustomAuthenticationToken(userInfo.getBody().sub, userInfo.getBody().email);
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -62,10 +62,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     @NotNull
     private static class UserInfo {
 
-        @NotNull
-        public String sub;
+        @NotNull public String sub;
 
-        @NotNull
-        public String email;
+        @NotNull public String email;
     }
 }

@@ -3,6 +3,7 @@ package ru.trett.rss.dao;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
+
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.models.User;
 

@@ -6,8 +6,10 @@ import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.models.FeedItem;
 
@@ -38,21 +40,28 @@ public class RssParser {
             try (XmlReader xmlReader = new XmlReader(stream)) {
                 SyndFeed feed = input.build(xmlReader);
                 String title = feed.getTitle();
-                logger.info(MessageFormat.format("Parse channel: title ''{0}'', type ''{1}''", title, feed.getFeedType()));
+                logger.info(
+                        MessageFormat.format(
+                                "Parse channel: title ''{0}'', type ''{1}''",
+                                title, feed.getFeedType()));
                 Channel channel = new Channel();
                 channel.setTitle(title);
                 channel.setLink(feed.getLink());
                 List<SyndEntry> entries = feed.getEntries();
-                Set<FeedItem> feedItems = entries.stream().map(entry -> {
-                    FeedItem feedItem = new FeedItem();
-                    feedItem.setGuid(entry.getUri());
-                    feedItem.setChannel(channel);
-                    feedItem.setDescription(extractDescription(entry));
-                    feedItem.setTitle(entry.getTitle());
-                    feedItem.setPubDate(extractDate(entry));
-                    feedItem.setLink(entry.getLink());
-                    return feedItem;
-                }).collect(Collectors.toSet());
+                Set<FeedItem> feedItems =
+                        entries.stream()
+                                .map(
+                                        entry -> {
+                                            FeedItem feedItem = new FeedItem();
+                                            feedItem.setGuid(entry.getUri());
+                                            feedItem.setChannel(channel);
+                                            feedItem.setDescription(extractDescription(entry));
+                                            feedItem.setTitle(entry.getTitle());
+                                            feedItem.setPubDate(extractDate(entry));
+                                            feedItem.setLink(entry.getLink());
+                                            return feedItem;
+                                        })
+                                .collect(Collectors.toSet());
                 channel.setFeedItems(feedItems);
                 logger.info("End of parse channel");
                 return channel;
@@ -64,9 +73,14 @@ public class RssParser {
 
     public Set<FeedItem> getNewFeeds(Channel channel, int deleteAfter) throws IOException {
         return parse().getFeedItems().stream()
-                .filter(item -> !channel.getFeedItems().contains(item)
-                        && item.getPubDate().isAfter(LocalDateTime.now().minusDays(deleteAfter)))
-                .peek(feedItem -> feedItem.setChannel(channel)).collect(Collectors.toSet());
+                .filter(
+                        item ->
+                                !channel.getFeedItems().contains(item)
+                                        && item.getPubDate()
+                                                .isAfter(
+                                                        LocalDateTime.now().minusDays(deleteAfter)))
+                .peek(feedItem -> feedItem.setChannel(channel))
+                .collect(Collectors.toSet());
     }
 
     private String extractDescription(SyndEntry entry) {

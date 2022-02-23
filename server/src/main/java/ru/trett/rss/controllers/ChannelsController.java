@@ -9,6 +9,7 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+
 import ru.trett.rss.dao.ChannelRepository;
 import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
@@ -17,8 +18,6 @@ import ru.trett.rss.models.FeedItem;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -26,6 +25,9 @@ import java.security.Principal;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.StreamSupport;
+
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping(path = "/api/channel")
@@ -42,8 +44,11 @@ public class ChannelsController {
     private RestTemplate restTemplate;
 
     @Autowired
-    public ChannelsController(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
-            UserRepository userRepository, RestTemplate restTemplate) {
+    public ChannelsController(
+            ChannelRepository channelRepository,
+            FeedItemRepository feedItemRepository,
+            UserRepository userRepository,
+            RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
@@ -64,16 +69,19 @@ public class ChannelsController {
         logger.info(logMessage + "Start");
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         try {
-            for (Channel channel : channelRepository
-                    .findByUserEager(userRepository.findByPrincipalName(userName))) {
+            for (Channel channel :
+                    channelRepository.findByUserEager(
+                            userRepository.findByPrincipalName(userName))) {
                 logger.info("Starting update feeds for channel: " + channel.getTitle());
-                ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
-                        HttpMethod.GET);
+                ClientHttpRequest request =
+                        requestFactory.createRequest(
+                                URI.create(channel.getChannelLink()), HttpMethod.GET);
                 ClientHttpResponse execute = request.execute();
-                int deleteAfter = userRepository.findByPrincipalName(userName).getSettings()
-                        .getDeleteAfter();
+                int deleteAfter =
+                        userRepository.findByPrincipalName(userName).getSettings().getDeleteAfter();
                 try (InputStream inputStream = execute.getBody()) {
-                    Set<FeedItem> items = new RssParser(inputStream).getNewFeeds(channel, deleteAfter);
+                    Set<FeedItem> items =
+                            new RssParser(inputStream).getNewFeeds(channel, deleteAfter);
                     logger.info("Updated " + items.size() + "feeds");
                     feedItemRepository.saveAll(items);
                 }
@@ -85,11 +93,14 @@ public class ChannelsController {
     }
 
     @PostMapping(path = "/add")
-    public Long addFeed(@RequestBody @NotEmpty String link, Principal principal) throws IOException {
+    public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
+            throws IOException {
         logger.info("Adding channel with link: " + link);
         try {
-            ClientHttpRequest request = restTemplate.getRequestFactory().createRequest(URI.create(link),
-                    HttpMethod.GET);
+            ClientHttpRequest request =
+                    restTemplate
+                            .getRequestFactory()
+                            .createRequest(URI.create(link), HttpMethod.GET);
             try (InputStream inputStream = request.execute().getBody()) {
                 Channel channel = new RssParser(inputStream).parse();
                 User user = userRepository.findByPrincipalName(principal.getName());

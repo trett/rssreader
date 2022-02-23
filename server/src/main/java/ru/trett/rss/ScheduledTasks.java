@@ -10,6 +10,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+
 import ru.trett.rss.dao.ChannelRepository;
 import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
@@ -18,13 +19,14 @@ import ru.trett.rss.models.FeedItem;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
 
-import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.Set;
+
+import javax.xml.stream.XMLStreamException;
 
 @Component
 public class ScheduledTasks {
@@ -40,8 +42,11 @@ public class ScheduledTasks {
     private UserRepository userRepository;
 
     @Autowired
-    public ScheduledTasks(ChannelRepository channelRepository, FeedItemRepository feedItemRepository,
-                          UserRepository userRepository, RestTemplate restTemplate) {
+    public ScheduledTasks(
+            ChannelRepository channelRepository,
+            FeedItemRepository feedItemRepository,
+            UserRepository userRepository,
+            RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
@@ -62,14 +67,18 @@ public class ScheduledTasks {
             logger.info("Starting update feeds for user: " + user.getPrincipalName());
             for (Channel channel : channelRepository.findByUserEager(user)) {
                 try {
-                    ClientHttpRequest request = requestFactory.createRequest(URI.create(channel.getChannelLink()),
-                            HttpMethod.GET);
+                    ClientHttpRequest request =
+                            requestFactory.createRequest(
+                                    URI.create(channel.getChannelLink()), HttpMethod.GET);
                     ClientHttpResponse execute = request.execute();
                     try (InputStream inputStream = execute.getBody()) {
-                        Set<FeedItem> feedItems = new RssParser(inputStream).getNewFeeds(channel,
-                                user.getSettings().getDeleteAfter());
-                        logger.info(MessageFormat.format("{0} items was update for ''{1}''", feedItems.size(),
-                                channel.getTitle()));
+                        Set<FeedItem> feedItems =
+                                new RssParser(inputStream)
+                                        .getNewFeeds(channel, user.getSettings().getDeleteAfter());
+                        logger.info(
+                                MessageFormat.format(
+                                        "{0} items was update for ''{1}''",
+                                        feedItems.size(), channel.getTitle()));
                         feedItemRepository.saveAll(feedItems);
                     }
                 } catch (Exception e) {
@@ -81,25 +90,42 @@ public class ScheduledTasks {
         logger.info("End of updating feeds");
     }
 
-    /**
-     * Delete old feeds for all users every day at 00:00
-     */
+    /** Delete old feeds for all users every day at 00:00 */
     @Scheduled(cron = "0 0 0 * * ?")
     public void deleteFeeds() {
         logger.info("Starting delete old feeds");
-        userRepository.findAll().forEach(user -> {
-            logger.info("Delete feeds for user: " + user.getPrincipalName());
-            channelRepository.findByUserEager(user)
-                    .forEach(channel ->
-                            channel.getFeedItems()
-                                    .stream()
-                                    .filter(feedItem ->
-                                            feedItem.getPubDate()
-                                                    .isBefore(LocalDateTime.now()
-                                                            .minusDays(user.getSettings().getDeleteAfter())))
-                                    .peek(feedItem -> logger.info("Deleting feed: " + feedItem.getGuid()))
-                                    .forEach(feedItem -> feedItemRepository.delete(feedItem)));
-        });
+        userRepository
+                .findAll()
+                .forEach(
+                        user -> {
+                            logger.info("Delete feeds for user: " + user.getPrincipalName());
+                            channelRepository
+                                    .findByUserEager(user)
+                                    .forEach(
+                                            channel ->
+                                                    channel.getFeedItems().stream()
+                                                            .filter(
+                                                                    feedItem ->
+                                                                            feedItem.getPubDate()
+                                                                                    .isBefore(
+                                                                                            LocalDateTime
+                                                                                                    .now()
+                                                                                                    .minusDays(
+                                                                                                            user.getSettings()
+                                                                                                                    .getDeleteAfter())))
+                                                            .peek(
+                                                                    feedItem ->
+                                                                            logger.info(
+                                                                                    "Deleting feed:"
+                                                                                        + " "
+                                                                                            + feedItem
+                                                                                                    .getGuid()))
+                                                            .forEach(
+                                                                    feedItem ->
+                                                                            feedItemRepository
+                                                                                    .delete(
+                                                                                            feedItem)));
+                        });
         logger.info("End of delete old feeds");
     }
 }

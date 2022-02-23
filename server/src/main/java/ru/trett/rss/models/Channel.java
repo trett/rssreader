@@ -1,17 +1,16 @@
 package ru.trett.rss.models;
 
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotEmpty;
 import java.util.Set;
 
-/**
- * RSS feed with items
- */
+import javax.persistence.*;
+import javax.validation.constraints.NotEmpty;
+
+/** RSS feed with items */
 @Entity
 public class Channel {
 
@@ -19,14 +18,11 @@ public class Channel {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @NotEmpty
-    private String channelLink;
+    @NotEmpty private String channelLink;
 
-    @NotEmpty
-    private String title;
+    @NotEmpty private String title;
 
-    @NotEmpty
-    private String link;
+    @NotEmpty private String link;
 
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<FeedItem> feedItems;

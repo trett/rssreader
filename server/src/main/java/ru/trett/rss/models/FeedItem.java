@@ -2,16 +2,16 @@ package ru.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.hibernate.annotations.Type;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotEmpty;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/**
- * RSS channel item
- */
+import javax.persistence.*;
+import javax.validation.constraints.NotEmpty;
+
+/** RSS channel item */
 @Entity
 public class FeedItem {
 
@@ -19,13 +19,11 @@ public class FeedItem {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @NotEmpty
-    private String guid;
+    @NotEmpty private String guid;
 
     private String title;
 
-    @NotEmpty
-    private String link;
+    @NotEmpty private String link;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime pubDate;

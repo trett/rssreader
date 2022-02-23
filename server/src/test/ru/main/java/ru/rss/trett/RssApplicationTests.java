@@ -1,13 +1,14 @@
 package ru.rss.trett;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Test;
+
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.parser.RssParser;
 
 import java.io.IOException;
 import java.io.InputStream;
-
-import static org.junit.Assert.assertEquals;
 
 public class RssApplicationTests {
 
@@ -38,4 +39,3 @@ public class RssApplicationTests {
         }
     }
 }
-
