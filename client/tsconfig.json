@@ -1,0 +1,19 @@
+{
+  "include": ["./src/**/*"],
+  "compilerOptions": {
+    "target": "ESNext",
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    // "sourceMap": true,
+    // "allowJs": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false
+  },
+  "eslint.validate": [
+    "javascript",
+    "vue",
+    { "language": "typescript", "autoFix": true }
+  ]
+}

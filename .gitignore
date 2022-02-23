@@ -1,5 +1,4 @@
 /target/
-!.mvn/wrapper/maven-wrapper.jar
 
 ### STS ###
 .apt_generated
@@ -16,21 +15,8 @@
 *.iml
 *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-/build/
-
-### Node ###
-/node_modules/
-/target-grunt/
-
-package-lock.json
-.vscode/
-mvnw
-mvnw.cmd
-/mvn/
-
+.ijwb/
+.workspace/
+**/node_modules/
+bazel-*
+dist
