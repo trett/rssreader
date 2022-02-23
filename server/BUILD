@@ -11,7 +11,7 @@ java_library(
     ],
     visibility = ["//visibility:public"],
     runtime_deps = [
-        "@maven//:com_h2database_h2",
+        "@maven//:com_zaxxer_HikariCP",
     ],
     deps = [
         "@maven//:com_fasterxml_jackson_core_jackson_annotations",
@@ -26,6 +26,7 @@ java_library(
         "@maven//:org_apache_httpcomponents_httpclient",
         "@maven//:org_apache_tomcat_embed_tomcat_embed_core",
         "@maven//:org_hibernate_hibernate_core",
+        "@maven//:org_postgresql_postgresql",
         "@maven//:org_slf4j_slf4j_api",
         "@maven//:org_springframework_boot_spring_boot_autoconfigure",
         "@maven//:org_springframework_boot_spring_boot_starter_data_jpa",

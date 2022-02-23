@@ -23,6 +23,8 @@ http_archive(
 
 maven_install(
     artifacts = [
+        "org.postgresql:postgresql:42.3.3",
+        "com.zaxxer:HikariCP:5.0.1",
         "org.springframework.boot:spring-boot:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-actuator:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-actuator-autoconfigure:2.1.4.RELEASE",
