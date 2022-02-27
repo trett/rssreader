@@ -42,7 +42,11 @@ maven_install(
         "org.apache.httpcomponents:httpclient:4.5.13",
         "org.apache.commons:commons-lang3:3.9",
         "com.rometools:rome:1.12.0",
+        "org.slf4j:slf4j-simple:2.0.0-alpha6",
         "junit:junit:4.12",
+    ],
+    excluded_artifacts = [
+        "ch.qos.logback:logback-classic",
     ],
     fetch_sources = True,
     maven_install_json = "//:maven_install.json",

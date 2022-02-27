@@ -1,11 +1,9 @@
-const webpack = require('webpack')
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyPlugin = require("copy-webpack-plugin")
-const webPath = './src'
 
 module.exports = (env, argv) => ({
-    entry: `${webPath}/application.ts`,
+    entry: '.src/application.ts',
     output: {
         path: path.resolve(__dirname, `dist`),
         filename: 'application-[fullhash:6].js',
@@ -38,11 +36,6 @@ module.exports = (env, argv) => ({
         modules: ['client/node_modules'],
       },
     plugins: [
-        new webpack.EnvironmentPlugin({
-            CLIENT_PORT: 8080,
-            CLIENT_ID: "",
-            SERVER_PORT: 8082,
-          }),
         new HtmlWebpackPlugin({
             template: 'client/src/index.html'
         }),

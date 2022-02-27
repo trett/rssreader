@@ -1,11 +1,9 @@
 import axios from "axios";
 import EventBus from "../eventBus";
 import { OAuthService } from "./oauthService";
+import Environments from "../environments"
 
-const apiPort = process.env.SERVER_PORT;
-const http = axios.create({
-    baseURL: `http://localhost:${apiPort}/api`,
-});
+const http = axios.create({ baseURL: Environments.SERVER_URL });
 
 http.interceptors.request.use(config => {
     const token = localStorage.getItem("access_token");

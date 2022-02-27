@@ -14,19 +14,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Autowired private TokenAuthenticationFilter tokenAuthenticationFilter;
+    @Autowired
+    private TokenAuthenticationFilter tokenAuthenticationFilter;
 
-    @Autowired private UserFilter userFilter;
+    @Autowired
+    private UserFilter userFilter;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf()
                 .disable()
                 .cors()
-                //                .and()
-                //                .requiresChannel()
-                //                .requestMatchers(r -> r.getHeader("X-Forwarded-Proto") != null)
-                //                .requiresSecure()
                 .and()
                 .exceptionHandling()
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

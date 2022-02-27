@@ -1,3 +1,5 @@
+
+import Environments from "../environments"
 export class OAuthService {
 
     public static doAuth(): void {
@@ -8,7 +10,7 @@ export class OAuthService {
             // check if redirect from oauth
             if (state === "authorized" && accessToken) {
                 localStorage.setItem("access_token", accessToken as string);
-                window.location.href = "http://localhost:" + process.env.CLIENT_PORT;
+                window.location.href = Environments.REDIRECT_URI;
                 return;
             }
         }
@@ -28,8 +30,8 @@ export class OAuthService {
 
         // Parameters to pass to OAuth 2.0 endpoint.
         const params = new Map<string, string>([
-            ["client_id", process.env.CLIENT_ID as string],
-            ["redirect_uri", "http://localhost:" + process.env.CLIENT_PORT as string],
+            ["client_id", Environments.CLIENT_ID],
+            ["redirect_uri", Environments.REDIRECT_URI],
             ["response_type", "token"],
             ["scope", "https://www.googleapis.com/auth/drive.metadata.readonly"],
             ["include_granted_scopes", "true"],

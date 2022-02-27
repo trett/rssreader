@@ -7,11 +7,11 @@ java_library(
     srcs = glob(["src/main/java/**/*.java"]),
     resources = [
         "src/main/resources/application.properties",
-        #        "src/main/resources/logback.xml",
     ],
     visibility = ["//visibility:public"],
     runtime_deps = [
         "@maven//:com_zaxxer_HikariCP",
+        "@maven//:org_slf4j_slf4j_simple",
     ],
     deps = [
         "@maven//:com_fasterxml_jackson_core_jackson_annotations",
