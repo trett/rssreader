@@ -1,0 +1,14 @@
+localhost {
+
+    handle /api/* {
+        reverse_proxy {
+            to rss_server:8080
+        }
+    }
+
+    handle {
+        reverse_proxy {
+            to rss_client
+        }
+    }
+}

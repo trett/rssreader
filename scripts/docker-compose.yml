@@ -1,0 +1,44 @@
+version: "3.7"
+
+services:
+  db:
+    image: postgres
+    container_name: postgresdb
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: rss
+      POSTGRES_USER: rss_user
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - $PWD/Caddyfile:/etc/caddy/Caddyfile
+
+  server:
+    image: bazel/server:image
+    container_name: rss_server
+    restart: always
+    depends_on:
+      - caddy
+    ports:
+      - 8081:8080
+    environment:
+      SERVER_PORT: 8080
+      DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/rss
+      DATASOURCE_USER: rss_user
+      DATASOURCE_PASS: 123456
+      # CORS_URL: https://localhost
+
+  client:
+    image: bazel/client:image
+    container_name: rss_client
+    restart: always
+    depends_on:
+      - server
