@@ -33,7 +33,7 @@ export class OAuthService {
             ["client_id", Environments.CLIENT_ID],
             ["redirect_uri", Environments.REDIRECT_URI],
             ["response_type", "token"],
-            ["scope", "https://www.googleapis.com/auth/drive.metadata.readonly"],
+            ["scope", "openid email profile"],
             ["include_granted_scopes", "true"],
             ["state", "authorized"],
         ]);
