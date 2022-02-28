@@ -136,7 +136,7 @@ export default class Main extends Vue {
     }
 
     private async addChannel(): Promise<void> {
-        NetworkService.addChannel(this.newChannel);
+        await NetworkService.addChannel(this.newChannel);
         this.update();
     }
 
@@ -148,7 +148,7 @@ export default class Main extends Vue {
         if (!confirm(`Do you really want to delete ${channel.title}?`)) {
             return;
         }
-        await NetworkService.deleteChannel(channel.id);
+        NetworkService.deleteChannel(channel.id);
     }
 
     private async update(): Promise<void> {
