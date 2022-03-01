@@ -34,7 +34,7 @@ import { FeedItem, NetworkService } from "../services/networkService";
 })
 export default class FeedsComponent extends Vue {
 
-    @Prop()
+    @Prop({ default: [] })
     private data: FeedItem[] = [];
 
     private async markRead(ids: string[]): Promise<void> {

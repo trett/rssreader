@@ -141,7 +141,8 @@ export default class Main extends Vue {
     }
 
     private async markAllAsRead(): Promise<void> {
-        NetworkService.markRead(this.data.map(feedItem => feedItem.id));
+        await NetworkService.markRead(this.data.map(feedItem => feedItem.id));
+        this.data.forEach(item => item.read = true);
     }
 
     private async deleteChannel(channel: IChannel): Promise<void> {
