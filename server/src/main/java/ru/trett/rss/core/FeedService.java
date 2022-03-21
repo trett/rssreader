@@ -25,6 +25,8 @@ public class FeedService {
 
     public List<FeedEntity> getItemsByUserName(String userName, boolean hideRead) {
         return jdbcTemplate.query(
-                hideRead ? GET_UNREAD_FEEDS : GET_ALL_FEEDS, new FeedEntityRowMapper(), userName);
+                (hideRead ? GET_UNREAD_FEEDS : GET_ALL_FEEDS) + " ORDER BY fi.pub_date DESC",
+                new FeedEntityRowMapper(),
+                userName);
     }
 }
