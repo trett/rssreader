@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
@@ -34,13 +33,9 @@ import javax.validation.constraints.NotNull;
 public class ChannelsController {
 
     private Logger logger = LoggerFactory.getLogger(ChannelsController.class);
-
     private ChannelRepository channelRepository;
-
     private FeedItemRepository feedItemRepository;
-
     private UserRepository userRepository;
-
     private RestTemplate restTemplate;
 
     @Autowired
@@ -95,6 +90,7 @@ public class ChannelsController {
     @PostMapping(path = "/add")
     public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
             throws IOException {
+        link = link.trim();
         logger.info("Adding channel with link: " + link);
         try {
             ClientHttpRequest request =
@@ -121,11 +117,9 @@ public class ChannelsController {
     public String delete(@NotNull @RequestBody Long id, Principal principal) {
         logger.info("Deleting channel with id: " + id);
         User user = userRepository.findByPrincipalName(principal.getName());
-        Iterator<Channel> channelIterator = channelRepository.findByUser(user).iterator();
-        while (channelIterator.hasNext()) {
-            Channel channel = channelIterator.next();
+        for (Channel channel : channelRepository.findByUser(user)) {
             if (channel.getId() == id) {
-                channelIterator.remove();
+                channelRepository.deleteById(id);
                 return "deleted: " + id;
             }
         }

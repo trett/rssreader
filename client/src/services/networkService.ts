@@ -28,11 +28,11 @@ export class NetworkService {
         await http.post("/channel/delete", channelId, { headers: this.JSON_REQUEST_HEADERS });
     }
 
-    public static async getAllFeeds(): Promise<FeedItem[]> {
+    public static async getAllFeeds(): Promise<FeedEntity[]> {
         return http.get("/feed/all");
     }
 
-    public static async getFeedsByChannelId(id: string): Promise<FeedItem[]> {
+    public static async getFeedsByChannelId(id: string): Promise<FeedEntity[]> {
         return http.get(`/feed/get/${id}`);
     }
 
@@ -53,18 +53,19 @@ export class NetworkService {
     }
 }
 
-export type FeedItem = IChannel & {
+export type FeedEntity = {
+    id: string,
+    link: string,
+    title: string,
     pubDate: string,
     description: string,
     read: boolean,
-    channelId: number,
+    channelTitle: string
 };
 
 export interface IChannel {
     id: string;
     title: string;
-    link: string;
-    feedItems: FeedItem[];
 }
 
 export interface ISettings {

@@ -32,6 +32,7 @@ maven_install(
         "org.springframework.boot:spring-boot-autoconfigure:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-starter-test:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-test-autoconfigure:2.1.4.RELEASE",
+        "org.springframework.boot:spring-boot-starter-jdbc:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-starter-data-jpa:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-starter-data-rest:2.1.4.RELEASE",
         "org.springframework.boot:spring-boot-starter-web:2.1.4.RELEASE",

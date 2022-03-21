@@ -3,7 +3,7 @@ import Component from "vue-class-component";
 import { Watch } from "vue-property-decorator";
 import AlertComponent from "../components/alertComponent";
 import EventBus from "../eventBus";
-import { FeedItem, IChannel, NetworkService } from "../services/networkService";
+import { FeedEntity, IChannel, NetworkService } from "../services/networkService";
 
 @Component({
     components: {
@@ -107,7 +107,7 @@ export default class Main extends Vue {
 
     private selectedChannel = "";
 
-    private data: FeedItem[] = [];
+    private data: FeedEntity[] = [];
 
     public async beforeMount(): Promise<void> {
         this.update();
@@ -116,7 +116,7 @@ export default class Main extends Vue {
     public mounted(): void {
         EventBus.$on("loading", () => this.loading = true);
         EventBus.$on("loadOff", () => this.loading = false);
-        NetworkService.getAllFeeds().then(response => this.data = response);
+        this.setFeeds();
     }
 
     private async setFeeds(id?: string) {
@@ -141,7 +141,7 @@ export default class Main extends Vue {
     }
 
     private async markAllAsRead(): Promise<void> {
-        await NetworkService.markRead(this.data.map(feedItem => feedItem.id));
+        await NetworkService.markRead(this.data.map(FeedEntity => FeedEntity.id));
         this.data.forEach(item => item.read = true);
     }
 

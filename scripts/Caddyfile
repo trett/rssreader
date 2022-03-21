@@ -1,4 +1,4 @@
-localhost {
+localhost:80 {
 	handle /api/* {
 		reverse_proxy {
 			to rss_server:8080

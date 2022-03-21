@@ -14,11 +14,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Autowired
-    private TokenAuthenticationFilter tokenAuthenticationFilter;
-
-    @Autowired
-    private UserFilter userFilter;
+    @Autowired private TokenAuthenticationFilter tokenAuthenticationFilter;
+    @Autowired private UserFilter userFilter;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {

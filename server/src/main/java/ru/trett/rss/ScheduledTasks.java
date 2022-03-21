@@ -31,14 +31,10 @@ import javax.xml.stream.XMLStreamException;
 @Component
 public class ScheduledTasks {
 
-    private Logger logger = LoggerFactory.getLogger(ScheduledTasks.class);
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScheduledTasks.class);
     private ChannelRepository channelRepository;
-
     private FeedItemRepository feedItemRepository;
-
     private RestTemplate restTemplate;
-
     private UserRepository userRepository;
 
     @Autowired
@@ -59,12 +55,12 @@ public class ScheduledTasks {
      * @throws XMLStreamException
      * @throws IOException
      */
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "*/30 0 * * * ?")
     public void updateFeeds() {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
-        logger.info("Starting update feeds at " + LocalDateTime.now());
+        LOGGER.info("Starting update feeds at " + LocalDateTime.now());
         for (User user : userRepository.findAll()) {
-            logger.info("Starting update feeds for user: " + user.getPrincipalName());
+            LOGGER.info("Starting update feeds for user: " + user.getPrincipalName());
             for (Channel channel : channelRepository.findByUserEager(user)) {
                 try {
                     ClientHttpRequest request =
@@ -75,7 +71,7 @@ public class ScheduledTasks {
                         Set<FeedItem> feedItems =
                                 new RssParser(inputStream)
                                         .getNewFeeds(channel, user.getSettings().getDeleteAfter());
-                        logger.info(
+                        LOGGER.info(
                                 MessageFormat.format(
                                         "{0} items was update for ''{1}''",
                                         feedItems.size(), channel.getTitle()));
@@ -83,22 +79,22 @@ public class ScheduledTasks {
                     }
                 } catch (Exception e) {
                     // logging and update next channel
-                    logger.info("Error occured during parse channel: " + channel.getTitle(), e);
+                    LOGGER.info("Error occured during parse channel: " + channel.getTitle(), e);
                 }
             }
         }
-        logger.info("End of updating feeds");
+        LOGGER.info("End of updating feeds");
     }
 
     /** Delete old feeds for all users every day at 00:00 */
     @Scheduled(cron = "0 0 0 * * ?")
     public void deleteFeeds() {
-        logger.info("Starting delete old feeds");
+        LOGGER.info("Starting delete old feeds");
         userRepository
                 .findAll()
                 .forEach(
                         user -> {
-                            logger.info("Delete feeds for user: " + user.getPrincipalName());
+                            LOGGER.info("Delete feeds for user: " + user.getPrincipalName());
                             channelRepository
                                     .findByUserEager(user)
                                     .forEach(
@@ -115,9 +111,9 @@ public class ScheduledTasks {
                                                                                                                     .getDeleteAfter())))
                                                             .peek(
                                                                     feedItem ->
-                                                                            logger.info(
+                                                                            LOGGER.info(
                                                                                     "Deleting feed:"
-                                                                                        + " "
+                                                                                            + " "
                                                                                             + feedItem
                                                                                                     .getGuid()))
                                                             .forEach(
@@ -126,6 +122,6 @@ public class ScheduledTasks {
                                                                                     .delete(
                                                                                             feedItem)));
                         });
-        logger.info("End of delete old feeds");
+        LOGGER.info("End of delete old feeds");
     }
 }

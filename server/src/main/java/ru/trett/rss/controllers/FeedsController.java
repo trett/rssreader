@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import ru.trett.rss.core.FeedEntity;
+import ru.trett.rss.core.FeedService;
 import ru.trett.rss.dao.ChannelRepository;
 import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
@@ -19,10 +21,8 @@ import ru.trett.rss.models.User;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import javax.validation.constraints.NotNull;
@@ -31,44 +31,31 @@ import javax.validation.constraints.NotNull;
 @RequestMapping(path = "/api/feed")
 public class FeedsController {
 
-    private Logger logger = LoggerFactory.getLogger(FeedsController.class);
-
-    private ChannelRepository channelRepository;
-
-    private FeedItemRepository feedItemRepository;
-
-    private UserRepository userRepository;
+    private static final Logger logger = LoggerFactory.getLogger(FeedsController.class);
+    private final ChannelRepository channelRepository;
+    private final FeedItemRepository feedItemRepository;
+    private final UserRepository userRepository;
+    private final FeedService feedService;
 
     @Autowired
     public FeedsController(
             ChannelRepository channelRepository,
             FeedItemRepository feedItemRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            FeedService feedService) {
         this.channelRepository = channelRepository;
         this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
+        this.feedService = feedService;
     }
 
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     @JsonSerialize(using = IterableSerializer.class)
-    public List<FeedItem> getNews(Principal principal) {
+    public List<FeedEntity> getNews(Principal principal) {
         String userName = principal.getName();
         logger.info("Retrieving all feeds for principal: " + userName);
-        Stream<FeedItem> feedItemStream =
-                StreamSupport.stream(
-                                channelRepository
-                                        .findByUserEager(
-                                                userRepository.findByPrincipalName(userName))
-                                        .spliterator(),
-                                false)
-                        .flatMap(channel -> channel.getFeedItems().stream())
-                        .sorted(Comparator.comparing(FeedItem::getPubDate).reversed());
-        if (userRepository.findByPrincipalName(userName).getSettings().isHideRead()) {
-            return feedItemStream
-                    .filter(feedItem -> !feedItem.isRead())
-                    .collect(Collectors.toList());
-        }
-        List<FeedItem> items = feedItemStream.collect(Collectors.toList());
+        var user = userRepository.findByPrincipalName(userName);
+        var items = feedService.getItemsByUserName(userName, user.getSettings().isHideRead());
         logger.info("Retrived " + items.size() + " feeds");
         return items;
     }

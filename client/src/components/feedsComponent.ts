@@ -1,30 +1,33 @@
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop } from "vue-property-decorator";
-import { FeedItem, NetworkService } from "../services/networkService";
+import { FeedEntity, NetworkService } from "../services/networkService";
 
 @Component({
     template: `
-        <p v-if="!data.length" class="text-center display-1" style="color: #666666">No feeds. Refresh later</p>
+        <p v-if="!data.length" class="text-center display-1" style="color: #666666">It looks like you've already read all!</p>
         <v-container v-else fluid grid-list-md pa-0>
             <v-layout row wrap>
-                <template v-for="feedItem in data">
+                <template v-for="feedEntity in data">
                     <v-flex xs12>
                         <v-card tag="a"
-                                @click="markRead([feedItem.id]); window.open(feedItem.link, '_blank')"
+                                @click="markRead([feedEntity.id]); window.open(feedEntity.link, '_blank')"
                                 elevation="3"
-                                v-bind:class="{read: feedItem.read}"
+                                v-bind:class="{read: feedEntity.read}"
                                 v-ripple="false"
                                 class="feed">
                             <v-card-title class="title" style="word-break: break-word;">
-                                {{ feedItem.title || (feedItem.description.substring(0, 50) + '...') }}
+                                {{ feedEntity.title || (feedEntity.description.substring(0, 50) + '...') }}
                             </v-card-title>
                             <v-card-text>
-                                <div v-bind:class="{read: feedItem.read, unread: !feedItem.read}"
-                                    v-html="feedItem.description">
+                                <div v-bind:class="{read: feedEntity.read, unread: !feedEntity.read}"
+                                    v-html="feedEntity.description">
                                 </div>
                             </v-card-text>
-                            <v-card-actions class="body-2">{{feedItem.pubDate}}</v-card-actions>
+                            <v-card-actions class="body-2">
+                                <v-btn x-small rounded disabled>{{ feedEntity.pubDate }}</v-btn> 
+                                <v-btn v-if="!!feedEntity.channelTitle" x-small rounded disabled>{{ feedEntity.channelTitle }}</v-btn>
+                            </v-card-actions>
                         </v-card>
                     </v-flex>
                 </template>
@@ -35,7 +38,7 @@ import { FeedItem, NetworkService } from "../services/networkService";
 export default class FeedsComponent extends Vue {
 
     @Prop({ default: [] })
-    private data: FeedItem[] = [];
+    private data: FeedEntity[] = [];
 
     private async markRead(ids: string[]): Promise<void> {
         await NetworkService.markRead(ids);
