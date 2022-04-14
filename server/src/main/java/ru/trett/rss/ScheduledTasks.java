@@ -55,7 +55,7 @@ public class ScheduledTasks {
      * @throws XMLStreamException
      * @throws IOException
      */
-    @Scheduled(cron = "* 0/30 * * * ?")
+    @Scheduled(cron = "0 0/30 * * * ?")
     public void updateFeeds() {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         LOGGER.info("Starting update feeds at " + LocalDateTime.now());
