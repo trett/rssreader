@@ -10,6 +10,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import ru.trett.rss.core.ClientException;
 import ru.trett.rss.dao.ChannelRepository;
 import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
@@ -32,11 +33,12 @@ import javax.validation.constraints.NotNull;
 @RequestMapping(path = "/api/channel")
 public class ChannelsController {
 
-    private Logger logger = LoggerFactory.getLogger(ChannelsController.class);
-    private ChannelRepository channelRepository;
-    private FeedItemRepository feedItemRepository;
-    private UserRepository userRepository;
-    private RestTemplate restTemplate;
+    private static final Logger LOG = LoggerFactory.getLogger(ChannelsController.class);
+
+    private final ChannelRepository channelRepository;
+    private final FeedItemRepository feedItemRepository;
+    private final UserRepository userRepository;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public ChannelsController(
@@ -53,7 +55,7 @@ public class ChannelsController {
     @GetMapping(path = "/all")
     public Iterable<Channel> getChannels(Principal principal) {
         String userName = principal.getName();
-        logger.info("Retrieving all channels for principal: " + userName);
+        LOG.info("Retrieving all channels for principal: " + userName);
         return channelRepository.findByUser(userRepository.findByPrincipalName(userName));
     }
 
@@ -61,13 +63,13 @@ public class ChannelsController {
     public void refresh(Principal principal) {
         String userName = principal.getName();
         String logMessage = "Updating channels for principal: " + userName + ". ";
-        logger.info(logMessage + "Start");
+        LOG.info(logMessage + "Start");
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         try {
             for (Channel channel :
                     channelRepository.findByUserEager(
                             userRepository.findByPrincipalName(userName))) {
-                logger.info("Starting update feeds for channel: " + channel.getTitle());
+                LOG.info("Starting update feeds for channel: " + channel.getTitle());
                 ClientHttpRequest request =
                         requestFactory.createRequest(
                                 URI.create(channel.getChannelLink()), HttpMethod.GET);
@@ -77,21 +79,21 @@ public class ChannelsController {
                 try (InputStream inputStream = execute.getBody()) {
                     Set<FeedItem> items =
                             new RssParser(inputStream).getNewFeeds(channel, deleteAfter);
-                    logger.info("Updated " + items.size() + "feeds");
+                    LOG.info("Updated " + items.size() + "feeds");
                     feedItemRepository.saveAll(items);
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Can't update feeds. Please try later", e);
+            throw new ClientException("Can't update feeds. Please try later", e);
         }
-        logger.info(logMessage + "End");
+        LOG.info(logMessage + "End");
     }
 
     @PostMapping(path = "/add")
     public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
             throws IOException {
         link = link.trim();
-        logger.info("Adding channel with link: " + link);
+        LOG.info("Adding channel with link: " + link);
         try {
             ClientHttpRequest request =
                     restTemplate
@@ -109,13 +111,13 @@ public class ChannelsController {
                 return channelRepository.save(channel).getId();
             }
         } catch (IOException e) {
-            throw new RuntimeException("URL is not valid");
+            throw new ClientException("URL is not valid");
         }
     }
 
     @PostMapping(path = "/delete")
     public String delete(@NotNull @RequestBody Long id, Principal principal) {
-        logger.info("Deleting channel with id: " + id);
+        LOG.info("Deleting channel with id: " + id);
         User user = userRepository.findByPrincipalName(principal.getName());
         for (Channel channel : channelRepository.findByUser(user)) {
             if (channel.getId() == id) {
@@ -123,6 +125,6 @@ public class ChannelsController {
                 return "deleted: " + id;
             }
         }
-        throw new RuntimeException("Channel not found");
+        throw new ClientException("Channel not found");
     }
 }

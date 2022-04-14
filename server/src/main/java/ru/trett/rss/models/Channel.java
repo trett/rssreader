@@ -19,9 +19,7 @@ public class Channel {
     private long id;
 
     @NotEmpty private String channelLink;
-
     @NotEmpty private String title;
-
     @NotEmpty private String link;
 
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)

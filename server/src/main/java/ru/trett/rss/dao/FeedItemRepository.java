@@ -6,7 +6,4 @@ import org.springframework.stereotype.Repository;
 import ru.trett.rss.models.FeedItem;
 
 @Repository
-public interface FeedItemRepository extends CrudRepository<FeedItem, Long> {
-
-    Iterable<FeedItem> findByChannelIdOrderByPubDateDesc(Long id);
-}
+public interface FeedItemRepository extends CrudRepository<FeedItem, Long> {}
