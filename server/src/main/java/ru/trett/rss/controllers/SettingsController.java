@@ -15,7 +15,7 @@ import java.security.Principal;
 @RequestMapping("/api/settings")
 public class SettingsController {
 
-    private Logger logger = LoggerFactory.getLogger(SettingsController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SettingsController.class);
 
     private UserRepository userRepository;
 
@@ -27,14 +27,14 @@ public class SettingsController {
     @GetMapping
     public Settings getSettings(Principal principal) {
         String userName = principal.getName();
-        logger.info("Update settings for user: " + userName);
+        LOG.info("Update settings for user: " + userName);
         return userRepository.findByPrincipalName(userName).getSettings();
     }
 
     @PostMapping
     public void updateSettings(@RequestBody Settings settings, Principal principal) {
         String userName = principal.getName();
-        logger.info("Update settings for user:" + userName);
+        LOG.info("Update settings for user:" + userName);
         User user = userRepository.findByPrincipalName(userName);
         user.setSettings(settings);
         userRepository.save(user);

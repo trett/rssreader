@@ -20,9 +20,7 @@ public class FeedItem {
     private long id;
 
     @NotEmpty private String guid;
-
     private String title;
-
     @NotEmpty private String link;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")

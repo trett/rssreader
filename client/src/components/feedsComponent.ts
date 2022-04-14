@@ -25,8 +25,8 @@ import { FeedEntity, NetworkService } from "../services/networkService";
                                 </div>
                             </v-card-text>
                             <v-card-actions class="body-2">
-                                <v-btn x-small rounded disabled>{{ feedEntity.pubDate }}</v-btn> 
-                                <v-btn v-if="!!feedEntity.channelTitle" x-small rounded disabled>{{ feedEntity.channelTitle }}</v-btn>
+                                <v-chip class="ma-2" small>{{ feedEntity.pubDate }}</v-chip> 
+                                <v-chip v-if="!!feedEntity.channelTitle" class="ma-2" small outlined color="primary">{{ feedEntity.channelTitle }}</v-chip>
                             </v-card-actions>
                         </v-card>
                     </v-flex>
