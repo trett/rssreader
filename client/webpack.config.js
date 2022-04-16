@@ -1,6 +1,7 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CopyPlugin = require("copy-webpack-plugin")
+const CopyPlugin = require("copy-webpack-plugin");
+const webpack = require('webpack');
 
 module.exports = (env, argv) => ({
     entry: '.src/application.ts',
@@ -43,6 +44,11 @@ module.exports = (env, argv) => ({
               patterns: [
                 { from: "client/css", to: "css/" },
             ],
+        }),
+        new webpack.EnvironmentPlugin({
+          SERVER_URL: env.SERVER_URL || "http://localhost/api",
+          CLIENT_ID: env.CLIENT_ID,
+          REDIRECT_URI: env.REDIRECT_URI || "http://localhost"  
         })
     ],
 });
