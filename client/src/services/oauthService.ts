@@ -1,5 +1,3 @@
-
-import Environments from "../environments"
 export class OAuthService {
 
     public static doAuth(): void {
@@ -10,7 +8,7 @@ export class OAuthService {
             // check if redirect from oauth
             if (state === "authorized" && accessToken) {
                 localStorage.setItem("access_token", accessToken as string);
-                window.location.href = Environments.REDIRECT_URI;
+                window.location.href = process.env.REDIRECT_URI as string;
                 return;
             }
         }
@@ -30,8 +28,8 @@ export class OAuthService {
 
         // Parameters to pass to OAuth 2.0 endpoint.
         const params = new Map<string, string>([
-            ["client_id", Environments.CLIENT_ID],
-            ["redirect_uri", Environments.REDIRECT_URI],
+            ["client_id", process.env.CLIENT_ID as string],
+            ["redirect_uri", process.env.REDIRECT_URI as string],
             ["response_type", "token"],
             ["scope", "openid email profile"],
             ["include_granted_scopes", "true"],
