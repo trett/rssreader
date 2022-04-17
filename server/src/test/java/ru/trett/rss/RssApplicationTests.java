@@ -1,4 +1,4 @@
-package ru.rss.trett;
+package ru.trett.rss;
 
 import static org.junit.Assert.assertEquals;
 
