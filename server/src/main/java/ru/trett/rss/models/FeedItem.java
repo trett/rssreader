@@ -2,14 +2,12 @@ package ru.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import org.hibernate.annotations.Type;
-
 import java.time.LocalDateTime;
 import java.util.Objects;
-
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
+
+
 
 /** RSS channel item */
 @Entity
@@ -26,8 +24,7 @@ public class FeedItem {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime pubDate;
 
-    @Lob
-    @Type(type = "org.hibernate.type.TextType")
+    @Column(columnDefinition = "text")
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)

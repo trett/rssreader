@@ -11,13 +11,12 @@ import org.springframework.web.bind.annotation.*;
 
 import ru.trett.rss.core.FeedEntity;
 import ru.trett.rss.core.FeedService;
+import ru.trett.rss.core.UserService;
 import ru.trett.rss.dao.ChannelRepository;
-import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
 import ru.trett.rss.models.User;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -29,20 +28,20 @@ public class FeedsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeedsController.class);
     private final ChannelRepository channelRepository;
-    private final FeedItemRepository feedItemRepository;
     private final UserRepository userRepository;
     private final FeedService feedService;
+    private final UserService userService;
 
     @Autowired
     public FeedsController(
             ChannelRepository channelRepository,
-            FeedItemRepository feedItemRepository,
             UserRepository userRepository,
-            FeedService feedService) {
+            FeedService feedService,
+            UserService userService) {
         this.channelRepository = channelRepository;
-        this.feedItemRepository = feedItemRepository;
         this.userRepository = userRepository;
         this.feedService = feedService;
+        this.userService = userService;
     }
 
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -66,29 +65,17 @@ public class FeedsController {
     }
 
     @PostMapping(path = "/read")
-    public void setRead(@RequestBody @NotNull Long[] ids) {
+    public void setRead(@RequestBody @NotNull Long[] ids, Principal principal) {
         LOG.info("Marking feeds with ids " + Arrays.toString(ids) + " as read");
-        feedService.markAsRead(ids);
+        feedService.markAsRead(Arrays.asList(ids), principal.getName());
     }
 
     @PostMapping("/deleteOldItems")
     public void deleteOldItems(Principal principal) {
         String userName = principal.getName();
         LOG.info("Deleting old feeds for principal: " + userName);
-        User user = userRepository.findByPrincipalName(userName);
-        channelRepository
-                .findByUserEager(user)
-                .forEach(
-                        channel ->
-                                channel.getFeedItems().stream()
-                                        .filter(
-                                                feedItem ->
-                                                        feedItem.getPubDate()
-                                                                .isBefore(
-                                                                        LocalDateTime.now()
-                                                                                .minusDays(
-                                                                                        user.getSettings()
-                                                                                                .getDeleteAfter())))
-                                        .forEach(feedItem -> feedItemRepository.delete(feedItem)));
+        var user = userService.getUser(userName);
+        var deleted = feedService.deleteOldFeeds(userName, user.getSettings().getDeleteAfter());
+        LOG.info(deleted + " feeds was deleted");
     }
 }

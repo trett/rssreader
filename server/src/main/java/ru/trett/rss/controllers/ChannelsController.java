@@ -11,11 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import ru.trett.rss.core.ClientException;
+import ru.trett.rss.core.FeedService;
 import ru.trett.rss.dao.ChannelRepository;
-import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
 import ru.trett.rss.models.Channel;
-import ru.trett.rss.models.FeedItem;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
 
@@ -23,7 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
-import java.util.Set;
+import java.text.MessageFormat;
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import javax.validation.constraints.NotEmpty;
@@ -36,18 +37,18 @@ public class ChannelsController {
     private static final Logger LOG = LoggerFactory.getLogger(ChannelsController.class);
 
     private final ChannelRepository channelRepository;
-    private final FeedItemRepository feedItemRepository;
+    private final FeedService feedService;
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
 
     @Autowired
     public ChannelsController(
             ChannelRepository channelRepository,
-            FeedItemRepository feedItemRepository,
+            FeedService feedService,
             UserRepository userRepository,
             RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
-        this.feedItemRepository = feedItemRepository;
+        this.feedService = feedService;
         this.userRepository = userRepository;
         this.restTemplate = restTemplate;
     }
@@ -77,10 +78,17 @@ public class ChannelsController {
                 int deleteAfter =
                         userRepository.findByPrincipalName(userName).getSettings().getDeleteAfter();
                 try (InputStream inputStream = execute.getBody()) {
-                    Set<FeedItem> items =
-                            new RssParser(inputStream).getNewFeeds(channel, deleteAfter);
-                    LOG.info("Updated " + items.size() + "feeds");
-                    feedItemRepository.saveAll(items);
+                    var since = LocalDateTime.now().minusDays(deleteAfter);
+                    var feeds =
+                            new RssParser(inputStream)
+                                    .parse().getFeedItems().stream()
+                                            .filter(feed -> feed.getPubDate().isAfter(since))
+                                            .collect(Collectors.toList());
+                    int inserted = feedService.saveAll(feeds, channel.getId());
+                    LOG.info(
+                            MessageFormat.format(
+                                    "{0} items was updated for ''{1}''",
+                                    inserted, channel.getTitle()));
                 }
             }
         } catch (Exception e) {

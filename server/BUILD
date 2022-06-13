@@ -49,7 +49,7 @@ java_test(
     name = "test",
     srcs = glob(["src/test/**/*.java"]),
     resources = glob(["src/test/resources/**"]),
-    test_class = "ru.trett.rss.RssApplicationTests",
+    test_class = "ru.trett.rss.AllSpecs",
     runtime_deps = [
         "@maven//:com_h2database_h2",
     ],
@@ -76,6 +76,8 @@ java_test(
         "@maven//:org_springframework_boot_spring_boot_starter_jdbc",
         "@maven//:org_springframework_boot_spring_boot_starter_security",
         "@maven//:org_springframework_boot_spring_boot_starter_web",
+        # "@maven//:org_springframework_boot_spring_boot_starter_test",
+        "@maven//:org_springframework_spring_test",
         "@maven//:org_springframework_data_spring_data_commons",
         "@maven//:org_springframework_data_spring_data_jpa",
         "@maven//:org_springframework_security_spring_security_config",

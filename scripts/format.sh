@@ -8,7 +8,7 @@ java --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED \
 --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED \
 --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED \
 --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED \
--jar $SCRIPT_DIR/google-java-format-1.14.0-all-deps.jar -a -i  $(git ls-files|grep \.java$)
+-jar $SCRIPT_DIR/google-java-format-1.14.0-all-deps.jar -a -i  $(find ./ -type f -name "*.java")
 
 buildifier ./WORKSPACE
 buildifier ./server/BUILD
