@@ -2,12 +2,11 @@ package ru.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.time.LocalDateTime;
-import java.util.Objects;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
-
-
 
 /** RSS channel item */
 @Entity
@@ -95,24 +94,5 @@ public class FeedItem {
 
     public void setRead(boolean read) {
         this.read = read;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        FeedItem feedItem = (FeedItem) o;
-
-        return Objects.equals(getGuid(), feedItem.getGuid());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getGuid());
     }
 }

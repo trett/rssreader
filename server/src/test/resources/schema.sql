@@ -9,7 +9,7 @@ CREATE TABLE user
 
 CREATE TABLE channel
 (
-    `id` int DEFAULT NEXTVAL('hibernate_sequence'),
+    `id` int DEFAULT NOT NULL PRIMARY KEY,
     `channel_link` varchar(255),
     `title` varchar(255),
     `link` varchar(255),
@@ -20,7 +20,7 @@ ALTER TABLE channel ADD CONSTRAINT FK_channel_user FOREIGN KEY (user_principal_n
 
 CREATE TABLE feed_item
 (
-    `id` int DEFAULT NEXTVAL('hibernate_sequence'),
+    `id` int DEFAULT NOT NULL PRIMARY KEY,
     `guid` varchar(255),
     `title` varchar(255),
     `link` varchar(255),
