@@ -62,10 +62,6 @@ public class FeedService {
 
     private static final String DELETE_FEEDS = "DELETE FROM feed_item fi where fi.id=?";
 
-    public void delete(long id) {
-        jdbcTemplate.update(DELETE_FEEDS, id);
-    }
-
     public int deleteOldFeeds(String userName, int deleteAfter) {
         var since = LocalDateTime.now().minusDays(deleteAfter);
         var itemsToDelete =
