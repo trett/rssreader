@@ -3,10 +3,7 @@ package ru.trett.rss.models;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import org.hibernate.annotations.Type;
-
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
@@ -26,8 +23,7 @@ public class FeedItem {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime pubDate;
 
-    @Lob
-    @Type(type = "org.hibernate.type.TextType")
+    @Column(columnDefinition = "text")
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -98,24 +94,5 @@ public class FeedItem {
 
     public void setRead(boolean read) {
         this.read = read;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        FeedItem feedItem = (FeedItem) o;
-
-        return Objects.equals(getGuid(), feedItem.getGuid());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getGuid());
     }
 }

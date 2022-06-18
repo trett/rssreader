@@ -11,40 +11,36 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import ru.trett.rss.core.FeedService;
 import ru.trett.rss.dao.ChannelRepository;
-import ru.trett.rss.dao.FeedItemRepository;
 import ru.trett.rss.dao.UserRepository;
 import ru.trett.rss.models.Channel;
-import ru.trett.rss.models.FeedItem;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.util.Set;
-
-import javax.xml.stream.XMLStreamException;
+import java.util.stream.Collectors;
 
 @Component
 public class ScheduledTasks {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ScheduledTasks.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ScheduledTasks.class);
     private ChannelRepository channelRepository;
-    private FeedItemRepository feedItemRepository;
+    private FeedService feedService;
     private RestTemplate restTemplate;
     private UserRepository userRepository;
 
     @Autowired
     public ScheduledTasks(
             ChannelRepository channelRepository,
-            FeedItemRepository feedItemRepository,
+            FeedService feedService,
             UserRepository userRepository,
             RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
-        this.feedItemRepository = feedItemRepository;
+        this.feedService = feedService;
         this.userRepository = userRepository;
         this.restTemplate = restTemplate;
     }
@@ -58,70 +54,53 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0/30 * * * ?")
     public void updateFeeds() {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
-        LOGGER.info("Starting update feeds at " + LocalDateTime.now());
+        LOG.info("Starting of update feeds at " + LocalDateTime.now());
         for (User user : userRepository.findAll()) {
-            LOGGER.info("Starting update feeds for user: " + user.getPrincipalName());
-            for (Channel channel : channelRepository.findByUserEager(user)) {
+            LOG.info("Starting of update feeds for user: " + user.getPrincipalName());
+            for (Channel channel : channelRepository.findByUser(user)) {
                 try {
                     ClientHttpRequest request =
                             requestFactory.createRequest(
                                     URI.create(channel.getChannelLink()), HttpMethod.GET);
                     ClientHttpResponse execute = request.execute();
                     try (InputStream inputStream = execute.getBody()) {
-                        Set<FeedItem> feedItems =
+                        var since =
+                                LocalDateTime.now().minusDays(user.getSettings().getDeleteAfter());
+                        var feeds =
                                 new RssParser(inputStream)
-                                        .getNewFeeds(channel, user.getSettings().getDeleteAfter());
-                        LOGGER.info(
+                                        .parse().getFeedItems().stream()
+                                                .filter(feed -> feed.getPubDate().isAfter(since))
+                                                .collect(Collectors.toList());
+                        int inserted = feedService.saveAll(feeds, channel.getId());
+                        LOG.info(
                                 MessageFormat.format(
-                                        "{0} items was update for ''{1}''",
-                                        feedItems.size(), channel.getTitle()));
-                        feedItemRepository.saveAll(feedItems);
+                                        "{0} items was updated for ''{1}''",
+                                        inserted, channel.getTitle()));
                     }
                 } catch (Exception e) {
                     // logging and update next channel
-                    LOGGER.info("Error occured during parse channel: " + channel.getTitle(), e);
+                    LOG.info("Error occured during the channel parsings: " + channel.getTitle(), e);
                 }
             }
         }
-        LOGGER.info("End of updating feeds");
+        LOG.info("End of updating feeds");
     }
 
     /** Delete old feeds for all users every day at 00:00 */
     @Scheduled(cron = "0 0 0 * * ?")
     public void deleteFeeds() {
-        LOGGER.info("Starting delete old feeds");
+        LOG.info("Start of deletion old feeds");
         userRepository
                 .findAll()
                 .forEach(
                         user -> {
-                            LOGGER.info("Delete feeds for user: " + user.getPrincipalName());
-                            channelRepository
-                                    .findByUserEager(user)
-                                    .forEach(
-                                            channel ->
-                                                    channel.getFeedItems().stream()
-                                                            .filter(
-                                                                    feedItem ->
-                                                                            feedItem.getPubDate()
-                                                                                    .isBefore(
-                                                                                            LocalDateTime
-                                                                                                    .now()
-                                                                                                    .minusDays(
-                                                                                                            user.getSettings()
-                                                                                                                    .getDeleteAfter())))
-                                                            .peek(
-                                                                    feedItem ->
-                                                                            LOGGER.info(
-                                                                                    "Deleting feed:"
-                                                                                            + " "
-                                                                                            + feedItem
-                                                                                                    .getGuid()))
-                                                            .forEach(
-                                                                    feedItem ->
-                                                                            feedItemRepository
-                                                                                    .delete(
-                                                                                            feedItem)));
+                            LOG.info("Delete feeds for user: " + user.getPrincipalName());
+                            int deleted =
+                                    feedService.deleteOldFeeds(
+                                            user.getPrincipalName(),
+                                            user.getSettings().getDeleteAfter());
+                            LOG.info(deleted + " was deleted for");
                         });
-        LOGGER.info("End of delete old feeds");
+        LOG.info("End of deletion old feeds");
     }
 }

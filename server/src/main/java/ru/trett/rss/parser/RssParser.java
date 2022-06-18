@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
 public class RssParser {
 
     private static final ZoneId ZONE_ID = ZoneId.systemDefault();
-    private Logger logger = LoggerFactory.getLogger(RssParser.class);
-    private InputStream stream;
+    private static final Logger LOG = LoggerFactory.getLogger(RssParser.class);
+    private final InputStream stream;
 
     public RssParser(InputStream stream) {
         this.stream = stream;
@@ -40,7 +40,7 @@ public class RssParser {
             try (XmlReader xmlReader = new XmlReader(stream)) {
                 SyndFeed feed = input.build(xmlReader);
                 String title = feed.getTitle();
-                logger.info(
+                LOG.info(
                         MessageFormat.format(
                                 "Parse channel: title ''{0}'', type ''{1}''",
                                 title, feed.getFeedType()));
@@ -63,24 +63,13 @@ public class RssParser {
                                         })
                                 .collect(Collectors.toSet());
                 channel.setFeedItems(feedItems);
-                logger.info("End of parse channel");
+                LOG.info("Parsed " + feedItems.size() + " items");
+                LOG.info("End of parse channel");
                 return channel;
             }
         } catch (FeedException e) {
             throw new RuntimeException("Can't parse feed", e);
         }
-    }
-
-    public Set<FeedItem> getNewFeeds(Channel channel, int deleteAfter) throws IOException {
-        return parse().getFeedItems().stream()
-                .filter(
-                        item ->
-                                !channel.getFeedItems().contains(item)
-                                        && item.getPubDate()
-                                                .isAfter(
-                                                        LocalDateTime.now().minusDays(deleteAfter)))
-                .peek(feedItem -> feedItem.setChannel(channel))
-                .collect(Collectors.toSet());
     }
 
     private String extractDescription(SyndEntry entry) {

@@ -10,7 +10,7 @@ import ru.trett.rss.parser.RssParser;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class RssApplicationTests {
+public class FeedParserSpecs {
 
     @Test
     public void testParserRSS() throws IOException {
