@@ -30,8 +30,8 @@ public class FeedService {
     private static final String GET_ALL_FEEDS =
             "SELECT c.title as channel_title, fi.id as feed_id, fi.title as feed_title, fi.link as"
                     + " feed_link, fi.pub_date as feed_date, fi.description as feed_description,"
-                    + " fi.read as read FROM channel c"
-                    + " JOIN feed_item fi ON fi.channel_id=c.id"
+                    + " fi.read as read FROM public.channel c"
+                    + " JOIN public.feed_item fi ON fi.channel_id=c.id"
                     + " WHERE c.user_principal_name=?";
 
     private static final String NOT_READ_CONDITION = " AND NOT fi.read";
@@ -60,7 +60,7 @@ public class FeedService {
         }
     }
 
-    private static final String DELETE_FEEDS = "DELETE FROM feed_item fi where fi.id=?";
+    private static final String DELETE_FEEDS = "DELETE FROM public.feed_item fi where fi.id=?";
 
     public int deleteOldFeeds(String userName, int deleteAfter) {
         var since = LocalDateTime.now().minusDays(deleteAfter);
@@ -85,7 +85,7 @@ public class FeedService {
         return itemsToDelete.size();
     }
 
-    private static final String MARK_AS_READ = "UPDATE feed_item SET read=true WHERE id=?";
+    private static final String MARK_AS_READ = "UPDATE public.feed_item SET read=true WHERE id=?";
 
     public void markAsRead(List<Long> ids, String userName) {
         var itemsToUpdate =
@@ -118,7 +118,7 @@ public class FeedService {
     }
 
     private static final String UPDATE_FEED =
-            "UPDATE feed_item AS fi SET title=?, link=?, pub_date=?, description=?"
+            "UPDATE public.feed_item AS fi SET title=?, link=?, pub_date=?, description=?"
                     + " WHERE fi.channel_id=? AND fi.guid=?";
 
     private int[] updateFeeds(List<FeedItem> feedItems, long channelId) {
@@ -144,8 +144,8 @@ public class FeedService {
     }
 
     private static final String INSERT_FEED =
-            "INSERT INTO feed_item(id, guid, title, link, pub_date, description, read, channel_id)"
-                    + " VALUES(?,?,?,?,?,?,?,?)";
+            "INSERT INTO public.feed_item(id, guid, title, link, pub_date, description, read,"
+                    + " channel_id) VALUES(?,?,?,?,?,?,?,?)";
 
     private int[] insertFeeds(List<FeedItem> feedItems, long channelId) {
         return jdbcTemplate.batchUpdate(

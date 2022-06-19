@@ -5,9 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import ru.trett.rss.dao.UserRepository;
+import ru.trett.rss.core.UserService;
 import ru.trett.rss.models.Settings;
-import ru.trett.rss.models.User;
 
 import java.security.Principal;
 
@@ -17,26 +16,33 @@ public class SettingsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(SettingsController.class);
 
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Autowired
-    public SettingsController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public SettingsController(UserService userService) {
+        this.userService = userService;
     }
 
     @GetMapping
     public Settings getSettings(Principal principal) {
         String userName = principal.getName();
         LOG.info("Update settings for user: " + userName);
-        return userRepository.findByPrincipalName(userName).getSettings();
+        return userService
+                .getUser(userName)
+                .map(u -> u.getSettings())
+                .orElseGet(() -> new Settings());
     }
 
     @PostMapping
     public void updateSettings(@RequestBody Settings settings, Principal principal) {
         String userName = principal.getName();
         LOG.info("Update settings for user:" + userName);
-        User user = userRepository.findByPrincipalName(userName);
-        user.setSettings(settings);
-        userRepository.save(user);
+        userService
+                .getUser(userName)
+                .ifPresent(
+                        user -> {
+                            user.setSettings(settings);
+                            userService.update(user);
+                        });
     }
 }

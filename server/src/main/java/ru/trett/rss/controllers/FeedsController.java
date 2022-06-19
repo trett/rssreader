@@ -13,11 +13,10 @@ import ru.trett.rss.core.FeedEntity;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
 import ru.trett.rss.dao.ChannelRepository;
-import ru.trett.rss.dao.UserRepository;
-import ru.trett.rss.models.User;
 
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.validation.constraints.NotNull;
@@ -28,18 +27,13 @@ public class FeedsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeedsController.class);
     private final ChannelRepository channelRepository;
-    private final UserRepository userRepository;
     private final FeedService feedService;
     private final UserService userService;
 
     @Autowired
     public FeedsController(
-            ChannelRepository channelRepository,
-            UserRepository userRepository,
-            FeedService feedService,
-            UserService userService) {
+            ChannelRepository channelRepository, FeedService feedService, UserService userService) {
         this.channelRepository = channelRepository;
-        this.userRepository = userRepository;
         this.feedService = feedService;
         this.userService = userService;
     }
@@ -49,8 +43,14 @@ public class FeedsController {
     public List<FeedEntity> getNews(Principal principal) {
         String userName = principal.getName();
         LOG.info("Retrieving all feeds for principal: " + userName);
-        var user = userRepository.findByPrincipalName(userName);
-        var items = feedService.getItemsByUserName(userName, user.getSettings().isHideRead());
+        var items =
+                userService
+                        .getUser(userName)
+                        .map(
+                                user ->
+                                        feedService.getItemsByUserName(
+                                                userName, user.getSettings().isHideRead()))
+                        .orElse(Collections.emptyList());
         LOG.info("Retrived " + items.size() + " feeds");
         return items;
     }
@@ -59,9 +59,13 @@ public class FeedsController {
     public Iterable<FeedEntity> getFeedsByChannelId(
             @PathVariable @NotNull Long id, Principal principal) {
         LOG.info("Retrieving feeds for channel: " + id);
-        User user = userRepository.findByPrincipalName(principal.getName());
-        return feedService.getItemsByUserNameAndChannelId(
-                principal.getName(), id, user.getSettings().isHideRead());
+        return userService
+                .getUser(principal.getName())
+                .map(
+                        user ->
+                                feedService.getItemsByUserNameAndChannelId(
+                                        principal.getName(), id, user.getSettings().isHideRead()))
+                .orElse(Collections.emptyList());
     }
 
     @PostMapping(path = "/read")
@@ -74,8 +78,14 @@ public class FeedsController {
     public void deleteOldItems(Principal principal) {
         String userName = principal.getName();
         LOG.info("Deleting old feeds for principal: " + userName);
-        var user = userService.getUser(userName);
-        var deleted = feedService.deleteOldFeeds(userName, user.getSettings().getDeleteAfter());
-        LOG.info(deleted + " feeds was deleted");
+        userService
+                .getUser(userName)
+                .ifPresent(
+                        user -> {
+                            var deleted =
+                                    feedService.deleteOldFeeds(
+                                            userName, user.getSettings().getDeleteAfter());
+                            LOG.info(deleted + " feeds was deleted");
+                        });
     }
 }

@@ -31,7 +31,7 @@ public class FeedServiceSpecs {
                 new EmbeddedDatabaseBuilder()
                         .setType(EmbeddedDatabaseType.H2)
                         .addScript("classpath:schema.sql")
-                        .addScript("classpath:data.sql")
+                        .addScript("classpath:feed_items_test_data.sql")
                         .build();
         jdbcTemplate = new JdbcTemplate(dataSource);
         feedService = new FeedService(jdbcTemplate);
