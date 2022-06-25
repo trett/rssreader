@@ -7,7 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import ru.trett.rss.dao.UserRepository;
+import ru.trett.rss.core.UserService;
 import ru.trett.rss.models.Settings;
 import ru.trett.rss.models.User;
 
@@ -23,13 +23,13 @@ import javax.servlet.http.HttpServletResponse;
 @Component
 public class UserFilter extends OncePerRequestFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserFilter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(UserFilter.class);
     private static final Map<String, User> userCache = new ConcurrentHashMap<>();
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @Autowired
-    public UserFilter(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserFilter(UserService userRepository) {
+        this.userService = userRepository;
     }
 
     @Override
@@ -40,28 +40,28 @@ public class UserFilter extends OncePerRequestFilter {
                 (CustomAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
             String name = (String) authentication.getPrincipal();
-            LOGGER.info("Loading user with sub: " + name + " from cache");
+            LOG.info("Loading user with sub: " + name + " from cache");
             User cachedUser = userCache.get(name);
             if (cachedUser == null) {
-                LOGGER.info("Loading user with sub: " + name);
-                User user = userRepository.findByPrincipalName(name);
-
-                if (user == null) {
-                    user = saveUser(name, authentication.getEmail());
-                }
-
-                userCache.put(name, user);
+                LOG.info("Loading user with sub: " + name);
+                userService
+                        .getUser(name)
+                        .ifPresentOrElse(
+                                u -> userCache.put(name, u),
+                                () ->
+                                        userCache.put(
+                                                name, saveUser(name, authentication.getEmail())));
             }
         }
         chain.doFilter(request, response);
     }
 
     private User saveUser(String name, String email) {
-        LOGGER.info("Creating user with sub: " + name);
+        LOG.info("Creating user with sub: " + name);
         User user = new User(name, email);
         user.setSettings(new Settings());
-        userRepository.save(user);
-        LOGGER.info("User with sub: " + name + " has been saved");
+        userService.save(user);
+        LOG.info("User with sub: " + name + " has been saved");
         return user;
     }
 }

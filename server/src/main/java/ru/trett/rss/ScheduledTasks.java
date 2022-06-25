@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import ru.trett.rss.core.FeedService;
+import ru.trett.rss.core.UserService;
 import ru.trett.rss.dao.ChannelRepository;
-import ru.trett.rss.dao.UserRepository;
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
@@ -28,34 +28,28 @@ import java.util.stream.Collectors;
 public class ScheduledTasks {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledTasks.class);
-    private ChannelRepository channelRepository;
-    private FeedService feedService;
-    private RestTemplate restTemplate;
-    private UserRepository userRepository;
+    private final ChannelRepository channelRepository;
+    private final FeedService feedService;
+    private final RestTemplate restTemplate;
+    private final UserService userService;
 
     @Autowired
     public ScheduledTasks(
             ChannelRepository channelRepository,
             FeedService feedService,
-            UserRepository userRepository,
+            UserService userRepository,
             RestTemplate restTemplate) {
         this.channelRepository = channelRepository;
         this.feedService = feedService;
-        this.userRepository = userRepository;
+        this.userService = userRepository;
         this.restTemplate = restTemplate;
     }
 
-    /**
-     * Update all channels every hour
-     *
-     * @throws XMLStreamException
-     * @throws IOException
-     */
     @Scheduled(cron = "0 0/30 * * * ?")
     public void updateFeeds() {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         LOG.info("Starting of update feeds at " + LocalDateTime.now());
-        for (User user : userRepository.findAll()) {
+        for (User user : userService.getUsers()) {
             LOG.info("Starting of update feeds for user: " + user.getPrincipalName());
             for (Channel channel : channelRepository.findByUser(user)) {
                 try {
@@ -86,12 +80,11 @@ public class ScheduledTasks {
         LOG.info("End of updating feeds");
     }
 
-    /** Delete old feeds for all users every day at 00:00 */
     @Scheduled(cron = "0 0 0 * * ?")
     public void deleteFeeds() {
         LOG.info("Start of deletion old feeds");
-        userRepository
-                .findAll()
+        userService
+                .getUsers()
                 .forEach(
                         user -> {
                             LOG.info("Delete feeds for user: " + user.getPrincipalName());
