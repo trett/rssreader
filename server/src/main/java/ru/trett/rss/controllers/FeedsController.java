@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import ru.trett.rss.core.FeedEntity;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
-import ru.trett.rss.dao.ChannelRepository;
 
 import java.security.Principal;
 import java.util.Arrays;
@@ -26,14 +25,11 @@ import javax.validation.constraints.NotNull;
 public class FeedsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeedsController.class);
-    private final ChannelRepository channelRepository;
     private final FeedService feedService;
     private final UserService userService;
 
     @Autowired
-    public FeedsController(
-            ChannelRepository channelRepository, FeedService feedService, UserService userService) {
-        this.channelRepository = channelRepository;
+    public FeedsController(FeedService feedService, UserService userService) {
         this.feedService = feedService;
         this.userService = userService;
     }

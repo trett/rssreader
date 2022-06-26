@@ -2,15 +2,11 @@ package ru.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-
 import java.util.Set;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
 
-/** RSS feed with items */
 @Entity
 public class Channel {
 
@@ -75,31 +71,5 @@ public class Channel {
 
     public void setUser(User user) {
         this.user = user;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        Channel channel = (Channel) o;
-        return new EqualsBuilder()
-                .append(getId(), channel.getId())
-                .append(getTitle(), channel.getTitle())
-                .append(getLink(), channel.getLink())
-                .isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(17, 37)
-                .append(getId())
-                .append(getTitle())
-                .append(getLink())
-                .toHashCode();
     }
 }

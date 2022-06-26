@@ -10,10 +10,10 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import ru.trett.rss.core.ChannelService;
 import ru.trett.rss.core.ClientException;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
-import ru.trett.rss.dao.ChannelRepository;
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
@@ -37,18 +37,18 @@ public class ChannelsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChannelsController.class);
 
-    private final ChannelRepository channelRepository;
+    private final ChannelService channelService;
     private final FeedService feedService;
     private final UserService userService;
     private final RestTemplate restTemplate;
 
     @Autowired
     public ChannelsController(
-            ChannelRepository channelRepository,
+            ChannelService channelService,
             FeedService feedService,
             UserService userRepository,
             RestTemplate restTemplate) {
-        this.channelRepository = channelRepository;
+        this.channelService = channelService;
         this.feedService = feedService;
         this.userService = userRepository;
         this.restTemplate = restTemplate;
@@ -60,7 +60,7 @@ public class ChannelsController {
         LOG.info("Retrieving all channels for principal: " + userName);
         return userService
                 .getUser(userName)
-                .map(user -> channelRepository.findByUser(user))
+                .map(user -> channelService.findByUser(user.getPrincipalName()))
                 .orElse(null);
     }
 
@@ -76,7 +76,7 @@ public class ChannelsController {
         }
         User user = maybeUser.get();
         try {
-            for (Channel channel : channelRepository.findByUser(user)) {
+            for (Channel channel : channelService.findByUser(user.getPrincipalName())) {
                 LOG.info("Starting update feeds for channel: " + channel.getTitle());
                 ClientHttpRequest request =
                         requestFactory.createRequest(
@@ -120,13 +120,15 @@ public class ChannelsController {
                     throw new RuntimeException("User not found");
                 }
                 User user = maybeUser.get();
-                if (StreamSupport.stream(channelRepository.findByUser(user).spliterator(), false)
+                if (StreamSupport.stream(
+                                channelService.findByUser(user.getPrincipalName()).spliterator(),
+                                false)
                         .anyMatch(channel::equals)) {
                     throw new RuntimeException("Channel already exist");
                 }
                 channel.setUser(user);
                 channel.setChannelLink(link);
-                return channelRepository.save(channel).getId();
+                return channelService.save(channel);
             }
         } catch (IOException e) {
             throw new ClientException("URL is not valid");
@@ -140,9 +142,10 @@ public class ChannelsController {
                 .getUser(principal.getName())
                 .map(
                         user -> {
-                            for (Channel channel : channelRepository.findByUser(user)) {
+                            for (Channel channel :
+                                    channelService.findByUser(user.getPrincipalName())) {
                                 if (channel.getId() == id) {
-                                    channelRepository.deleteById(id);
+                                    channelService.delete(id);
                                 }
                             }
                             return "deleted: " + id;
