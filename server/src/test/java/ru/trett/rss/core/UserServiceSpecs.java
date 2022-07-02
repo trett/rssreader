@@ -37,7 +37,7 @@ public class UserServiceSpecs {
 
     @After
     public void tearDown() {
-        JdbcTestUtils.dropTables(jdbcTemplate, "feed_item", "channel", "user");
+        JdbcTestUtils.dropTables(jdbcTemplate, "feeds", "channels", "users");
     }
 
     @Test

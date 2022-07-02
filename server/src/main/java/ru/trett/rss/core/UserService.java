@@ -29,7 +29,7 @@ public class UserService {
     }
 
     private static final String GET_USERS =
-            "SELECT principal_name, settings, email FROM public.user u";
+            "SELECT principal_name, settings, email FROM public.users u";
 
     public List<User> getUsers() {
         return jdbcTemplate.query(GET_USERS, new UserRowMapper());
@@ -43,7 +43,7 @@ public class UserService {
     }
 
     private static final String INSERT_USER =
-            "INSERT INTO public.user(principal_name, email, settings) VALUES(?,?,?)";
+            "INSERT INTO public.users(principal_name, email, settings) VALUES(?,?,?)";
 
     public void save(User user) {
         try {
@@ -58,7 +58,7 @@ public class UserService {
     }
 
     private static final String UPDATE_USER =
-            "UPDATE public.user SET email=?, settings=? WHERE principal_name=?";
+            "UPDATE public.users SET email=?, settings=? WHERE principal_name=?";
 
     public void update(User user) {
         try {

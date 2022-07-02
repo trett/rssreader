@@ -28,7 +28,7 @@ public class ChannelServiceSpecs {
                 new EmbeddedDatabaseBuilder()
                         .setType(EmbeddedDatabaseType.H2)
                         .addScript("classpath:schema.sql")
-                        .addScript("classpath:channel_test_data.sql")
+                        .addScript("classpath:channels_test_data.sql")
                         .build();
         jdbcTemplate = new JdbcTemplate(dataSource);
         channelService = new ChannelService(jdbcTemplate);
@@ -37,7 +37,7 @@ public class ChannelServiceSpecs {
 
     @After
     public void tearDown() {
-        JdbcTestUtils.dropTables(jdbcTemplate, "feed_item", "channel", "user");
+        JdbcTestUtils.dropTables(jdbcTemplate, "feeds", "channels", "users");
     }
 
     @Test

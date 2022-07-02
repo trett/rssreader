@@ -29,7 +29,7 @@ public class FeedServiceSpecs {
                 new EmbeddedDatabaseBuilder()
                         .setType(EmbeddedDatabaseType.H2)
                         .addScript("classpath:schema.sql")
-                        .addScript("classpath:feed_items_test_data.sql")
+                        .addScript("classpath:feeds_test_data.sql")
                         .build();
         jdbcTemplate = new JdbcTemplate(dataSource);
         feedService = new FeedService(jdbcTemplate);
@@ -37,7 +37,7 @@ public class FeedServiceSpecs {
 
     @After
     public void tearDown() {
-        JdbcTestUtils.dropTables(jdbcTemplate, "feed_item", "channel", "user");
+        JdbcTestUtils.dropTables(jdbcTemplate, "feeds", "channels", "users");
     }
 
     @Test

@@ -20,7 +20,7 @@ public class ChannelService {
     }
 
     private static final String INSERT_CHANNEL =
-            "INSERT INTO public.channel(channel_link, title, link, user_principal_name)"
+            "INSERT INTO public.channels(channel_link, title, link, user_principal_name)"
                     + " VALUES(?, ?, ?, ?)";
 
     public int save(Channel channel) {
@@ -32,14 +32,14 @@ public class ChannelService {
                 channel.user.principalName);
     }
 
-    private static final String DELETE_CHANNEL = "DELETE FROM public.channel WHERE id=?";
+    private static final String DELETE_CHANNEL = "DELETE FROM public.channels WHERE id=?";
 
     public int delete(long channelId) {
         return jdbcTemplate.update(DELETE_CHANNEL, channelId);
     }
 
     private static final String FIND_BY_USER =
-            "SELECT id, channel_link, title, link, user_principal_name from public.channel WHERE"
+            "SELECT id, channel_link, title, link, user_principal_name from public.channels WHERE"
                     + " user_principal_name=?";
 
     public List<Channel> findByUser(String userName) {
