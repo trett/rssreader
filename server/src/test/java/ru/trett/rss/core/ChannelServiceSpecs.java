@@ -20,6 +20,7 @@ public class ChannelServiceSpecs {
 
     private JdbcTemplate jdbcTemplate;
     private ChannelService channelService;
+    private FeedService feedService;
 
     @Before
     public void init() {
@@ -31,6 +32,7 @@ public class ChannelServiceSpecs {
                         .build();
         jdbcTemplate = new JdbcTemplate(dataSource);
         channelService = new ChannelService(jdbcTemplate);
+        feedService = new FeedService(jdbcTemplate);
     }
 
     @After
@@ -50,6 +52,7 @@ public class ChannelServiceSpecs {
 
     @Test
     public void testDeleteChannel() {
+        feedService.deleteFeedsByChannel("123", 1);
         assertEquals(1, channelService.delete(1));
         assertEquals(Collections.emptyList(), channelService.findByUser("123"));
     }

@@ -142,9 +142,11 @@ public class ChannelsController {
                 .getUser(principal.getName())
                 .map(
                         user -> {
-                            for (Channel channel :
-                                    channelService.findByUser(user.getPrincipalName())) {
-                                if (channel.getId() == id) {
+                            var userName = user.getPrincipalName();
+                            for (Channel channel : channelService.findByUser(userName)) {
+                                var channelId = channel.getId();
+                                if (channelId == id) {
+                                    feedService.deleteFeedsByChannel(userName, channelId);
                                     channelService.delete(id);
                                 }
                             }
