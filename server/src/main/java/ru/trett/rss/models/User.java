@@ -1,8 +1,5 @@
 package ru.trett.rss.models;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-
 import ru.trett.rss.converter.SettingsConverter;
 
 import java.util.Set;
@@ -63,31 +60,5 @@ public class User {
 
     public void setSettings(Settings settings) {
         this.settings = settings;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        User user = (User) o;
-
-        return new EqualsBuilder()
-                .append(getPrincipalName(), user.getPrincipalName())
-                .append(getEmail(), user.getEmail())
-                .isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(17, 37)
-                .append(getPrincipalName())
-                .append(getEmail())
-                .toHashCode();
     }
 }

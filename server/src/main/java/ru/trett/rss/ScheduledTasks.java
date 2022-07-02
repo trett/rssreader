@@ -11,9 +11,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import ru.trett.rss.core.ChannelService;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
-import ru.trett.rss.dao.ChannelRepository;
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
@@ -28,18 +28,18 @@ import java.util.stream.Collectors;
 public class ScheduledTasks {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledTasks.class);
-    private final ChannelRepository channelRepository;
+    private final ChannelService channelService;
     private final FeedService feedService;
     private final RestTemplate restTemplate;
     private final UserService userService;
 
     @Autowired
     public ScheduledTasks(
-            ChannelRepository channelRepository,
+            ChannelService channelService,
             FeedService feedService,
             UserService userRepository,
             RestTemplate restTemplate) {
-        this.channelRepository = channelRepository;
+        this.channelService = channelService;
         this.feedService = feedService;
         this.userService = userRepository;
         this.restTemplate = restTemplate;
@@ -51,7 +51,7 @@ public class ScheduledTasks {
         LOG.info("Starting of update feeds at " + LocalDateTime.now());
         for (User user : userService.getUsers()) {
             LOG.info("Starting of update feeds for user: " + user.getPrincipalName());
-            for (Channel channel : channelRepository.findByUser(user)) {
+            for (Channel channel : channelService.findByUser(user.getPrincipalName())) {
                 try {
                     ClientHttpRequest request =
                             requestFactory.createRequest(

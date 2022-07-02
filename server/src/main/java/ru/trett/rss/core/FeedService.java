@@ -69,19 +69,16 @@ public class FeedService {
                         .filter(feedItem -> feedItem.pubDate.isBefore(since))
                         .map(feedItem -> feedItem.id)
                         .collect(Collectors.toList());
+        batchDeleteFeeds(itemsToDelete);
+        return itemsToDelete.size();
+    }
 
-        jdbcTemplate.batchUpdate(
-                DELETE_FEEDS,
-                new BatchPreparedStatementSetter() {
-
-                    public void setValues(PreparedStatement ps, int i) throws SQLException {
-                        ps.setLong(1, itemsToDelete.get(i));
-                    }
-
-                    public int getBatchSize() {
-                        return itemsToDelete.size();
-                    }
-                });
+    public int deleteFeedsByChannel(String userName, long channelId) {
+        var itemsToDelete =
+                getItemsByUserNameAndChannelId(userName, channelId, false).stream()
+                        .map(feed -> feed.id)
+                        .collect(Collectors.toList());
+        batchDeleteFeeds(itemsToDelete);
         return itemsToDelete.size();
     }
 
@@ -170,6 +167,21 @@ public class FeedService {
 
                     public int getBatchSize() {
                         return feedItems.size();
+                    }
+                });
+    }
+
+    private void batchDeleteFeeds(List<Long> itemsToDelete) {
+        jdbcTemplate.batchUpdate(
+                DELETE_FEEDS,
+                new BatchPreparedStatementSetter() {
+
+                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+                        ps.setLong(1, itemsToDelete.get(i));
+                    }
+
+                    public int getBatchSize() {
+                        return itemsToDelete.size();
                     }
                 });
     }
