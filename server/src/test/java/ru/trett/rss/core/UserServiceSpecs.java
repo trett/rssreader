@@ -42,34 +42,28 @@ public class UserServiceSpecs {
 
     @Test
     public void testSaveUser() {
-        User user = new User();
-        user.setPrincipalName("345");
-        user.setEmail("email@example.com");
+        User user = new User("345", "email@example.com");
         var settings = new Settings();
-        settings.setDeleteAfter(10);
-        user.setSettings(settings);
+        settings.deleteAfter = 10;
+        user.settings = settings;
         userService.save(user);
         assertEquals(
-                Optional.of(settings.getDeleteAfter()),
-                userService
-                        .getUser(user.getPrincipalName())
-                        .map(u -> u.getSettings().getDeleteAfter()));
+                Optional.of(settings.deleteAfter),
+                userService.getUser(user.principalName).map(u -> u.settings.deleteAfter));
     }
 
     @Test
     public void testUpdateUser() {
         var user = userService.getUser("123").get();
-        user.setEmail("new@email.com");
+        user.email = "new@email.com";
         userService.update(user);
-        assertEquals(
-                Optional.of("new@email.com"), userService.getUser("123").map(u -> u.getEmail()));
+        assertEquals(Optional.of("new@email.com"), userService.getUser("123").map(u -> u.email));
     }
 
     @Test
     public void testGetUser() {
         assertEquals(
-                Optional.of("example2@test.com"),
-                userService.getUser("234").map(u -> u.getEmail()));
+                Optional.of("example2@test.com"), userService.getUser("234").map(u -> u.email));
     }
 
     @Test

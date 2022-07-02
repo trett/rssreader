@@ -43,10 +43,10 @@ public class ChannelServiceSpecs {
     @Test
     public void testSaveChannel() {
         var channel = new Channel();
-        channel.setChannelLink("http://test.link");
-        channel.setLink("http://channel.link");
-        channel.setTitle("test_title");
-        channel.setUser(new UserService(jdbcTemplate).getUser("123").get());
+        channel.channelLink = "http://test.link";
+        channel.link = "http://channel.link";
+        channel.title = "test_title";
+        channel.user = new UserService(jdbcTemplate).getUser("123").get();
         assertEquals(1, channelService.save(channel));
     }
 

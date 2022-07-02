@@ -24,14 +24,12 @@ public class ChannelService {
                     + " VALUES(?, ?, ?, ?)";
 
     public int save(Channel channel) {
-        // var id = jdbcTemplate.queryForObject("SELECT NEXTVAL('rss_sequence')", Integer.class);
         return jdbcTemplate.update(
                 INSERT_CHANNEL,
-                // id,
-                channel.getChannelLink(),
-                channel.getTitle(),
-                channel.getLink(),
-                channel.getUser().getPrincipalName());
+                channel.channelLink,
+                channel.title,
+                channel.link,
+                channel.user.principalName);
     }
 
     private static final String DELETE_CHANNEL = "DELETE FROM public.channel WHERE id=?";
@@ -44,10 +42,7 @@ public class ChannelService {
             "SELECT id, channel_link, title, link, user_principal_name from public.channel WHERE"
                     + " user_principal_name=?";
 
-    @SuppressWarnings("unchecked")
     public List<Channel> findByUser(String userName) {
-        return (List<Channel>)
-                jdbcTemplate.query(
-                        FIND_BY_USER, new BeanPropertyRowMapper(Channel.class), userName);
+        return jdbcTemplate.query(FIND_BY_USER, new BeanPropertyRowMapper<>(Channel.class), userName);
     }
 }

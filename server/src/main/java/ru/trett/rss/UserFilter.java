@@ -59,7 +59,7 @@ public class UserFilter extends OncePerRequestFilter {
     private User saveUser(String name, String email) {
         LOG.info("Creating user with sub: " + name);
         User user = new User(name, email);
-        user.setSettings(new Settings());
+        user.settings = new Settings();
         userService.save(user);
         LOG.info("User with sub: " + name + " has been saved");
         return user;

@@ -19,8 +19,9 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper JSON = new ObjectMapper();
 
     @Autowired
     public UserService(JdbcTemplate jdbcTemplate) {
@@ -48,9 +49,9 @@ public class UserService {
         try {
             jdbcTemplate.update(
                     INSERT_USER,
-                    user.getPrincipalName(),
-                    user.getEmail(),
-                    JSON.writeValueAsString(user.getSettings()));
+                    user.principalName,
+                    user.email,
+                    JSON.writeValueAsString(user.settings));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Invalid json value", e);
         }
@@ -63,23 +64,23 @@ public class UserService {
         try {
             jdbcTemplate.update(
                     UPDATE_USER,
-                    user.getEmail(),
-                    JSON.writeValueAsString(user.getSettings()),
-                    user.getPrincipalName());
+                    user.email,
+                    JSON.writeValueAsString(user.settings),
+                    user.principalName);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Invalid json value", e);
         }
     }
 
-    private class UserRowMapper implements RowMapper<User> {
+    private static class UserRowMapper implements RowMapper<User> {
 
         @Override
         public User mapRow(ResultSet rs, int row) throws SQLException {
             try {
-                User user = new User();
-                user.setPrincipalName(rs.getString("principal_name"));
-                user.setEmail(rs.getString("email"));
-                user.setSettings(JSON.readValue(rs.getString("settings"), Settings.class));
+                var principalName = rs.getString("principal_name");
+                var email = rs.getString("email");
+                var user = new User(principalName, email);
+                user.settings = JSON.readValue(rs.getString("settings"), Settings.class);
                 return user;
             } catch (JsonProcessingException e) {
                 throw new RuntimeException("Error occured during parse settings");

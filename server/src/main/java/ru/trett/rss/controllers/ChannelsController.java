@@ -60,7 +60,7 @@ public class ChannelsController {
         LOG.info("Retrieving all channels for principal: " + userName);
         return userService
                 .getUser(userName)
-                .map(user -> channelService.findByUser(user.getPrincipalName()))
+                .map(user -> channelService.findByUser(user.principalName))
                 .orElse(null);
     }
 
@@ -76,25 +76,24 @@ public class ChannelsController {
         }
         User user = maybeUser.get();
         try {
-            for (Channel channel : channelService.findByUser(user.getPrincipalName())) {
-                LOG.info("Starting update feeds for channel: " + channel.getTitle());
+            for (Channel channel : channelService.findByUser(user.principalName)) {
+                LOG.info("Starting update feeds for channel: " + channel.title);
                 ClientHttpRequest request =
                         requestFactory.createRequest(
-                                URI.create(channel.getChannelLink()), HttpMethod.GET);
+                                URI.create(channel.channelLink), HttpMethod.GET);
                 ClientHttpResponse execute = request.execute();
-                int deleteAfter = user.getSettings().getDeleteAfter();
+                int deleteAfter = user.settings.deleteAfter;
                 try (InputStream inputStream = execute.getBody()) {
                     var since = LocalDateTime.now().minusDays(deleteAfter);
                     var feeds =
                             new RssParser(inputStream)
-                                    .parse().getFeedItems().stream()
-                                            .filter(feed -> feed.getPubDate().isAfter(since))
+                                    .parse().feedItems.stream()
+                                            .filter(feed -> feed.pubDate.isAfter(since))
                                             .collect(Collectors.toList());
                     int inserted = feedService.saveAll(feeds, channel.getId());
                     LOG.info(
                             MessageFormat.format(
-                                    "{0} items was updated for ''{1}''",
-                                    inserted, channel.getTitle()));
+                                    "{0} items was updated for ''{1}''", inserted, channel.title));
                 }
             }
         } catch (Exception e) {
@@ -121,13 +120,12 @@ public class ChannelsController {
                 }
                 User user = maybeUser.get();
                 if (StreamSupport.stream(
-                                channelService.findByUser(user.getPrincipalName()).spliterator(),
-                                false)
+                                channelService.findByUser(user.principalName).spliterator(), false)
                         .anyMatch(channel::equals)) {
                     throw new RuntimeException("Channel already exist");
                 }
-                channel.setUser(user);
-                channel.setChannelLink(link);
+                channel.user = user;
+                channel.link = link;
                 channelService.save(channel);
             }
         } catch (IOException e) {
@@ -142,7 +140,7 @@ public class ChannelsController {
                 .getUser(principal.getName())
                 .map(
                         user -> {
-                            var userName = user.getPrincipalName();
+                            var userName = user.principalName;
                             for (Channel channel : channelService.findByUser(userName)) {
                                 var channelId = channel.getId();
                                 if (channelId == id) {

@@ -16,7 +16,7 @@ public class SettingsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(SettingsController.class);
 
-    private UserService userService;
+    private final UserService userService;
 
     @Autowired
     public SettingsController(UserService userService) {
@@ -27,10 +27,7 @@ public class SettingsController {
     public Settings getSettings(Principal principal) {
         String userName = principal.getName();
         LOG.info("Update settings for user: " + userName);
-        return userService
-                .getUser(userName)
-                .map(u -> u.getSettings())
-                .orElseGet(() -> new Settings());
+        return userService.getUser(userName).map(u -> u.settings).orElseGet(Settings::new);
     }
 
     @PostMapping
@@ -41,7 +38,7 @@ public class SettingsController {
                 .getUser(userName)
                 .ifPresent(
                         user -> {
-                            user.setSettings(settings);
+                            user.settings = settings;
                             userService.update(user);
                         });
     }
