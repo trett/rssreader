@@ -11,7 +11,7 @@ CREATE TABLE public.users
 
 CREATE TABLE public.channels
 (
-    id INT NOT NULL PRIMARY KEY DEFAULT NEXTVAL('rss_sequence'),
+    id int NOT NULL PRIMARY KEY DEFAULT NEXTVAL('rss_sequence'),
     channel_link varchar(255),
     title varchar(255),
     link varchar(255),

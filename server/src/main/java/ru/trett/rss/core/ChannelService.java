@@ -43,6 +43,7 @@ public class ChannelService {
                     + " user_principal_name=?";
 
     public List<Channel> findByUser(String userName) {
-        return jdbcTemplate.query(FIND_BY_USER, new BeanPropertyRowMapper<>(Channel.class), userName);
+        return jdbcTemplate.query(
+                FIND_BY_USER, new BeanPropertyRowMapper<>(Channel.class), userName);
     }
 }
