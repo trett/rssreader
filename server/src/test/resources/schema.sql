@@ -1,4 +1,4 @@
-CREATE SEQUENCE IF NOT EXISTS hibernate_sequence;
+-- CREATE SEQUENCE IF NOT EXISTS rss_sequence;
 
 CREATE TABLE public.user
 (
@@ -9,7 +9,7 @@ CREATE TABLE public.user
 
 CREATE TABLE public.channel
 (
-    `id` int DEFAULT NOT NULL PRIMARY KEY,
+    `id` int NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `channel_link` varchar(255),
     `title` varchar(255),
     `link` varchar(255),
@@ -20,7 +20,7 @@ ALTER TABLE channel ADD CONSTRAINT FK_channel_user FOREIGN KEY (user_principal_n
 
 CREATE TABLE public.feed_item
 (
-    `id` int DEFAULT NOT NULL PRIMARY KEY,
+    `id` int NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `guid` varchar(255),
     `title` varchar(255),
     `link` varchar(255),

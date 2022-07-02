@@ -5,30 +5,21 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotEmpty;
-
 /** RSS channel item */
-@Entity
 public class FeedItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @NotEmpty private String guid;
+    private String guid;
     private String title;
-    @NotEmpty private String link;
+    private String link;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime pubDate;
 
-    @Column(columnDefinition = "text")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JsonIgnore
-    private Channel channel;
+    @JsonIgnore private Channel channel;
 
     private boolean read;
 

@@ -1,7 +1,6 @@
 package ru.trett.rss;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import org.apache.http.client.HttpClient;
@@ -42,7 +41,6 @@ public class RssApplication {
         MappingJackson2HttpMessageConverter messageConverter =
                 new MappingJackson2HttpMessageConverter();
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new Hibernate5Module());
         mapper.registerModule(new JavaTimeModule());
         messageConverter.setObjectMapper(mapper);
         return messageConverter;

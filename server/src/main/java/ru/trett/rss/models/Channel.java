@@ -4,26 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.Set;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotEmpty;
-
-@Entity
 public class Channel {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @NotEmpty private String channelLink;
-    @NotEmpty private String title;
-    @NotEmpty private String link;
+    private String channelLink;
+    private String title;
+    private String link;
 
-    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<FeedItem> feedItems;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JsonIgnore
-    private User user;
+    @JsonIgnore private User user;
 
     public String getChannelLink() {
         return channelLink;

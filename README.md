@@ -1,6 +1,6 @@
 # Simple RSS Reader
 
-Written using Spring Boot 2, Hibernate, Vue.js/Vuetify and Typescript
+Written using Spring Boot 2, Vue.js/Vuetify and Typescript
 
 Authorization based on Google OAuth2 API
 

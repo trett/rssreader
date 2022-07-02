@@ -141,8 +141,8 @@ public class FeedService {
     }
 
     private static final String INSERT_FEED =
-            "INSERT INTO public.feed_item(id, guid, title, link, pub_date, description, read,"
-                    + " channel_id) VALUES(?,?,?,?,?,?,?,?)";
+            "INSERT INTO public.feed_item(guid, title, link, pub_date, description, read,"
+                    + " channel_id) VALUES(?,?,?,?,?,?,?)";
 
     private int[] insertFeeds(List<FeedItem> feedItems, long channelId) {
         return jdbcTemplate.batchUpdate(
@@ -151,11 +151,11 @@ public class FeedService {
 
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         var feed = feedItems.get(i);
-                        var id =
-                                jdbcTemplate.queryForObject(
-                                        "SELECT NEXTVAL('hibernate_sequence')", Long.class);
+                        // var id =
+                        //         jdbcTemplate.queryForObject(
+                        //                 "SELECT NEXTVAL('rss_sequence')", Long.class);
                         int idx = 0;
-                        ps.setLong(++idx, id);
+                        // ps.setLong(++idx, id);
                         ps.setString(++idx, feed.getGuid());
                         ps.setString(++idx, feed.getTitle());
                         ps.setString(++idx, feed.getLink());

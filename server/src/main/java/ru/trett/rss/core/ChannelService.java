@@ -20,19 +20,18 @@ public class ChannelService {
     }
 
     private static final String INSERT_CHANNEL =
-            "INSERT INTO public.channel(id, channel_link, title, link, user_principal_name)"
-                    + " VALUES(?, ?, ?, ?, ?)";
+            "INSERT INTO public.channel(channel_link, title, link, user_principal_name)"
+                    + " VALUES(?, ?, ?, ?)";
 
-    public long save(Channel channel) {
-        var id = jdbcTemplate.queryForObject("SELECT NEXTVAL('hibernate_sequence')", Integer.class);
-        jdbcTemplate.update(
+    public int save(Channel channel) {
+        // var id = jdbcTemplate.queryForObject("SELECT NEXTVAL('rss_sequence')", Integer.class);
+        return jdbcTemplate.update(
                 INSERT_CHANNEL,
-                id,
+                // id,
                 channel.getChannelLink(),
                 channel.getTitle(),
                 channel.getLink(),
                 channel.getUser().getPrincipalName());
-        return id;
     }
 
     private static final String DELETE_CHANNEL = "DELETE FROM public.channel WHERE id=?";

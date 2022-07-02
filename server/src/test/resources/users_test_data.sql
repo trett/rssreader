@@ -1,4 +1,4 @@
-ALTER SEQUENCE hibernate_sequence RESTART WITH 1;
+-- ALTER SEQUENCE hibernate_sequence RESTART WITH 1;
 INSERT INTO public.user(principal_name, email, settings)
     VALUES('123', 'example@test.com', '{}');
 INSERT INTO public.user(principal_name, email, settings)

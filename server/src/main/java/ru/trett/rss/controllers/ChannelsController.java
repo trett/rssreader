@@ -104,7 +104,7 @@ public class ChannelsController {
     }
 
     @PostMapping(path = "/add")
-    public Long addFeed(@RequestBody @NotEmpty String link, Principal principal)
+    public void addFeed(@RequestBody @NotEmpty String link, Principal principal)
             throws IOException {
         link = link.trim();
         LOG.info("Adding channel with link: " + link);
@@ -128,7 +128,7 @@ public class ChannelsController {
                 }
                 channel.setUser(user);
                 channel.setChannelLink(link);
-                return channelService.save(channel);
+                channelService.save(channel);
             }
         } catch (IOException e) {
             throw new ClientException("URL is not valid");

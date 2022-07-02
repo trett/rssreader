@@ -8,7 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
-import ru.trett.rss.converter.SettingsConverter;
+import ru.trett.rss.models.Settings;
 import ru.trett.rss.models.User;
 
 import java.sql.ResultSet;
@@ -71,16 +71,19 @@ public class UserService {
         }
     }
 
-    private static class UserRowMapper implements RowMapper<User> {
+    private class UserRowMapper implements RowMapper<User> {
 
         @Override
         public User mapRow(ResultSet rs, int row) throws SQLException {
-            User user = new User();
-            user.setPrincipalName(rs.getString("principal_name"));
-            user.setEmail(rs.getString("email"));
-            user.setSettings(
-                    new SettingsConverter().convertToEntityAttribute(rs.getString("settings")));
-            return user;
+            try {
+                User user = new User();
+                user.setPrincipalName(rs.getString("principal_name"));
+                user.setEmail(rs.getString("email"));
+                user.setSettings(JSON.readValue(rs.getString("settings"), Settings.class));
+                return user;
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Error occured during parse settings");
+            }
         }
     }
 }

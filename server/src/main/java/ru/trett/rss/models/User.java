@@ -1,26 +1,15 @@
 package ru.trett.rss.models;
 
-import ru.trett.rss.converter.SettingsConverter;
-
 import java.util.Set;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotEmpty;
-
-@Entity
 public class User {
 
-    @Id
-    @NotEmpty
-    @Column(name = "principal_name", unique = true, updatable = false)
     private String principalName;
 
-    @NotEmpty private String email;
+    private String email;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Channel> channels;
 
-    @Convert(converter = SettingsConverter.class)
     private Settings settings;
 
     public User() {}
