@@ -47,7 +47,6 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             UriComponentsBuilder builder =
                     UriComponentsBuilder.fromUriString(authUrl).queryParam("access_token", token);
             String uriString = builder.toUriString();
-            LOGGER.info(uriString);
             ResponseEntity<UserInfo> userInfo =
                     restTemplate.getForEntity(uriString, UserInfo.class);
             Authentication authentication =

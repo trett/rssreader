@@ -90,7 +90,7 @@ public class ChannelsController {
                                     .parse().feedItems.stream()
                                             .filter(feed -> feed.pubDate.isAfter(since))
                                             .collect(Collectors.toList());
-                    int inserted = feedService.saveAll(feeds, channel.getId());
+                    int inserted = feedService.saveAll(feeds, channel.id);
                     LOG.info(
                             MessageFormat.format(
                                     "{0} items was updated for ''{1}''", inserted, channel.title));
@@ -124,9 +124,8 @@ public class ChannelsController {
                         .anyMatch(channel::equals)) {
                     throw new RuntimeException("Channel already exist");
                 }
-                channel.user = user;
-                channel.link = link;
-                channelService.save(channel);
+                channel.channelLink = link;
+                channelService.save(channel, user.principalName);
             }
         } catch (IOException e) {
             throw new ClientException("URL is not valid");
@@ -142,7 +141,7 @@ public class ChannelsController {
                         user -> {
                             var userName = user.principalName;
                             for (Channel channel : channelService.findByUser(userName)) {
-                                var channelId = channel.getId();
+                                var channelId = channel.id;
                                 if (channelId == id) {
                                     feedService.deleteFeedsByChannel(userName, channelId);
                                     channelService.delete(id);

@@ -46,8 +46,8 @@ public class ChannelServiceSpecs {
         channel.channelLink = "http://test.link";
         channel.link = "http://channel.link";
         channel.title = "test_title";
-        channel.user = new UserService(jdbcTemplate).getUser("123").get();
-        assertEquals(1, channelService.save(channel));
+        var user = new UserService(jdbcTemplate).getUser("123").get();
+        assertEquals(1, channelService.save(channel, user.principalName));
     }
 
     @Test

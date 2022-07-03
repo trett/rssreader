@@ -64,7 +64,7 @@ public class ScheduledTasks {
                                         .parse().feedItems.stream()
                                                 .filter(feed -> feed.pubDate.isAfter(since))
                                                 .collect(Collectors.toList());
-                        int inserted = feedService.saveAll(feeds, channel.getId());
+                        int inserted = feedService.saveAll(feeds, channel.id);
                         LOG.info(
                                 MessageFormat.format(
                                         "{0} items was updated for ''{1}''",
