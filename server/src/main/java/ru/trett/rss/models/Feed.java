@@ -1,14 +1,17 @@
-package ru.trett.rss.core;
+package ru.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 
-public class FeedEntity {
+import javax.validation.constraints.NotEmpty;
+
+public class Feed {
 
     public long id;
-    public String title;
-    public String channelTitle;
+    @NotEmpty public String title;
+    @NotEmpty public String guid;
+    @NotEmpty public String channelTitle;
     public String description;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")

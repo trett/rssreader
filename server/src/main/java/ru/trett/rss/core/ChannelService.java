@@ -1,13 +1,14 @@
 package ru.trett.rss.core;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import ru.trett.rss.models.Channel;
 
 import java.util.List;
+
+import javax.validation.constraints.NotEmpty;
 
 @Service
 public class ChannelService {
@@ -20,35 +21,34 @@ public class ChannelService {
     }
 
     private static final String INSERT_CHANNEL =
-            "INSERT INTO public.channel(id, channel_link, title, link, user_principal_name)"
-                    + " VALUES(?, ?, ?, ?, ?)";
+            "INSERT INTO public.channels(channel_link, title, link, user_principal_name) VALUES(?,"
+                    + " ?, ?, ?)";
 
-    public long save(Channel channel) {
-        var id = jdbcTemplate.queryForObject("SELECT NEXTVAL('hibernate_sequence')", Integer.class);
-        jdbcTemplate.update(
-                INSERT_CHANNEL,
-                id,
-                channel.getChannelLink(),
-                channel.getTitle(),
-                channel.getLink(),
-                channel.getUser().getPrincipalName());
-        return id;
+    public int save(Channel channel, @NotEmpty String principalName) {
+        return jdbcTemplate.update(
+                INSERT_CHANNEL, channel.channelLink, channel.title, channel.link, principalName);
     }
 
-    private static final String DELETE_CHANNEL = "DELETE FROM public.channel WHERE id=?";
+    private static final String DELETE_CHANNEL = "DELETE FROM public.channels WHERE id=?";
 
     public int delete(long channelId) {
         return jdbcTemplate.update(DELETE_CHANNEL, channelId);
     }
 
     private static final String FIND_BY_USER =
-            "SELECT id, channel_link, title, link, user_principal_name from public.channel WHERE"
-                    + " user_principal_name=?";
+            "SELECT id, channel_link, title, link from public.channels WHERE user_principal_name=?";
 
-    @SuppressWarnings("unchecked")
     public List<Channel> findByUser(String userName) {
-        return (List<Channel>)
-                jdbcTemplate.query(
-                        FIND_BY_USER, new BeanPropertyRowMapper(Channel.class), userName);
+        return jdbcTemplate.query(
+                FIND_BY_USER,
+                (rs, idx) -> {
+                    var channel = new Channel();
+                    channel.id = rs.getLong("id");
+                    channel.channelLink = rs.getString("channel_link");
+                    channel.title = rs.getString("title");
+                    channel.link = rs.getString("link");
+                    return channel;
+                },
+                userName);
     }
 }

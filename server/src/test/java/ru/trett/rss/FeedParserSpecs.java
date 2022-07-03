@@ -16,8 +16,8 @@ public class FeedParserSpecs {
     public void testParserRSS() throws IOException {
         try (InputStream is = getClass().getResourceAsStream("/test.xml")) {
             Channel channel = new RssParser(is).parse();
-            assertEquals("JUG.ru", channel.getTitle());
-            assertEquals(10, channel.getFeedItems().size());
+            assertEquals("JUG.ru", channel.title);
+            assertEquals(10, channel.feedItems.size());
         }
     }
 
@@ -25,8 +25,8 @@ public class FeedParserSpecs {
     public void testParserAtom() throws IOException {
         try (InputStream is = getClass().getResourceAsStream("/blog.atom")) {
             Channel channel = new RssParser(is).parse();
-            assertEquals("Spring", channel.getTitle());
-            assertEquals(20, channel.getFeedItems().size());
+            assertEquals("Spring", channel.title);
+            assertEquals(20, channel.feedItems.size());
         }
     }
 
@@ -34,8 +34,8 @@ public class FeedParserSpecs {
     public void testParserReddit() throws IOException {
         try (InputStream is = getClass().getResourceAsStream("/reddit.rss")) {
             Channel channel = new RssParser(is).parse();
-            assertEquals("posts from java, WTF", channel.getTitle());
-            assertEquals(25, channel.getFeedItems().size());
+            assertEquals("posts from java, WTF", channel.title);
+            assertEquals(25, channel.feedItems.size());
         }
     }
 }

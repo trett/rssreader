@@ -50,30 +50,29 @@ public class ScheduledTasks {
         ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
         LOG.info("Starting of update feeds at " + LocalDateTime.now());
         for (User user : userService.getUsers()) {
-            LOG.info("Starting of update feeds for user: " + user.getPrincipalName());
-            for (Channel channel : channelService.findByUser(user.getPrincipalName())) {
+            LOG.info("Starting of update feeds for user: " + user.principalName);
+            for (Channel channel : channelService.findByUser(user.principalName)) {
                 try {
                     ClientHttpRequest request =
                             requestFactory.createRequest(
-                                    URI.create(channel.getChannelLink()), HttpMethod.GET);
+                                    URI.create(channel.channelLink), HttpMethod.GET);
                     ClientHttpResponse execute = request.execute();
                     try (InputStream inputStream = execute.getBody()) {
-                        var since =
-                                LocalDateTime.now().minusDays(user.getSettings().getDeleteAfter());
+                        var since = LocalDateTime.now().minusDays(user.settings.deleteAfter);
                         var feeds =
                                 new RssParser(inputStream)
-                                        .parse().getFeedItems().stream()
-                                                .filter(feed -> feed.getPubDate().isAfter(since))
+                                        .parse().feedItems.stream()
+                                                .filter(feed -> feed.pubDate.isAfter(since))
                                                 .collect(Collectors.toList());
-                        int inserted = feedService.saveAll(feeds, channel.getId());
+                        int inserted = feedService.saveAll(feeds, channel.id);
                         LOG.info(
                                 MessageFormat.format(
                                         "{0} items was updated for ''{1}''",
-                                        inserted, channel.getTitle()));
+                                        inserted, channel.title));
                     }
                 } catch (Exception e) {
                     // logging and update next channel
-                    LOG.info("Error occured during the channel parsings: " + channel.getTitle(), e);
+                    LOG.info("Error occured during the channel parsings: " + channel.title, e);
                 }
             }
         }
@@ -87,11 +86,10 @@ public class ScheduledTasks {
                 .getUsers()
                 .forEach(
                         user -> {
-                            LOG.info("Delete feeds for user: " + user.getPrincipalName());
+                            LOG.info("Delete feeds for user: " + user.principalName);
                             int deleted =
                                     feedService.deleteOldFeeds(
-                                            user.getPrincipalName(),
-                                            user.getSettings().getDeleteAfter());
+                                            user.principalName, user.settings.deleteAfter);
                             LOG.info(deleted + " was deleted for");
                         });
         LOG.info("End of deletion old feeds");

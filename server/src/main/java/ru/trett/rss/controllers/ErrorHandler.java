@@ -14,7 +14,7 @@ import ru.trett.rss.core.ClientException;
 @ControllerAdvice
 public class ErrorHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ClientException.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ErrorHandler.class);
 
     @ExceptionHandler(ClientException.class)
     protected ResponseEntity<Object> handleConflict(ClientException e, WebRequest request) {

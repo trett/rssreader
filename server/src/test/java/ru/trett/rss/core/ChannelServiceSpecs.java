@@ -28,7 +28,7 @@ public class ChannelServiceSpecs {
                 new EmbeddedDatabaseBuilder()
                         .setType(EmbeddedDatabaseType.H2)
                         .addScript("classpath:schema.sql")
-                        .addScript("classpath:channel_test_data.sql")
+                        .addScript("classpath:channels_test_data.sql")
                         .build();
         jdbcTemplate = new JdbcTemplate(dataSource);
         channelService = new ChannelService(jdbcTemplate);
@@ -37,17 +37,17 @@ public class ChannelServiceSpecs {
 
     @After
     public void tearDown() {
-        JdbcTestUtils.dropTables(jdbcTemplate, "feed_item", "channel", "user");
+        JdbcTestUtils.dropTables(jdbcTemplate, "feeds", "channels", "users");
     }
 
     @Test
     public void testSaveChannel() {
         var channel = new Channel();
-        channel.setChannelLink("http://test.link");
-        channel.setLink("http://channel.link");
-        channel.setTitle("test_title");
-        channel.setUser(new UserService(jdbcTemplate).getUser("123").get());
-        assertEquals(2, channelService.save(channel));
+        channel.channelLink = "http://test.link";
+        channel.link = "http://channel.link";
+        channel.title = "test_title";
+        var user = new UserService(jdbcTemplate).getUser("123").get();
+        assertEquals(1, channelService.save(channel, user.principalName));
     }
 
     @Test

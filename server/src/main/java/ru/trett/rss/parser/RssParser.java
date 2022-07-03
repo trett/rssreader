@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ru.trett.rss.models.Channel;
-import ru.trett.rss.models.FeedItem;
+import ru.trett.rss.models.Feed;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +21,6 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class RssParser {
@@ -38,31 +37,30 @@ public class RssParser {
         try {
             SyndFeedInput input = new SyndFeedInput();
             try (XmlReader xmlReader = new XmlReader(stream)) {
-                SyndFeed feed = input.build(xmlReader);
-                String title = feed.getTitle();
+                SyndFeed syndFeed = input.build(xmlReader);
+                String title = syndFeed.getTitle();
                 LOG.info(
                         MessageFormat.format(
                                 "Parse channel: title ''{0}'', type ''{1}''",
-                                title, feed.getFeedType()));
+                                title, syndFeed.getFeedType()));
                 Channel channel = new Channel();
-                channel.setTitle(title);
-                channel.setLink(feed.getLink());
-                List<SyndEntry> entries = feed.getEntries();
-                Set<FeedItem> feedItems =
+                channel.title = title;
+                channel.link = syndFeed.getLink();
+                List<SyndEntry> entries = syndFeed.getEntries();
+                var feedItems =
                         entries.stream()
                                 .map(
                                         entry -> {
-                                            FeedItem feedItem = new FeedItem();
-                                            feedItem.setGuid(entry.getUri());
-                                            feedItem.setChannel(channel);
-                                            feedItem.setDescription(extractDescription(entry));
-                                            feedItem.setTitle(entry.getTitle());
-                                            feedItem.setPubDate(extractDate(entry));
-                                            feedItem.setLink(entry.getLink());
-                                            return feedItem;
+                                            var feed = new Feed();
+                                            feed.guid = entry.getUri();
+                                            feed.description = extractDescription(entry);
+                                            feed.title = entry.getTitle();
+                                            feed.pubDate = extractDate(entry);
+                                            feed.link = entry.getLink();
+                                            return feed;
                                         })
-                                .collect(Collectors.toSet());
-                channel.setFeedItems(feedItems);
+                                .collect(Collectors.toList());
+                channel.feedItems = feedItems;
                 LOG.info("Parsed " + feedItems.size() + " items");
                 LOG.info("End of parse channel");
                 return channel;

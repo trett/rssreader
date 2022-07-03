@@ -11,9 +11,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.test.jdbc.JdbcTestUtils;
 
-import ru.trett.rss.models.Channel;
-import ru.trett.rss.models.FeedItem;
-import ru.trett.rss.models.User;
+import ru.trett.rss.models.Feed;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +29,7 @@ public class FeedServiceSpecs {
                 new EmbeddedDatabaseBuilder()
                         .setType(EmbeddedDatabaseType.H2)
                         .addScript("classpath:schema.sql")
-                        .addScript("classpath:feed_items_test_data.sql")
+                        .addScript("classpath:feeds_test_data.sql")
                         .build();
         jdbcTemplate = new JdbcTemplate(dataSource);
         feedService = new FeedService(jdbcTemplate);
@@ -39,7 +37,7 @@ public class FeedServiceSpecs {
 
     @After
     public void tearDown() {
-        JdbcTestUtils.dropTables(jdbcTemplate, "feed_item", "channel", "user");
+        JdbcTestUtils.dropTables(jdbcTemplate, "feeds", "channels", "users");
     }
 
     @Test
@@ -64,7 +62,7 @@ public class FeedServiceSpecs {
     @Test
     public void testUpdateFeed() {
         var feed = createFeed();
-        feed.setGuid("guid234");
+        feed.guid = "guid234";
         feedService.saveAll(List.of(feed), 1);
         var feeds = feedService.getItemsByUserName("123", false);
         assertEquals(2, feeds.size());
@@ -73,7 +71,7 @@ public class FeedServiceSpecs {
     @Test
     public void testDeleteFeeds() {
         var feed = createFeed();
-        feed.setPubDate(LocalDateTime.now().minusDays(1));
+        feed.pubDate = LocalDateTime.now().minusDays(1);
         feedService.saveAll(List.of(feed), 1);
         var deleted = feedService.deleteOldFeeds("123", 7);
         assertEquals(2, deleted);
@@ -84,27 +82,19 @@ public class FeedServiceSpecs {
     @Test
     public void testMarkAsRead() {
         var feed = createFeed();
-        feed.setRead(true);
+        feed.read = true;
         feedService.saveAll(List.of(feed), 1);
         var feeds = feedService.getItemsByUserName("123", false);
         assertTrue(feeds.get(0).read);
     }
 
-    private FeedItem createFeed() {
-        var feedItem = new FeedItem();
-        feedItem.setGuid("guid345");
-        feedItem.setTitle("inserted_item");
-        feedItem.setLink("http://testLink");
-        feedItem.setPubDate(LocalDateTime.now());
-        feedItem.setDescription("description");
-        var user = new User();
-        user.setPrincipalName("123");
-        var channel = new Channel();
-        channel.setId(1);
-        channel.setLink("http://link");
-        channel.setTitle("test");
-        channel.setUser(user);
-        feedItem.setChannel(channel);
-        return feedItem;
+    private Feed createFeed() {
+        var feed = new Feed();
+        feed.guid = "guid345";
+        feed.title = "inserted_item";
+        feed.link = "http://testLink";
+        feed.pubDate = LocalDateTime.now();
+        feed.description = "description";
+        return feed;
     }
 }

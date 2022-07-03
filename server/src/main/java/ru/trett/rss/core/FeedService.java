@@ -6,7 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
-import ru.trett.rss.models.FeedItem;
+import ru.trett.rss.models.Feed;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -30,22 +30,22 @@ public class FeedService {
     private static final String GET_ALL_FEEDS =
             "SELECT c.title as channel_title, fi.id as feed_id, fi.title as feed_title, fi.link as"
                     + " feed_link, fi.pub_date as feed_date, fi.description as feed_description,"
-                    + " fi.read as read FROM public.channel c"
-                    + " JOIN public.feed_item fi ON fi.channel_id=c.id"
+                    + " fi.read as read FROM public.channels c"
+                    + " JOIN public.feeds fi ON fi.channel_id=c.id"
                     + " WHERE c.user_principal_name=?";
 
     private static final String NOT_READ_CONDITION = " AND NOT fi.read";
 
     private static final String ORDER_CLAUSE = " ORDER BY fi.pub_date DESC";
 
-    public List<FeedEntity> getItemsByUserName(String userName, boolean hideRead) {
+    public List<Feed> getItemsByUserName(String userName, boolean hideRead) {
         return jdbcTemplate.query(
                 GET_ALL_FEEDS + (hideRead ? NOT_READ_CONDITION : "") + ORDER_CLAUSE,
                 new FeedEntityRowMapper(),
                 userName);
     }
 
-    public List<FeedEntity> getItemsByUserNameAndChannelId(
+    public List<Feed> getItemsByUserNameAndChannelId(
             String userName, long channelId, boolean hideRead) {
         var sql = GET_ALL_FEEDS + " AND c.id = ?";
         if (hideRead) {
@@ -60,14 +60,14 @@ public class FeedService {
         }
     }
 
-    private static final String DELETE_FEEDS = "DELETE FROM public.feed_item fi where fi.id=?";
+    private static final String DELETE_FEEDS = "DELETE FROM public.feeds fi where fi.id=?";
 
     public int deleteOldFeeds(String userName, int deleteAfter) {
         var since = LocalDateTime.now().minusDays(deleteAfter);
         var itemsToDelete =
                 getItemsByUserName(userName, false).stream()
                         .filter(feedItem -> feedItem.pubDate.isBefore(since))
-                        .map(feedItem -> feedItem.id)
+                        .map(feed -> feed.id)
                         .collect(Collectors.toList());
         batchDeleteFeeds(itemsToDelete);
         return itemsToDelete.size();
@@ -82,7 +82,7 @@ public class FeedService {
         return itemsToDelete.size();
     }
 
-    private static final String MARK_AS_READ = "UPDATE public.feed_item SET read=true WHERE id=?";
+    private static final String MARK_AS_READ = "UPDATE public.feeds SET read=true WHERE id=?";
 
     public void markAsRead(List<Long> ids, String userName) {
         var itemsToUpdate =
@@ -103,22 +103,22 @@ public class FeedService {
                 });
     }
 
-    public int saveAll(List<FeedItem> feedItems, long channelId) {
+    public int saveAll(List<Feed> feedItems, long channelId) {
         var res = updateFeeds(feedItems, channelId);
         var toInsert =
                 IntStream.range(0, res.length)
                         .filter(idx -> res[idx] == 0)
-                        .mapToObj(idx -> feedItems.get(idx))
+                        .mapToObj(feedItems::get)
                         .collect(Collectors.toList());
         insertFeeds(toInsert, channelId);
         return toInsert.size();
     }
 
     private static final String UPDATE_FEED =
-            "UPDATE public.feed_item AS fi SET title=?, link=?, pub_date=?, description=?"
+            "UPDATE public.feeds AS fi SET title=?, link=?, pub_date=?, description=?"
                     + " WHERE fi.channel_id=? AND fi.guid=?";
 
-    private int[] updateFeeds(List<FeedItem> feedItems, long channelId) {
+    private int[] updateFeeds(List<Feed> feedItems, long channelId) {
         return jdbcTemplate.batchUpdate(
                 UPDATE_FEED,
                 new BatchPreparedStatementSetter() {
@@ -126,12 +126,12 @@ public class FeedService {
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         var feed = feedItems.get(i);
                         int idx = 0;
-                        ps.setString(++idx, feed.getTitle());
-                        ps.setString(++idx, feed.getLink());
-                        ps.setTimestamp(++idx, Timestamp.valueOf(feed.getPubDate()));
-                        ps.setString(++idx, feed.getDescription());
+                        ps.setString(++idx, feed.title);
+                        ps.setString(++idx, feed.link);
+                        ps.setTimestamp(++idx, Timestamp.valueOf(feed.pubDate));
+                        ps.setString(++idx, feed.description);
                         ps.setLong(++idx, channelId);
-                        ps.setString(++idx, feed.getGuid());
+                        ps.setString(++idx, feed.guid);
                     }
 
                     public int getBatchSize() {
@@ -141,27 +141,23 @@ public class FeedService {
     }
 
     private static final String INSERT_FEED =
-            "INSERT INTO public.feed_item(id, guid, title, link, pub_date, description, read,"
-                    + " channel_id) VALUES(?,?,?,?,?,?,?,?)";
+            "INSERT INTO public.feeds(guid, title, link, pub_date, description, read,"
+                    + " channel_id) VALUES(?,?,?,?,?,?,?)";
 
-    private int[] insertFeeds(List<FeedItem> feedItems, long channelId) {
+    private int[] insertFeeds(List<Feed> feedItems, long channelId) {
         return jdbcTemplate.batchUpdate(
                 INSERT_FEED,
                 new BatchPreparedStatementSetter() {
 
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         var feed = feedItems.get(i);
-                        var id =
-                                jdbcTemplate.queryForObject(
-                                        "SELECT NEXTVAL('hibernate_sequence')", Long.class);
                         int idx = 0;
-                        ps.setLong(++idx, id);
-                        ps.setString(++idx, feed.getGuid());
-                        ps.setString(++idx, feed.getTitle());
-                        ps.setString(++idx, feed.getLink());
-                        ps.setTimestamp(++idx, Timestamp.valueOf(feed.getPubDate()));
-                        ps.setString(++idx, feed.getDescription());
-                        ps.setBoolean(++idx, feed.isRead());
+                        ps.setString(++idx, feed.guid);
+                        ps.setString(++idx, feed.title);
+                        ps.setString(++idx, feed.link);
+                        ps.setTimestamp(++idx, Timestamp.valueOf(feed.pubDate));
+                        ps.setString(++idx, feed.description);
+                        ps.setBoolean(++idx, feed.read);
                         ps.setLong(++idx, channelId);
                     }
 
@@ -186,11 +182,11 @@ public class FeedService {
                 });
     }
 
-    private static class FeedEntityRowMapper implements RowMapper<FeedEntity> {
+    private static class FeedEntityRowMapper implements RowMapper<Feed> {
 
         @Override
-        public FeedEntity mapRow(ResultSet rs, int rowNum) throws SQLException {
-            var feedEntity = new FeedEntity();
+        public Feed mapRow(ResultSet rs, int rowNum) throws SQLException {
+            var feedEntity = new Feed();
             feedEntity.id = rs.getLong("feed_id");
             feedEntity.channelTitle = rs.getString("channel_title");
             feedEntity.title = rs.getString("feed_title");

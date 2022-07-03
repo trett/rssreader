@@ -9,9 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import ru.trett.rss.core.FeedEntity;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
+import ru.trett.rss.models.Feed;
 
 import java.security.Principal;
 import java.util.Arrays;
@@ -34,9 +34,9 @@ public class FeedsController {
         this.userService = userService;
     }
 
-    @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
     @JsonSerialize(using = IterableSerializer.class)
-    public List<FeedEntity> getNews(Principal principal) {
+    public List<Feed> getNews(Principal principal) {
         String userName = principal.getName();
         LOG.info("Retrieving all feeds for principal: " + userName);
         var items =
@@ -45,22 +45,21 @@ public class FeedsController {
                         .map(
                                 user ->
                                         feedService.getItemsByUserName(
-                                                userName, user.getSettings().isHideRead()))
+                                                userName, user.settings.hideRead))
                         .orElse(Collections.emptyList());
         LOG.info("Retrived " + items.size() + " feeds");
         return items;
     }
 
-    @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public Iterable<FeedEntity> getFeedsByChannelId(
-            @PathVariable @NotNull Long id, Principal principal) {
+    @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Iterable<Feed> getFeedsByChannelId(@PathVariable @NotNull Long id, Principal principal) {
         LOG.info("Retrieving feeds for channel: " + id);
         return userService
                 .getUser(principal.getName())
                 .map(
                         user ->
                                 feedService.getItemsByUserNameAndChannelId(
-                                        principal.getName(), id, user.getSettings().isHideRead()))
+                                        principal.getName(), id, user.settings.hideRead))
                 .orElse(Collections.emptyList());
     }
 
@@ -79,8 +78,7 @@ public class FeedsController {
                 .ifPresent(
                         user -> {
                             var deleted =
-                                    feedService.deleteOldFeeds(
-                                            userName, user.getSettings().getDeleteAfter());
+                                    feedService.deleteOldFeeds(userName, user.settings.deleteAfter);
                             LOG.info(deleted + " feeds was deleted");
                         });
     }
