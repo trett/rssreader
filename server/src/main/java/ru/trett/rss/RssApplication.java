@@ -1,6 +1,5 @@
 package ru.trett.rss;
 
-import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.springframework.boot.SpringApplication;
@@ -22,10 +21,9 @@ public class RssApplication {
 
     @Bean
     public RestTemplate restTemplate() {
-        HttpComponentsClientHttpRequestFactory factory =
-                new HttpComponentsClientHttpRequestFactory();
-        RestTemplate restTemplate = new RestTemplate(factory);
-        HttpClient httpClient =
+        var factory = new HttpComponentsClientHttpRequestFactory();
+        var restTemplate = new RestTemplate(factory);
+        var httpClient =
                 HttpClientBuilder.create().setRedirectStrategy(new LaxRedirectStrategy()).build();
         factory.setHttpClient(httpClient);
         return restTemplate;

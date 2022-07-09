@@ -4,9 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.client.ClientHttpRequest;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -14,11 +11,8 @@ import org.springframework.web.client.RestTemplate;
 import ru.trett.rss.core.ChannelService;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
-import ru.trett.rss.models.Channel;
-import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
 
-import java.io.InputStream;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
@@ -28,6 +22,7 @@ import java.util.stream.Collectors;
 public class ScheduledTasks {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledTasks.class);
+
     private final ChannelService channelService;
     private final FeedService feedService;
     private final RestTemplate restTemplate;
@@ -47,24 +42,24 @@ public class ScheduledTasks {
 
     @Scheduled(cron = "0 0/30 * * * ?")
     public void updateFeeds() {
-        ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
+        var requestFactory = restTemplate.getRequestFactory();
         LOG.info("Starting of update feeds at " + LocalDateTime.now());
-        for (User user : userService.getUsers()) {
+        for (var user : userService.getUsers()) {
             LOG.info("Starting of update feeds for user: " + user.principalName);
-            for (Channel channel : channelService.findByUser(user.principalName)) {
+            for (var channel : channelService.findByUser(user.principalName)) {
                 try {
-                    ClientHttpRequest request =
+                    var request =
                             requestFactory.createRequest(
                                     URI.create(channel.channelLink), HttpMethod.GET);
-                    ClientHttpResponse execute = request.execute();
-                    try (InputStream inputStream = execute.getBody()) {
+                    var execute = request.execute();
+                    try (var is = execute.getBody()) {
                         var since = LocalDateTime.now().minusDays(user.settings.deleteAfter);
                         var feeds =
-                                new RssParser(inputStream)
+                                new RssParser(is)
                                         .parse().feedItems.stream()
                                                 .filter(feed -> feed.pubDate.isAfter(since))
                                                 .collect(Collectors.toList());
-                        int inserted = feedService.saveAll(feeds, channel.id);
+                        var inserted = feedService.saveAll(feeds, channel.id);
                         LOG.info(
                                 MessageFormat.format(
                                         "{0} items was updated for ''{1}''",

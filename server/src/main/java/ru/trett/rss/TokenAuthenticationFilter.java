@@ -5,9 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -42,14 +40,13 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String token = request.getHeader(HttpHeaders.AUTHORIZATION);
+        var token = request.getHeader(HttpHeaders.AUTHORIZATION);
         try {
-            UriComponentsBuilder builder =
+            var builder =
                     UriComponentsBuilder.fromUriString(authUrl).queryParam("access_token", token);
-            String uriString = builder.toUriString();
-            ResponseEntity<UserInfo> userInfo =
-                    restTemplate.getForEntity(uriString, UserInfo.class);
-            Authentication authentication =
+            var uriString = builder.toUriString();
+            var userInfo = restTemplate.getForEntity(uriString, UserInfo.class);
+            var authentication =
                     new CustomAuthenticationToken(userInfo.getBody().sub, userInfo.getBody().email);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (HttpClientErrorException e) {
