@@ -36,12 +36,12 @@ public class UserFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        CustomAuthenticationToken authentication =
+        var authentication =
                 (CustomAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
-            String name = (String) authentication.getPrincipal();
+            var name = (String) authentication.getPrincipal();
             LOG.info("Loading user with sub: " + name + " from cache");
-            User cachedUser = userCache.get(name);
+            var cachedUser = userCache.get(name);
             if (cachedUser == null) {
                 LOG.info("Loading user with sub: " + name);
                 synchronized (this) {
@@ -61,7 +61,7 @@ public class UserFilter extends OncePerRequestFilter {
 
     private User saveUser(String name, String email) {
         LOG.info("Creating user with sub: " + name);
-        User user = new User(name, email);
+        var user = new User(name, email);
         user.settings = new Settings();
         userService.save(user);
         LOG.info("User with sub: " + name + " has been saved");

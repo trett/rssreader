@@ -4,9 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.client.ClientHttpRequest;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -15,7 +12,6 @@ import ru.trett.rss.core.ClientException;
 import ru.trett.rss.core.FeedService;
 import ru.trett.rss.core.UserService;
 import ru.trett.rss.models.Channel;
-import ru.trett.rss.models.User;
 import ru.trett.rss.parser.RssParser;
 
 import java.io.IOException;
@@ -24,9 +20,7 @@ import java.net.URI;
 import java.security.Principal;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -56,8 +50,8 @@ public class ChannelsController {
 
     @GetMapping(path = "/all")
     public Iterable<Channel> getChannels(Principal principal) {
-        String userName = principal.getName();
-        LOG.info("Retrieving all channels for principal: " + userName);
+        var userName = principal.getName();
+        LOG.info("Receiving channels for the user: " + userName);
         return userService
                 .getUser(userName)
                 .map(user -> channelService.findByUser(user.principalName))
@@ -66,31 +60,31 @@ public class ChannelsController {
 
     @GetMapping(path = "/refresh")
     public void refresh(Principal principal) {
-        String userName = principal.getName();
-        String logMessage = "Updating channels for principal: " + userName + ". ";
+        var userName = principal.getName();
+        var logMessage = "Updating channels for the user: " + userName;
         LOG.info(logMessage + "Start");
-        ClientHttpRequestFactory requestFactory = restTemplate.getRequestFactory();
-        Optional<User> maybeUser = userService.getUser(userName);
+        var requestFactory = restTemplate.getRequestFactory();
+        var maybeUser = userService.getUser(userName);
         if (maybeUser.isEmpty()) {
             return;
         }
-        User user = maybeUser.get();
+        var user = maybeUser.get();
         try {
-            for (Channel channel : channelService.findByUser(user.principalName)) {
-                LOG.info("Starting update feeds for channel: " + channel.title);
-                ClientHttpRequest request =
+            for (var channel : channelService.findByUser(user.principalName)) {
+                LOG.info("Starting an update feeds for the channel: " + channel.title);
+                var request =
                         requestFactory.createRequest(
                                 URI.create(channel.channelLink), HttpMethod.GET);
-                ClientHttpResponse execute = request.execute();
-                int deleteAfter = user.settings.deleteAfter;
-                try (InputStream inputStream = execute.getBody()) {
+                var execute = request.execute();
+                var deleteAfter = user.settings.deleteAfter;
+                try (var is = execute.getBody()) {
                     var since = LocalDateTime.now().minusDays(deleteAfter);
                     var feeds =
-                            new RssParser(inputStream)
+                            new RssParser(is)
                                     .parse().feedItems.stream()
                                             .filter(feed -> feed.pubDate.isAfter(since))
                                             .collect(Collectors.toList());
-                    int inserted = feedService.saveAll(feeds, channel.id);
+                    var inserted = feedService.saveAll(feeds, channel.id);
                     LOG.info(
                             MessageFormat.format(
                                     "{0} items was updated for ''{1}''", inserted, channel.title));
@@ -103,33 +97,31 @@ public class ChannelsController {
     }
 
     @PostMapping(path = "/add")
-    public void addFeed(@RequestBody @NotEmpty String link, Principal principal)
-            throws IOException {
-        link = link.trim();
+    public void add(@RequestBody @NotEmpty String link, Principal principal) throws IOException {
+        var trimmedLink = link.trim();
         LOG.info("Adding channel with link: " + link);
-        try {
-            ClientHttpRequest request =
-                    restTemplate
-                            .getRequestFactory()
-                            .createRequest(URI.create(link), HttpMethod.GET);
-            try (InputStream inputStream = request.execute().getBody()) {
-                Channel channel = new RssParser(inputStream).parse();
-                Optional<User> maybeUser = userService.getUser(principal.getName());
-                if (maybeUser.isEmpty()) {
-                    throw new RuntimeException("User not found");
-                }
-                User user = maybeUser.get();
-                if (StreamSupport.stream(
-                                channelService.findByUser(user.principalName).spliterator(), false)
-                        .anyMatch(channel::equals)) {
-                    throw new RuntimeException("Channel already exist");
-                }
-                channel.channelLink = link;
-                channelService.save(channel, user.principalName);
-            }
-        } catch (IOException e) {
-            throw new ClientException("URL is not valid");
-        }
+        userService
+                .getUser(principal.getName())
+                .ifPresent(
+                        user -> {
+                            if (channelService.findByUser(user.principalName).stream()
+                                    .anyMatch(channel -> channel.channelLink.equals(trimmedLink))) {
+                                throw new RuntimeException("Channel already exist");
+                            }
+                            try {
+                                var request =
+                                        restTemplate
+                                                .getRequestFactory()
+                                                .createRequest(URI.create(link), HttpMethod.GET);
+                                try (InputStream inputStream = request.execute().getBody()) {
+                                    var channel = new RssParser(inputStream).parse();
+                                    channel.channelLink = trimmedLink;
+                                    channelService.save(channel, user.principalName);
+                                }
+                            } catch (IOException e) {
+                                throw new ClientException("URL is not valid");
+                            }
+                        });
     }
 
     @PostMapping(path = "/delete")
@@ -145,6 +137,7 @@ public class ChannelsController {
                                 if (channelId == id) {
                                     feedService.deleteFeedsByChannel(userName, channelId);
                                     channelService.delete(id);
+                                    break;
                                 }
                             }
                             return "deleted: " + id;

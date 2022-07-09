@@ -25,15 +25,15 @@ public class SettingsController {
 
     @GetMapping
     public Settings getSettings(Principal principal) {
-        String userName = principal.getName();
-        LOG.info("Update settings for user: " + userName);
+        var userName = principal.getName();
+        LOG.info("Updating settings for the user: " + userName);
         return userService.getUser(userName).map(u -> u.settings).orElseGet(Settings::new);
     }
 
     @PostMapping
     public void updateSettings(@RequestBody Settings settings, Principal principal) {
-        String userName = principal.getName();
-        LOG.info("Update settings for user:" + userName);
+        var userName = principal.getName();
+        LOG.info("Updating settings for the user:" + userName);
         userService
                 .getUser(userName)
                 .ifPresent(

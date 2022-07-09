@@ -2,7 +2,6 @@ package ru.trett.rss.parser;
 
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
-import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
@@ -18,8 +17,6 @@ import java.io.InputStream;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -35,18 +32,18 @@ public class RssParser {
 
     public Channel parse() throws IOException {
         try {
-            SyndFeedInput input = new SyndFeedInput();
-            try (XmlReader xmlReader = new XmlReader(stream)) {
-                SyndFeed syndFeed = input.build(xmlReader);
-                String title = syndFeed.getTitle();
+            var input = new SyndFeedInput();
+            try (var xmlReader = new XmlReader(stream)) {
+                var syndFeed = input.build(xmlReader);
+                var title = syndFeed.getTitle();
                 LOG.info(
                         MessageFormat.format(
-                                "Parse channel: title ''{0}'', type ''{1}''",
+                                "Parsing the channel: title ''{0}'', type ''{1}''",
                                 title, syndFeed.getFeedType()));
-                Channel channel = new Channel();
+                var channel = new Channel();
                 channel.title = title;
                 channel.link = syndFeed.getLink();
-                List<SyndEntry> entries = syndFeed.getEntries();
+                var entries = syndFeed.getEntries();
                 var feedItems =
                         entries.stream()
                                 .map(
@@ -62,18 +59,18 @@ public class RssParser {
                                 .collect(Collectors.toList());
                 channel.feedItems = feedItems;
                 LOG.info("Parsed " + feedItems.size() + " items");
-                LOG.info("End of parse channel");
+                LOG.info("End of parsing the channel");
                 return channel;
             }
         } catch (FeedException e) {
-            throw new RuntimeException("Can't parse feed", e);
+            throw new RuntimeException("Can't parse a feed", e);
         }
     }
 
     private String extractDescription(SyndEntry entry) {
-        Optional<SyndContent> description = Optional.ofNullable(entry.getDescription());
+        var description = Optional.ofNullable(entry.getDescription());
         if (!description.isPresent()) {
-            List<SyndContent> contents = entry.getContents();
+            var contents = entry.getContents();
             if (contents != null && !contents.isEmpty()) {
                 description = Optional.of(contents.get(0));
             }
@@ -82,7 +79,7 @@ public class RssParser {
     }
 
     private LocalDateTime extractDate(SyndEntry entry) {
-        Date date = Optional.ofNullable(entry.getPublishedDate()).orElse(entry.getUpdatedDate());
+        var date = Optional.ofNullable(entry.getPublishedDate()).orElse(entry.getUpdatedDate());
         if (date == null) {
             throw new RuntimeException("Date must not be empty! Feed: " + entry.getUri());
         }

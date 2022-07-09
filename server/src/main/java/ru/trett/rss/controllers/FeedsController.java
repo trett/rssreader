@@ -36,9 +36,9 @@ public class FeedsController {
 
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
     @JsonSerialize(using = IterableSerializer.class)
-    public List<Feed> getNews(Principal principal) {
-        String userName = principal.getName();
-        LOG.info("Retrieving all feeds for principal: " + userName);
+    public List<Feed> all(Principal principal) {
+        var userName = principal.getName();
+        LOG.info("Retrieving all feeds for the user: " + userName);
         var items =
                 userService
                         .getUser(userName)
@@ -47,13 +47,13 @@ public class FeedsController {
                                         feedService.getItemsByUserName(
                                                 userName, user.settings.hideRead))
                         .orElse(Collections.emptyList());
-        LOG.info("Retrived " + items.size() + " feeds");
+        LOG.info("Received " + items.size() + " feeds");
         return items;
     }
 
     @GetMapping(path = "/get/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Iterable<Feed> getFeedsByChannelId(@PathVariable @NotNull Long id, Principal principal) {
-        LOG.info("Retrieving feeds for channel: " + id);
+    public Iterable<Feed> getById(@PathVariable @NotNull Long id, Principal principal) {
+        LOG.info("Receiving feeds for the channel: " + id);
         return userService
                 .getUser(principal.getName())
                 .map(
@@ -64,15 +64,15 @@ public class FeedsController {
     }
 
     @PostMapping(path = "/read")
-    public void setRead(@RequestBody @NotNull Long[] ids, Principal principal) {
-        LOG.info("Marking feeds with ids " + Arrays.toString(ids) + " as read");
+    public void markAsRead(@RequestBody @NotNull Long[] ids, Principal principal) {
+        LOG.info("Marking feeds: " + Arrays.toString(ids) + " as read");
         feedService.markAsRead(Arrays.asList(ids), principal.getName());
     }
 
     @PostMapping("/deleteOldItems")
     public void deleteOldItems(Principal principal) {
-        String userName = principal.getName();
-        LOG.info("Deleting old feeds for principal: " + userName);
+        var userName = principal.getName();
+        LOG.info("Deleting old feeds for the user: " + userName);
         userService
                 .getUser(userName)
                 .ifPresent(
