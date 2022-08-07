@@ -15,6 +15,8 @@ import org.springframework.web.client.RestTemplate;
 @EnableScheduling
 public class RssApplication {
 
+    private static final int ONE_MINUTE_IN_MILLIS = 60_000;
+
     public static void main(String[] args) {
         SpringApplication.run(RssApplication.class, args);
     }
@@ -22,6 +24,9 @@ public class RssApplication {
     @Bean
     public RestTemplate restTemplate() {
         var factory = new HttpComponentsClientHttpRequestFactory();
+        factory.setConnectTimeout(ONE_MINUTE_IN_MILLIS);
+        factory.setReadTimeout(ONE_MINUTE_IN_MILLIS);
+        factory.setConnectionRequestTimeout(ONE_MINUTE_IN_MILLIS);
         var restTemplate = new RestTemplate(factory);
         var httpClient =
                 HttpClientBuilder.create().setRedirectStrategy(new LaxRedirectStrategy()).build();
