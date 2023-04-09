@@ -1,3 +1,5 @@
+[![Build and Publish](https://github.com/trett/rssreader/actions/workflows/build.yml/badge.svg)](https://github.com/trett/rssreader/actions/workflows/build.yml)
+
 # Simple RSS Reader
 
 Written using Spring Boot 2, Vue.js/Vuetify and Typescript

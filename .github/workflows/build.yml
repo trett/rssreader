@@ -1,0 +1,43 @@
+name: 'Build and Publish'
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  Build-Containers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Bazelisk
+        uses: bazelbuild/setup-bazelisk@v2
+
+      - name: Build server
+        run: bazel run //server:image
+
+      - name: Build client
+        run: bazel run //client:image --define SERVER_URL=${{ secrets.SERVER_URL }} --define CLIENT_ID=${{ secrets.CLIENT_ID }} --define REDIRECT_URI=${{ secrets.REDIRECT_URI }}
+
+      - name: Set outputs
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Tag server image
+        run: docker tag bazel/server:image ${{ secrets.REGISTRY }}/bazel/server:${{ steps.vars.outputs.sha_short }}
+        
+      - name: Tag client image
+        run: docker tag bazel/client:image ${{ secrets.REGISTRY }}/bazel/client:${{ steps.vars.outputs.sha_short }}
+
+      - name: Login to registry
+        run: docker login --username oauth --password ${{ secrets.TOKEN }} cr.yandex
+
+      - name: Push server image
+        run: docker push ${{ secrets.REGISTRY }}/bazel/server:${{ steps.vars.outputs.sha_short }}
+
+      - name: Push client image
+        run: docker push ${{ secrets.REGISTRY }}/bazel/client:${{ steps.vars.outputs.sha_short }}
+
+
