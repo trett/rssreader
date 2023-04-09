@@ -108,8 +108,8 @@ container_pull(
 container_pull(
     name = "jre_image",
     registry = "index.docker.io",
-    repository = "adoptopenjdk/openjdk11",
-    tag = "alpine-jre",
+    repository = "eclipse-temurin",
+    tag = "17-jre-alpine",
 )
 
 load(

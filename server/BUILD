@@ -45,6 +45,7 @@ java_test(
     srcs = glob(["src/test/**/*.java"]),
     resources = glob(["src/test/resources/**"]),
     test_class = "ru.trett.rss.AllSpecs",
+    jvm_flags = ["-Djava.security.manager=allow"],
     runtime_deps = [
         "@maven//:com_h2database_h2",
     ],
