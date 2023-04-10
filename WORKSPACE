@@ -15,9 +15,9 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 http_archive(
     name = "rules_spring",
-    sha256 = "9385652bb92d365675d1ca7c963672a8091dc5940a9e307104d3c92e7a789c8e",
+    sha256 = "7495e33261e4e69777a611e42c2e7a4f45021f6a8bb1eae1b064ca5653a61835",
     urls = [
-        "https://github.com/salesforce/rules_spring/releases/download/2.1.4/rules-spring-2.1.4.zip",
+        "https://github.com/salesforce/rules_spring/releases/download/2.2.2/rules-spring-2.2.2.zip",
     ],
 )
 
@@ -109,7 +109,7 @@ container_pull(
     name = "jre_image",
     registry = "index.docker.io",
     repository = "eclipse-temurin",
-    tag = "17-jre-alpine",
+    tag = "11-jre-alpine",
 )
 
 load(
