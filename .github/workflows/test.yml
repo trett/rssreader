@@ -15,7 +15,7 @@ jobs:
         uses: bazelbuild/setup-bazelisk@v2
 
       - name: Test server
-        run: bazel test //server:test --test_output=errors --java_runtime_version=11
+        run: bazel test //server:test --test_output=errors --java_runtime_version=17
 
 
 
