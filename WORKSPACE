@@ -25,15 +25,15 @@ maven_install(
     artifacts = [
         "org.postgresql:postgresql:42.3.3",
         "com.zaxxer:HikariCP:5.0.1",
-        "org.springframework.boot:spring-boot:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-actuator:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-actuator-autoconfigure:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-loader:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-autoconfigure:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-starter-test:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-starter-jdbc:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-starter-web:2.3.12.RELEASE",
-        "org.springframework.boot:spring-boot-starter-security:2.3.12.RELEASE",
+        "org.springframework.boot:spring-boot:2.7.11",
+        "org.springframework.boot:spring-boot-actuator:2.7.11",
+        "org.springframework.boot:spring-boot-actuator-autoconfigure:2.7.11",
+        "org.springframework.boot:spring-boot-loader:2.7.11",
+        "org.springframework.boot:spring-boot-autoconfigure:2.7.11",
+        "org.springframework.boot:spring-boot-starter-test:2.7.11",
+        "org.springframework.boot:spring-boot-starter-jdbc:2.7.11",
+        "org.springframework.boot:spring-boot-starter-web:2.7.11",
+        "org.springframework.boot:spring-boot-starter-security:2.7.11",
         "com.h2database:h2:1.4.200",
         "com.fasterxml.jackson.core:jackson-databind:2.10.0",
         "org.apache.httpcomponents:httpclient:4.5.13",
@@ -109,7 +109,7 @@ container_pull(
     name = "jre_image",
     registry = "index.docker.io",
     repository = "eclipse-temurin",
-    tag = "11-jre-alpine",
+    tag = "17-jre-alpine",
 )
 
 load(
