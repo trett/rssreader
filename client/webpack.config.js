@@ -43,6 +43,7 @@ module.exports = (env, argv) => ({
         new CopyPlugin({
               patterns: [
                 { from: "client/css", to: "css/" },
+                { from: "client/images", to: "images/" }
             ],
         }),
         new webpack.EnvironmentPlugin({
