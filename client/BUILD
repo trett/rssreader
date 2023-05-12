@@ -35,6 +35,7 @@ webpack(
     ],
     data = [
         "css/style.css",
+        "images/favicon.ico",
         "src/application.js",
         "src/index.html",
         "webpack.config.js",
