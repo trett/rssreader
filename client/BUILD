@@ -30,7 +30,6 @@ webpack(
         "$@",
         "--env",
         "SERVER_URL=$(SERVER_URL)",
-        "REDIRECT_URI=$(REDIRECT_URI)",
     ],
     data = [
         "css/style.css",

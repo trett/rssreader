@@ -18,9 +18,9 @@ MIT
 
 `SERVER_URL` - API location URL
 
-`REDIRECT_URI` - URI using as redirect from Google OAuth service
-
 `CLIENT_ID` - ID using for identifying app in Google OAuth service
+
+`CLIENT_SECRET` - Google app secret
 
 ## Build example
 
@@ -28,12 +28,11 @@ MIT
 
 ```bash
 cd ./scripts
-CLIENT_ID="<client_id>" ./build.sh
-docker-compose up -d
+./build.sh && CLIENT_ID="<client_id>" CLIENT_SECRET="<client_secret>" docker-compose up -d
 ```
 
 ### Production build
 
 ```bash
-SERVER_URL="<site_url>" REDIRECT_URI="<redirect_uri>" CLIENT_ID="<client_id>" ./build.sh
+SERVER_URL="<site_url>" ./build.sh
 ```
