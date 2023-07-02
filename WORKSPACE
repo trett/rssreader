@@ -34,6 +34,7 @@ maven_install(
         "org.springframework.boot:spring-boot-starter-jdbc:2.7.11",
         "org.springframework.boot:spring-boot-starter-web:2.7.11",
         "org.springframework.boot:spring-boot-starter-security:2.7.11",
+        "org.springframework.boot:spring-boot-starter-oauth2-client:2.7.11",
         "com.h2database:h2:1.4.200",
         "com.fasterxml.jackson.core:jackson-databind:2.10.0",
         "org.apache.httpcomponents:httpclient:4.5.13",

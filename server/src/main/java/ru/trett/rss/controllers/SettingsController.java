@@ -26,7 +26,7 @@ public class SettingsController {
     @GetMapping
     public Settings getSettings(Principal principal) {
         var userName = principal.getName();
-        LOG.info("Updating settings for the user: " + userName);
+        LOG.info("Getting settings for the user: " + userName);
         return userService.getUser(userName).map(u -> u.settings).orElseGet(Settings::new);
     }
 

@@ -11,6 +11,7 @@ import { FeedEntity, IChannel, NetworkService } from "../services/networkService
     },
     template: `
 <v-app>
+    <template v-if="!$route.path.includes('auth')">
     <v-overlay :value="loading">
       <v-progress-circular indeterminate size="64"></v-progress-circular>
     </v-overlay>
@@ -83,11 +84,14 @@ import { FeedEntity, IChannel, NetworkService } from "../services/networkService
             <v-icon>check</v-icon>
         </v-btn>
     </v-app-bar>
+    </template>
     <v-main>
         <v-container fluid>
             <alert></alert>
             <confirm ref="confirm"></confirm>
-            <router-view :data="data"/>
+            <keep-alive :include="['LoginComponent']">
+                <router-view :data="data"/>
+            </keep-alive>
         </v-container>
     </v-main>
 </v-app>
@@ -96,27 +100,17 @@ import { FeedEntity, IChannel, NetworkService } from "../services/networkService
 export default class Main extends Vue {
 
     private channels: IChannel[] = [];
-
     private newChannel = "";
-
     private loading = false;
-
     private dialog = false;
-
     private drawer = null;
-
     private selectedChannel = "";
-
     private data: FeedEntity[] = [];
-
-    public async beforeMount(): Promise<void> {
-        this.update();
-    }
 
     public mounted(): void {
         EventBus.$on("loading", () => this.loading = true);
         EventBus.$on("loadOff", () => this.loading = false);
-        this.setFeeds();
+        this.update().then(() => this.setFeeds());
     }
 
     private async setFeeds(id?: string) {

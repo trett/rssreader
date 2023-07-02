@@ -1,6 +1,6 @@
 package ru.trett.rss.models;
 
-import java.util.Set;
+import java.util.List;
 
 import javax.validation.constraints.NotEmpty;
 
@@ -8,7 +8,7 @@ public class User {
 
     @NotEmpty public String principalName;
     @NotEmpty public String email;
-    public Set<Channel> channels;
+    public List<Channel> channels;
     public Settings settings;
 
     public User(String principalName, String email) {

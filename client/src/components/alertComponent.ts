@@ -20,9 +20,7 @@ import EventBus from "../eventBus";
 export default class AlertComponent extends Vue {
 
     private alert = false;
-
     private alertType = "";
-
     private message = "";
 
     public mounted(): void {

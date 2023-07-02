@@ -5,7 +5,7 @@ import { FeedEntity, NetworkService } from "../services/networkService";
 
 @Component({
     template: `
-        <p v-if="!data.length" class="text-center display-1" style="color: #666666">It looks like you've already read all!</p>
+        <p v-if="!data.length" class="text-center display-1" style="color: #666666">Nothing to read :( </p>
         <v-container v-else fluid grid-list-md pa-0>
             <v-layout row wrap>
                 <template v-for="feedEntity in data">
