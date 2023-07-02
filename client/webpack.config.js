@@ -48,7 +48,6 @@ module.exports = (env, argv) => ({
         }),
         new webpack.EnvironmentPlugin({
           SERVER_URL: env.SERVER_URL || "http://localhost/api",
-          CLIENT_ID: env.CLIENT_ID,
           REDIRECT_URI: env.REDIRECT_URI || "http://localhost"  
         })
     ],

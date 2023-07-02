@@ -1,5 +1,13 @@
 localhost:80 {
-	handle /api/* {
+	@apipath {
+		path /api/*
+		path /error
+		path /login
+		path /login/*
+		path /oauth2/*
+	}
+
+	handle @apipath {
 		reverse_proxy {
 			to rss_server:8080
 		}

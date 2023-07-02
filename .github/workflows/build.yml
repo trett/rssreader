@@ -19,7 +19,7 @@ jobs:
         run: bazel run //server:image
 
       - name: Build client
-        run: bazel run //client:image --define SERVER_URL=${{ secrets.SERVER_URL }} --define CLIENT_ID=${{ secrets.CLIENT_ID }} --define REDIRECT_URI=${{ secrets.REDIRECT_URI }}
+        run: bazel run //client:image --define SERVER_URL=${{ secrets.SERVER_URL }} --define REDIRECT_URI=${{ secrets.REDIRECT_URI }}
 
       - name: Set outputs
         id: vars

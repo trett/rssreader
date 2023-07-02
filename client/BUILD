@@ -30,7 +30,6 @@ webpack(
         "$@",
         "--env",
         "SERVER_URL=$(SERVER_URL)",
-        "CLIENT_ID=$(CLIENT_ID)",
         "REDIRECT_URI=$(REDIRECT_URI)",
     ],
     data = [

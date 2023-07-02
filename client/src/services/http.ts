@@ -1,29 +1,21 @@
 import axios from "axios";
 import EventBus from "../eventBus";
-import { OAuthService } from "./oauthService";
-
+import router from '../router';
 const http = axios.create({ baseURL: process.env.SERVER_URL });
 
-http.interceptors.request.use(config => {
-    const token = localStorage.getItem("access_token");
-    if (config.headers) {
-        config.headers.Authorization = token as string;
-        EventBus.$emit("loading");
-    }
-    return config;
-});
-http.interceptors.response.use(response => {
-    EventBus.$emit("loadOff");
-    return response.data;
-}, error => {
-    EventBus.$emit("loadOff");
-    const response = error.response;
-    if (response && response.status === 401) {
-        OAuthService.doAuth();
-    } else {
-        EventBus.$emit("error", response ? response.data : "Unexpected server error");
-        return Promise.reject(error);
-    }
+http.interceptors.response.use((response: { status: number; data: any; }) => {
+  EventBus.$emit("loadOff");
+  return response.data;
+}, (error: { response: any; }) => {
+  EventBus.$emit("loadOff");
+  const response = error.response;
+  if (response.status === 301) {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    router.replace("/auth").catch(() => {});
+  } else {
+    EventBus.$emit("error", response ? response.data : "Unexpected server error");
+    return Promise.reject(error);
+  }
 });
 
 export default http;

@@ -1,38 +1,42 @@
 package ru.trett.rss;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.SecurityFilterChain;
+
+import ru.trett.rss.auth.CustomOAuth2UserService;
+import ru.trett.rss.auth.OAuthLoginSuccessHandler;
 
 @Configuration
-@EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfig {
 
-    @Autowired private TokenAuthenticationFilter tokenAuthenticationFilter;
-    @Autowired private UserFilter userFilter;
+    @Autowired private CustomOAuth2UserService oauth2UserService;
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
+    @Autowired private OAuthLoginSuccessHandler oauthLoginSuccessHandler;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf()
                 .disable()
                 .cors()
                 .and()
-                .exceptionHandling()
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                .and()
                 .authorizeRequests()
-                .antMatchers("/**")
+                .antMatchers("/login")
+                .permitAll()
+                .anyRequest()
                 .authenticated()
                 .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        http.addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterAfter(userFilter, TokenAuthenticationFilter.class);
+                .oauth2Login()
+                .loginPage("/login")
+                .userInfoEndpoint()
+                .userService(oauth2UserService)
+                .and()
+                .successHandler(oauthLoginSuccessHandler)
+                .and()
+                .exceptionHandling()
+                .accessDeniedPage("/error");
+        return http.build();
     }
 }
