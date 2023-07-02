@@ -47,8 +47,7 @@ module.exports = (env, argv) => ({
             ],
         }),
         new webpack.EnvironmentPlugin({
-          SERVER_URL: env.SERVER_URL || "http://localhost/api",
-          REDIRECT_URI: env.REDIRECT_URI || "http://localhost"  
+          SERVER_URL: env.SERVER_URL || "https://localhost/api",
         })
     ],
 });
