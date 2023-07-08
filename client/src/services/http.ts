@@ -3,6 +3,11 @@ import EventBus from "../eventBus";
 import router from '../router';
 const http = axios.create({ baseURL: process.env.SERVER_URL });
 
+http.interceptors.request.use(config => {
+  EventBus.$emit("loading");
+  return config;
+});
+
 http.interceptors.response.use((response: { status: number; data: any; }) => {
   EventBus.$emit("loadOff");
   return response.data;
