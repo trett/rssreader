@@ -9,10 +9,10 @@ http.interceptors.request.use(config => {
 });
 
 http.interceptors.response.use((response: { status: number; data: any; }) => {
-  EventBus.$emit("loadOff");
+  EventBus.$emit("load-stop");
   return response.data;
 }, (error: { response: any; }) => {
-  EventBus.$emit("loadOff");
+  EventBus.$emit("load-stop");
   const response = error.response;
   if (response.status === 301) {
     // eslint-disable-next-line @typescript-eslint/no-empty-function

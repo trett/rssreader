@@ -12,9 +12,6 @@ import { FeedEntity, IChannel, NetworkService } from "../services/networkService
     template: `
 <v-app>
     <template v-if="!$route.path.includes('auth')">
-    <v-overlay :value="loading">
-      <v-progress-circular indeterminate size="64"></v-progress-circular>
-    </v-overlay>
     <v-navigation-drawer v-model="drawer" app dark width="300">
         <v-list dense nav sub-header>
             <v-list-item to="/settings" exact>
@@ -55,6 +52,7 @@ import { FeedEntity, IChannel, NetworkService } from "../services/networkService
         </v-list>
     </v-navigation-drawer>
     <v-app-bar app dense>
+        <v-progress-linear :indeterminate="loading" absolute bottom v-show="loading"></v-progress-linear>
         <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         <v-btn icon @click="refresh()">
               <v-icon>cached</v-icon>
@@ -109,7 +107,7 @@ export default class Main extends Vue {
 
     public mounted(): void {
         EventBus.$on("loading", () => this.loading = true);
-        EventBus.$on("loadOff", () => this.loading = false);
+        EventBus.$on("load-stop", () => this.loading = false);
         this.update().then(() => this.setFeeds());
     }
 
