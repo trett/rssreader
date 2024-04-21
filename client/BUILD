@@ -1,6 +1,6 @@
-load("@npm//@bazel/typescript:index.bzl", "ts_project")
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@build_bazel_rules_nodejs//:index.bzl", "copy_to_bin")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@npm//@bazel/typescript:index.bzl", "ts_project")
 load("@npm//http-server:index.bzl", "http_server")
 load("@npm//webpack-cli:index.bzl", webpack = "webpack_cli")
 
