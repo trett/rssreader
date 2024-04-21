@@ -34,7 +34,7 @@ services:
       DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/rss
       DATASOURCE_USER: rss_user
       DATASOURCE_PASS: 123456
-      CORS_URL: https://localhost
+      CORS_URL: http://localhost
       CLIENT_ID: ${CLIENT_ID}
       CLIENT_SECRET: ${CLIENT_SECRET}
 
