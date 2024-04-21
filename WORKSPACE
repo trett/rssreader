@@ -62,8 +62,8 @@ pinned_maven_install()
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "c077680a307eb88f3e62b0b662c2e9c6315319385bc8c637a861ffdbed8ca247",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.1.0/rules_nodejs-5.1.0.tar.gz"],
+    sha256 = "709cc0dcb51cf9028dd57c268066e5bc8f03a119ded410a13b5c3925d6e43c48",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.4/rules_nodejs-5.8.4.tar.gz"],
 )
 
 load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
@@ -73,7 +73,7 @@ build_bazel_rules_nodejs_dependencies()
 load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories", "npm_install")
 
 node_repositories(
-    node_version = "17.3.0",
+    node_version = "18.2.0",
 )
 
 npm_install(
@@ -102,7 +102,7 @@ container_pull(
     name = "nginx_image",
     registry = "index.docker.io",
     repository = "nginx",
-    tag = "1.21.6-alpine",
+    tag = "1.25.5-alpine",
 )
 
 container_pull(
