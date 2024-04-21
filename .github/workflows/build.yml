@@ -32,7 +32,7 @@ jobs:
         run: docker tag bazel/client:image ${{ secrets.REGISTRY }}/bazel/client:${{ steps.vars.outputs.sha_short }}
 
       - name: Login to registry
-        run: docker login --username oauth --password ${{ secrets.TOKEN }} cr.yandex
+        run: echo ${{ secrets.TOKEN }} | docker login --username oauth --password-stdin cr.yandex
 
       - name: Push server image
         run: docker push ${{ secrets.REGISTRY }}/bazel/server:${{ steps.vars.outputs.sha_short }}
