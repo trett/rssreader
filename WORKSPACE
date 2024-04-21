@@ -23,8 +23,8 @@ http_archive(
 
 maven_install(
     artifacts = [
-        "org.postgresql:postgresql:42.3.3",
-        "com.zaxxer:HikariCP:5.0.1",
+        "org.postgresql:postgresql:42.7.3",
+        "com.zaxxer:HikariCP:5.1.0",
         "org.springframework.boot:spring-boot:2.7.11",
         "org.springframework.boot:spring-boot-actuator:2.7.11",
         "org.springframework.boot:spring-boot-actuator-autoconfigure:2.7.11",
@@ -36,13 +36,13 @@ maven_install(
         "org.springframework.boot:spring-boot-starter-security:2.7.11",
         "org.springframework.boot:spring-boot-starter-oauth2-client:2.7.11",
         "com.h2database:h2:1.4.200",
-        "com.fasterxml.jackson.core:jackson-databind:2.10.0",
-        "org.apache.httpcomponents:httpclient:4.5.13",
-        "org.apache.commons:commons-lang3:3.9",
-        "com.rometools:rome:1.12.0",
-        "org.slf4j:slf4j-simple:2.0.0-alpha6",
-        "junit:junit:4.12",
-        "org.flywaydb:flyway-core:6.5.7",
+        "com.fasterxml.jackson.core:jackson-databind:2.17.0",
+        "org.apache.httpcomponents:httpclient:4.5.14",
+        "org.apache.commons:commons-lang3:3.14.0",
+        "com.rometools:rome:2.1.0",
+        "org.slf4j:slf4j-simple:2.0.13",
+        "junit:junit:4.13.2",
+        "org.flywaydb:flyway-core:7.15.0",
         "javax.validation:validation-api:2.0.1.Final",
     ],
     excluded_artifacts = [

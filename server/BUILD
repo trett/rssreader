@@ -1,6 +1,6 @@
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_spring//springboot:springboot.bzl", "springboot")
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
 java_library(
     name = "lib",

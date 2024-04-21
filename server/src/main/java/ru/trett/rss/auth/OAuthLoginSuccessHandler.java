@@ -30,7 +30,6 @@ public class OAuthLoginSuccessHandler extends SavedRequestAwareAuthenticationSuc
         CustomOAuth2User oauth2User = (CustomOAuth2User) authentication.getPrincipal();
         String sub = oauth2User.getName();
         LOG.info("Loading user with sub: " + sub);
-        LOG.info(oauth2User.getName());
         var user = userService.getUser(sub);
         if (!user.isPresent()) {
             LOG.info("Saving user with sub: " + sub);
