@@ -1,9 +1,9 @@
 package ru.trett.rss.models;
 
+import jakarta.validation.constraints.NotEmpty;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.validation.constraints.NotEmpty;
 
 public class User {
 

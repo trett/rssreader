@@ -2,9 +2,9 @@ package ru.trett.rss.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotEmpty;
 
-import javax.validation.constraints.NotEmpty;
+import java.time.LocalDateTime;
 
 public class Feed {
 

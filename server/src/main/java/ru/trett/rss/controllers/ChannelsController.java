@@ -2,6 +2,9 @@ package ru.trett.rss.controllers;
 
 import com.rometools.rome.io.FeedException;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +24,6 @@ import java.net.URI;
 import java.security.Principal;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping(path = "/api/channel")

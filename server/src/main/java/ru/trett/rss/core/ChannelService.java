@@ -1,5 +1,7 @@
 package ru.trett.rss.core;
 
+import jakarta.validation.constraints.NotEmpty;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -7,8 +9,6 @@ import org.springframework.stereotype.Service;
 import ru.trett.rss.models.Channel;
 
 import java.util.List;
-
-import javax.validation.constraints.NotEmpty;
 
 @Service
 public class ChannelService {

@@ -1,6 +1,6 @@
 package ru.trett.rss.models;
 
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Size;
 
 public class Settings {
 
