@@ -13,6 +13,7 @@ java_library(
     runtime_deps = [
         "@maven//:com_zaxxer_HikariCP",
         "@maven//:org_flywaydb_flyway_core",
+        "@maven//:org_flywaydb_flyway_database_postgresql",
         "@maven//:org_slf4j_slf4j_simple",
     ],
     deps = [
@@ -21,9 +22,10 @@ java_library(
         "@maven//:com_fasterxml_jackson_core_jackson_databind",
         "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jsr310",
         "@maven//:com_rometools_rome",
-        "@maven//:javax_validation_validation_api",
+        "@maven//:jakarta_servlet_jakarta_servlet_api",
+        "@maven//:jakarta_validation_jakarta_validation_api",
         "@maven//:org_apache_commons_commons_lang3",
-        "@maven//:org_apache_httpcomponents_httpclient",
+        "@maven//:org_apache_httpcomponents_client5_httpclient5",
         "@maven//:org_apache_tomcat_embed_tomcat_embed_core",
         "@maven//:org_postgresql_postgresql",
         "@maven//:org_slf4j_slf4j_api",
@@ -31,6 +33,7 @@ java_library(
         "@maven//:org_springframework_boot_spring_boot_starter_jdbc",
         "@maven//:org_springframework_boot_spring_boot_starter_oauth2_client",
         "@maven//:org_springframework_boot_spring_boot_starter_security",
+        "@maven//:org_springframework_boot_spring_boot_starter_validation",
         "@maven//:org_springframework_boot_spring_boot_starter_web",
         "@maven//:org_springframework_security_spring_security_config",
         "@maven//:org_springframework_security_spring_security_core",
@@ -66,6 +69,7 @@ springboot(
     bazelrun_addexports = ["java.base/java.base=ALL-UNNAMED"],
     bazelrun_addopens = ["java.management/sun.management=ALL-UNNAMED"],
     boot_app_class = "ru.trett.rss.RssApplication",
+    boot_launcher_class = "org.springframework.boot.loader.launch.JarLauncher",
     java_library = ":lib",
 )
 

@@ -1,8 +1,8 @@
 package ru.trett.rss.models;
 
-import java.util.List;
+import jakarta.validation.constraints.NotEmpty;
 
-import javax.validation.constraints.NotEmpty;
+import java.util.List;
 
 public class Channel {
 
