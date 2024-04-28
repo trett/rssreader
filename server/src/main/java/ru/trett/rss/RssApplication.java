@@ -29,7 +29,10 @@ public class RssApplication {
         factory.setConnectionRequestTimeout(ONE_MINUTE_IN_MILLIS);
         var restTemplate = new RestTemplate(factory);
         var httpClient =
-                HttpClientBuilder.create().setRedirectStrategy(new LaxRedirectStrategy()).build();
+                HttpClientBuilder.create()
+                        .setUserAgent("RSS App/1.0")
+                        .setRedirectStrategy(new LaxRedirectStrategy())
+                        .build();
         factory.setHttpClient(httpClient);
         return restTemplate;
     }

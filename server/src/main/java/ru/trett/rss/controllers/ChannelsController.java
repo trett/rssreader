@@ -1,10 +1,13 @@
 package ru.trett.rss.controllers;
 
+import com.rometools.rome.io.FeedException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import ru.trett.rss.core.ChannelService;
@@ -14,13 +17,10 @@ import ru.trett.rss.core.UserService;
 import ru.trett.rss.models.Channel;
 import ru.trett.rss.parser.RssParser;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.util.stream.Collectors;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -34,17 +34,20 @@ public class ChannelsController {
     private final ChannelService channelService;
     private final FeedService feedService;
     private final UserService userService;
+    private final RssParser rssParser;
     private final RestTemplate restTemplate;
 
     @Autowired
     public ChannelsController(
             ChannelService channelService,
             FeedService feedService,
-            UserService userRepository,
+            UserService userService,
+            RssParser rssParser,
             RestTemplate restTemplate) {
         this.channelService = channelService;
         this.feedService = feedService;
-        this.userService = userRepository;
+        this.userService = userService;
+        this.rssParser = rssParser;
         this.restTemplate = restTemplate;
     }
 
@@ -63,41 +66,41 @@ public class ChannelsController {
         var userName = principal.getName();
         var logMessage = "Updating channels for the user: " + userName;
         LOG.info(logMessage + "Start");
-        var requestFactory = restTemplate.getRequestFactory();
         var maybeUser = userService.getUser(userName);
         if (maybeUser.isEmpty()) {
             return;
         }
         var user = maybeUser.get();
-        try {
-            for (var channel : channelService.findByUser(user.principalName)) {
-                LOG.info("Starting an update feeds for the channel: " + channel.title);
-                var request =
-                        requestFactory.createRequest(
-                                URI.create(channel.channelLink), HttpMethod.GET);
-                var execute = request.execute();
-                var deleteAfter = user.settings.deleteAfter;
-                try (var is = execute.getBody()) {
-                    var since = LocalDateTime.now().minusDays(deleteAfter);
-                    var feeds =
-                            new RssParser(is)
-                                    .parse().feedItems.stream()
-                                            .filter(feed -> feed.pubDate.isAfter(since))
-                                            .collect(Collectors.toList());
-                    var inserted = feedService.saveAll(feeds, channel.id);
-                    LOG.info(
-                            MessageFormat.format(
-                                    "{0} items was updated for ''{1}''", inserted, channel.title));
-                }
-            }
-        } catch (Exception e) {
-            throw new ClientException("Can't update feeds. Please try later", e);
+        for (var channel : channelService.findByUser(user.principalName)) {
+            LOG.info("Starting an update feeds for the channel: " + channel.title);
+            var updatedFeeds =
+                    restTemplate.execute(
+                            URI.create(channel.channelLink),
+                            HttpMethod.GET,
+                            null,
+                            response -> {
+                                var deleteAfter = user.settings.deleteAfter;
+                                var since = LocalDateTime.now().minusDays(deleteAfter);
+                                try {
+                                    var feeds =
+                                            rssParser.parse(response.getBody()).feedItems.stream()
+                                                    .filter(feed -> feed.pubDate.isAfter(since))
+                                                    .toList();
+                                    return feedService.saveAll(feeds, channel.id);
+                                } catch (HttpClientErrorException | FeedException e) {
+                                    throw new ClientException(
+                                            "Can't update feeds. Please try later", e);
+                                }
+                            });
+            LOG.info(
+                    MessageFormat.format(
+                            "Updated {0} feeds for channel ''{1}''", updatedFeeds, channel.title));
         }
         LOG.info(logMessage + "End");
     }
 
     @PostMapping(path = "/add")
-    public void add(@RequestBody @NotEmpty String link, Principal principal) throws IOException {
+    public void add(@RequestBody @NotEmpty String link, Principal principal) {
         var trimmedLink = link.trim();
         LOG.info("Adding channel with link: " + link);
         userService
@@ -108,19 +111,19 @@ public class ChannelsController {
                                     .anyMatch(channel -> channel.channelLink.equals(trimmedLink))) {
                                 throw new RuntimeException("Channel already exist");
                             }
-                            try {
-                                var request =
-                                        restTemplate
-                                                .getRequestFactory()
-                                                .createRequest(URI.create(link), HttpMethod.GET);
-                                try (InputStream inputStream = request.execute().getBody()) {
-                                    var channel = new RssParser(inputStream).parse();
-                                    channel.channelLink = trimmedLink;
-                                    channelService.save(channel, user.principalName);
-                                }
-                            } catch (IOException e) {
-                                throw new ClientException("URL is not valid");
-                            }
+                            restTemplate.execute(
+                                    URI.create(link),
+                                    HttpMethod.GET,
+                                    null,
+                                    response -> {
+                                        try {
+                                            var channel = rssParser.parse(response.getBody());
+                                            channel.channelLink = trimmedLink;
+                                            return channelService.save(channel, user.principalName);
+                                        } catch (FeedException e) {
+                                            throw new ClientException("URL is not valid");
+                                        }
+                                    });
                         });
     }
 

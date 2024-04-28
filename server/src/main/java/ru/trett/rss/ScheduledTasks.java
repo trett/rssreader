@@ -25,50 +25,60 @@ public class ScheduledTasks {
 
     private final ChannelService channelService;
     private final FeedService feedService;
-    private final RestTemplate restTemplate;
     private final UserService userService;
+    private final RssParser rssParser;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public ScheduledTasks(
             ChannelService channelService,
             FeedService feedService,
-            UserService userRepository,
+            UserService userService,
+            RssParser rssParser,
             RestTemplate restTemplate) {
         this.channelService = channelService;
         this.feedService = feedService;
-        this.userService = userRepository;
+        this.userService = userService;
+        this.rssParser = rssParser;
         this.restTemplate = restTemplate;
     }
 
-    @Scheduled(cron = "0 0/30 * * * ?")
+    @Scheduled(cron = "0 0/15 * * * ?")
     public void updateFeeds() {
-        var requestFactory = restTemplate.getRequestFactory();
         LOG.info("Starting of update feeds at " + LocalDateTime.now());
         for (var user : userService.getUsers()) {
             LOG.info("Starting of update feeds for user: " + user.principalName);
             for (var channel : channelService.findByUser(user.principalName)) {
-                try {
-                    var request =
-                            requestFactory.createRequest(
-                                    URI.create(channel.channelLink), HttpMethod.GET);
-                    var execute = request.execute();
-                    try (var is = execute.getBody()) {
-                        var since = LocalDateTime.now().minusDays(user.settings.deleteAfter);
-                        var feeds =
-                                new RssParser(is)
-                                        .parse().feedItems.stream()
-                                                .filter(feed -> feed.pubDate.isAfter(since))
-                                                .collect(Collectors.toList());
-                        var inserted = feedService.saveAll(feeds, channel.id);
-                        LOG.info(
-                                MessageFormat.format(
-                                        "{0} items was updated for ''{1}''",
-                                        inserted, channel.title));
-                    }
-                } catch (Exception e) {
-                    // logging and update next channel
-                    LOG.info("Error occured during the channel parsings: " + channel.title, e);
-                }
+                var inserted =
+                        restTemplate.execute(
+                                URI.create(channel.channelLink),
+                                HttpMethod.GET,
+                                null,
+                                response -> {
+                                    var since =
+                                            LocalDateTime.now()
+                                                    .minusDays(user.settings.deleteAfter);
+                                    try {
+                                        var feeds =
+                                                rssParser
+                                                        .parse(response.getBody())
+                                                        .feedItems
+                                                        .stream()
+                                                        .filter(feed -> feed.pubDate.isAfter(since))
+                                                        .collect(Collectors.toList());
+                                        return feedService.saveAll(feeds, channel.id);
+                                    } catch (Exception e) {
+                                        // logging and update next channel
+                                        LOG.info(
+                                                "Error occured during the channel parsings: "
+                                                        + channel.title,
+                                                e);
+                                        return 0;
+                                    }
+                                });
+                LOG.info(
+                        MessageFormat.format(
+                                "{0} items was updated for ''{1}''", inserted, channel.title));
             }
         }
         LOG.info("End of updating feeds");

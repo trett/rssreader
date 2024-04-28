@@ -16,5 +16,5 @@ public class Channel {
     /** Unique link for channel */
     @NotEmpty public String link;
 
-    public List<Feed> feedItems;
+    public List<Feed> feedItems = List.of();
 }

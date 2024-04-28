@@ -1,23 +1,31 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-RULES_JVM_EXTERNAL_TAG = "4.2"
+RULES_JVM_EXTERNAL_TAG = "5.1"
 
-RULES_JVM_EXTERNAL_SHA = "cd1a77b7b02e8e008439ca76fd34f5b07aecb8c752961f9640dea15e9e5ba1ca"
+RULES_JVM_EXTERNAL_SHA = "8c3b207722e5f97f1c83311582a6c11df99226e65e2471086e296561e57cc954"
 
 http_archive(
     name = "rules_jvm_external",
     sha256 = RULES_JVM_EXTERNAL_SHA,
     strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
+    url = "https://github.com/bazelbuild/rules_jvm_external/releases/download/%s/rules_jvm_external-%s.tar.gz" % (RULES_JVM_EXTERNAL_TAG, RULES_JVM_EXTERNAL_TAG),
 )
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+
+rules_jvm_external_deps()
+
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+
+rules_jvm_external_setup()
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 http_archive(
     name = "rules_spring",
-    sha256 = "7495e33261e4e69777a611e42c2e7a4f45021f6a8bb1eae1b064ca5653a61835",
+    sha256 = "87b337f95f9c09a2e5875f0bca533b050c9ccb8b0d2c92915e290520b79d0912",
     urls = [
-        "https://github.com/salesforce/rules_spring/releases/download/2.2.2/rules-spring-2.2.2.zip",
+        "https://github.com/salesforce/rules_spring/releases/download/2.3.2/rules-spring-2.3.2.zip",
     ],
 )
 
@@ -25,16 +33,16 @@ maven_install(
     artifacts = [
         "org.postgresql:postgresql:42.7.3",
         "com.zaxxer:HikariCP:5.1.0",
-        "org.springframework.boot:spring-boot:2.7.11",
-        "org.springframework.boot:spring-boot-actuator:2.7.11",
-        "org.springframework.boot:spring-boot-actuator-autoconfigure:2.7.11",
-        "org.springframework.boot:spring-boot-loader:2.7.11",
-        "org.springframework.boot:spring-boot-autoconfigure:2.7.11",
-        "org.springframework.boot:spring-boot-starter-test:2.7.11",
-        "org.springframework.boot:spring-boot-starter-jdbc:2.7.11",
-        "org.springframework.boot:spring-boot-starter-web:2.7.11",
-        "org.springframework.boot:spring-boot-starter-security:2.7.11",
-        "org.springframework.boot:spring-boot-starter-oauth2-client:2.7.11",
+        "org.springframework.boot:spring-boot:2.7.18",
+        "org.springframework.boot:spring-boot-actuator:2.7.18",
+        "org.springframework.boot:spring-boot-actuator-autoconfigure:2.7.18",
+        "org.springframework.boot:spring-boot-loader:2.7.18",
+        "org.springframework.boot:spring-boot-autoconfigure:2.7.18",
+        "org.springframework.boot:spring-boot-starter-test:2.7.18",
+        "org.springframework.boot:spring-boot-starter-jdbc:2.7.18",
+        "org.springframework.boot:spring-boot-starter-web:2.7.18",
+        "org.springframework.boot:spring-boot-starter-security:2.7.18",
+        "org.springframework.boot:spring-boot-starter-oauth2-client:2.7.18",
         "com.h2database:h2:1.4.200",
         "com.fasterxml.jackson.core:jackson-databind:2.17.0",
         "org.apache.httpcomponents:httpclient:4.5.14",
@@ -109,7 +117,7 @@ container_pull(
     name = "jre_image",
     registry = "index.docker.io",
     repository = "eclipse-temurin",
-    tag = "17-jre-alpine",
+    tag = "18-jre-alpine",
 )
 
 load(
