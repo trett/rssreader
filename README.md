@@ -2,7 +2,7 @@
 
 # Simple RSS Reader
 
-Written using Spring Boot 2, Vue.js/Vuetify and Typescript
+Written using Spring Boot 3, Vue.js/Vuetify and Typescript
 
 Authorization based on Google OAuth2 API
 
@@ -22,7 +22,11 @@ MIT
 
 `CLIENT_SECRET` - Google app secret
 
-## Build example
+`POSTGRES_USER` - DB user
+
+`POSTGRES_PASSWORD` - DB password
+
+`POSTGRES_DB` - DB name
 
 ### Local development
 
@@ -31,8 +35,6 @@ cd ./scripts
 ./build.sh && CLIENT_ID="<client_id>" CLIENT_SECRET="<client_secret>" docker-compose up -d
 ```
 
-### Production build
+### Production deploy 
 
-```bash
-SERVER_URL="<site_url>" ./build.sh
-```
+Use the `scripts/docker-compose.yml` as a starting point to prepare your installation.
