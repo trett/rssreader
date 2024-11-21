@@ -22,9 +22,11 @@ services:
       - "443:443"
     volumes:
       - $PWD/Caddyfile:/etc/caddy/Caddyfile
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   server:
-    image: bazel/server:image
+    image: bazel/server:latest
     container_name: rss_server
     restart: always
     depends_on:
@@ -34,13 +36,13 @@ services:
       DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/rss
       DATASOURCE_USER: rss_user
       DATASOURCE_PASS: 123456
-      CORS_URL: http://localhost
+      CORS_URL: https://localhost
       CLIENT_ID: ${CLIENT_ID}
       CLIENT_SECRET: ${CLIENT_SECRET}
 
-  client:
-    image: bazel/client:image
-    container_name: rss_client
-    restart: always
-    depends_on:
-      - server
+  #client:
+    #image: bazel/client:image
+    #container_name: rss_client
+    #restart: always
+    #depends_on:
+      #- server

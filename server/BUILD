@@ -1,4 +1,5 @@
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_spring//springboot:springboot.bzl", "springboot")
 
@@ -73,14 +74,34 @@ springboot(
     java_library = ":lib",
 )
 
-container_image(
+pkg_tar(
+    name = "launcher",
+    srcs = [":app"],
+)
+
+oci_image(
     name = "image",
-    base = "@jre_image//image",
-    cmd = [
+    base = "@distroless_java",
+    entrypoint = [
         "java",
         "-jar",
         "app.jar",
     ],
-    files = [":app"],
-    ports = ["8080/tcp"],
+    tars = [
+        ":launcher"
+    ],
+    exposed_ports = ["8080/tcp"],
 )
+
+oci_load(
+    name = "tarball",
+    image = ":image",
+    repo_tags = ["bazel/server:v0.0.1", "bazel/server:latest"],
+)
+
+#oci_push(
+    #name = "push",
+    #image = ":image",
+    #remote_tags = ["v0.0.1"],
+    #repository = "bazel/server",
+#)

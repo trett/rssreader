@@ -42,7 +42,7 @@ webpack(
     ],
 )
 
-container_image(
+oci_image(
     name = "image",
     base = "@nginx_image//image",
     cmd = [

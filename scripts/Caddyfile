@@ -12,10 +12,7 @@ localhost {
 			to rss_server:8080
 		}
 	}
-
-	handle {
-		reverse_proxy {
-			to rss_client
-		}
-	}
-}
+    reverse_proxy host.docker.internal:8081 {
+       header_up X-Real-IP {remote_host}
+    }
+}   
