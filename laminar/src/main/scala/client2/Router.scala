@@ -30,12 +30,13 @@ object Router:
   lazy val login = LoginPage.render
   lazy val settings = SettingsPage.render
   lazy val navbar = NavBar.render
+  lazy val notifications = NotifyComponent.render
 
   val root = div(
     child <-- currentPageVar.signal.map {
       case LoginRoute => login
-      case HomeRoute  => div(navbar, home)
-      case SettingsRoute => div(navbar, settings)
+      case HomeRoute  => div(navbar, notifications, home)
+      case SettingsRoute => div(navbar, notifications, settings)
       case ErrorRoute => div(Text("An error occured"))
       case NotFoundRoute => div(Text("Not Found"))
     }

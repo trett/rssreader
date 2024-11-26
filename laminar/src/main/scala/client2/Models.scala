@@ -24,7 +24,7 @@ case class ChannelData(
     //feedItems: FeedItemList
 )
 
-case class SettingsData(hideRead: Boolean, deleteAfter: Integer)
+case class SettingsData(hideRead: Boolean, deleteAfter: Int)
 
 type ChannelList = List[ChannelData]
 type FeedItemList = List[FeedItemData]
