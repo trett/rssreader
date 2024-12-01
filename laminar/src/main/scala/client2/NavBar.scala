@@ -9,7 +9,7 @@ import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
 import com.raquo.airstream.eventbus.EventBus
-import com.raquo.laminar.api.L.{*}
+import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement

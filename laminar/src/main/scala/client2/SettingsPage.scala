@@ -1,27 +1,27 @@
 package client2
 
+import be.doeraene.webcomponents.ui5.Button
+import be.doeraene.webcomponents.ui5.CheckBox
+import be.doeraene.webcomponents.ui5.Dialog
+import be.doeraene.webcomponents.ui5.Input
+import be.doeraene.webcomponents.ui5.Label
+import be.doeraene.webcomponents.ui5.StepInput
 import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.*
+import client2.NetworkUtils.JSON_ACCEPT
+import client2.NetworkUtils.JSON_CONTENT_TYPE
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
+import io.circe.Encoder
 import io.circe.generic.semiauto.*
 import io.circe.parser.decode
+import io.circe.syntax.*
 
 import scala.language.implicitConversions
 import scala.util.Failure
 import scala.util.Success
-import be.doeraene.webcomponents.ui5.CheckBox
-import be.doeraene.webcomponents.ui5.Label
-import be.doeraene.webcomponents.ui5.StepInput
-import io.circe.Encoder
-import io.circe.syntax._
-import be.doeraene.webcomponents.ui5.Button
 import scala.util.Try
-import client2.NetworkUtils.JSON_ACCEPT
-import client2.NetworkUtils.JSON_CONTENT_TYPE
-import be.doeraene.webcomponents.ui5.Input
-import be.doeraene.webcomponents.ui5.Dialog
 
 object SettingsPage {
 
@@ -38,43 +38,51 @@ object SettingsPage {
   private val channelsBus: EventBus[String] = new EventBus
   private val addChannelVar = Var[String]("")
 
+  private val formBlockStyle =
+    Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
+
   def render: Element =
     div(
-      div(
-        width := "fit-content",
-        settings(),
-        br(),
-        channels(),
-        addChannelComponent()
-      )
+      cls := "container",
+      display.flex,
+      flexWrap.wrap,
+      settings(),
+      div(flexBasis.percent := 100),
+      channels(),
+      addChannelComponent()
     )
 
   private def settings(): HtmlElement =
     div(
+      padding.px := 40,
       form(
-        display := "grid",
         onSubmit.preventDefault
           .mapTo(settingsSignal.now())
           .flatMap(updateSettings(_)) --> notifyVar.updater[Notify]((xs, x) =>
           xs :+ x
         ),
-        Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
-        CheckBox(
-          _.id := "hide-read-cb",
-          _.checked <-- settingsSignal.map(x =>
-            x.map(_.hideRead).getOrElse(true)
-          ),
-          _.events.onChange.mapToChecked --> settingsVar.updater[Boolean](
-            (a, b) => a.map(x => x.copy(hideRead = b))
+        div(
+          formBlockStyle,
+          Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
+          CheckBox(
+            _.id := "hide-read-cb",
+            _.checked <-- settingsSignal.map(x =>
+              x.map(_.hideRead).getOrElse(true)
+            ),
+            _.events.onChange.mapToChecked --> settingsVar.updater[Boolean](
+              (a, b) => a.map(x => x.copy(hideRead = b))
+            )
           )
         ),
         br(),
         div(
-          display := "grid",
+          formBlockStyle,
           Label(
             "Days to keep",
             _.forId := "days-to-keep-cmb",
-            _.showColon := true
+            _.showColon := true,
+            _.wrappingType := WrappingType.None,
+            paddingRight.px := 20
           ),
           StepInput(
             _.id := "days-to-keep-cmb",
@@ -90,10 +98,14 @@ object SettingsPage {
             )
           )
         ),
-        Button(
-          _.design := ButtonDesign.Emphasized,
-          "Save",
-          _.tpe := ButtonType.Submit
+        div(
+          paddingTop.px := 10,
+          Button(
+            _.design := ButtonDesign.Emphasized,
+            "Save",
+            _.icon := IconName.save,
+            _.tpe := ButtonType.Submit
+          )
         )
       ),
       getSettings()
@@ -101,13 +113,18 @@ object SettingsPage {
 
   private def channels(): HtmlElement =
     div(
-      display := "grid",
-      Button(
-        "Add channel",
-        _.design := ButtonDesign.Default,
-        _.events.onClick.mapTo(true) --> openDialogBus
+      borderTopStyle.ridge,
+      padding.px := 40,
+      div(
+        formBlockStyle,
+        Label("Your channels", _.forId := "channels-list", _.showColon := true),
+        Button(
+          _.design := ButtonDesign.Default,
+          _.icon := IconName.add,
+          _.iconOnly := true,
+          _.events.onClick.mapTo(true) --> openDialogBus
+        )
       ),
-      Label("Channels", _.forId := "channels-list", _.showColon := true),
       UList(
         _.id := "channels-list",
         _.events.onItemDelete
@@ -140,9 +157,10 @@ object SettingsPage {
           openDialogBus.events.map(!_).filter(identity).mapTo(())
         ),
         _.events.onClose.mapTo(addChannelVar.now()) --> channelsBus,
-        _.headerText := "RSS URL",
+        _.headerText := "New channel",
         sectionTag(
           div(
+            formBlockStyle,
             Label(_.forId := "rss_url", "RSS Url:"),
             Input(
               _.id := "rss_url",
@@ -151,10 +169,12 @@ object SettingsPage {
           )
         ),
         _.slots.footer := div(
+          paddingTop.px := 10,
           div(flex := "1"),
           Button(
             _.design := ButtonDesign.Emphasized,
             "Add",
+            _.icon := IconName.save,
             _.events.onClick.mapTo(false) --> openDialogBus.writer
           )
         )
@@ -184,9 +204,8 @@ object SettingsPage {
           )
           .recoverToTry
           .map {
-            _ match
-              case Success(_)  => infoMessage("Settings saved")
-              case Failure(ex) => errorMessage("Error")
+            case Success(_)  => infoMessage("Settings saved")
+            case Failure(ex) => errorMessage("Error")
           }
       )
       .getOrElse(EventStream.empty)
@@ -226,22 +245,18 @@ object SettingsPage {
 
   private def updateChannels() =
     onMountBind(ctx =>
-      channelsBus.events.filter(!_.isEmpty()) --> { url =>
+      channelsBus.events.filter(!_.isEmpty()) --> { link =>
         FetchStream
           .post(
             "https://localhost/api/channel/add",
-            _.body(url),
-            _.headers(
-              "Accept" -> "application/json",
-              "Content-Type" -> "application/json"
-            )
+            _.body(link),
+            _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
           )
           .addObserver(
-            Observer.fromTry(response =>
-              response match
-                case Success(value)     => println(value)
-                case Failure(exception) => println(exception)
-            )
+            Observer.fromTry {
+              case Success(value)     => println(value)
+              case Failure(exception) => println(exception)
+            }
           )(ctx.owner)
       }
     )

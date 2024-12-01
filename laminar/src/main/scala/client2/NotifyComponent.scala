@@ -1,11 +1,11 @@
 package client2
 
+import be.doeraene.webcomponents.ui5.MessageStrip
 import be.doeraene.webcomponents.ui5.configkeys.*
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 
 import scala.language.implicitConversions
-import be.doeraene.webcomponents.ui5.MessageStrip
 
 enum NotifyLevel:
   case Info, Error
