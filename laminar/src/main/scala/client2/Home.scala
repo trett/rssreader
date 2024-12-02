@@ -7,6 +7,7 @@ import be.doeraene.webcomponents.ui5.Icon
 import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.*
+import client2.NetworkUtils.HOST
 import client2.NetworkUtils.JSON_ACCEPT
 import client2.NetworkUtils.JSON_CONTENT_TYPE
 import com.raquo.laminar.DomApi
@@ -130,7 +131,7 @@ object Home:
 
   private def getFeedItems(): Modifier[HtmlElement] =
     FetchStream
-      .get("https://localhost/api/feed/all")
+      .get(s"${HOST}/api/feed/all")
       .recover { case err: Throwable => Option.empty } --> { item =>
       item match
         case "" => Router.currentPageVar.set(LoginRoute)
@@ -143,7 +144,7 @@ object Home:
   private def markFeed(id: String): EventStream[Long] =
     FetchStream
       .post(
-        "https://localhost/api/feed/read",
+        s"${HOST}/api/feed/read",
         _.body(List(id).asJson.toString),
         _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
       )

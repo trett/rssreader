@@ -8,6 +8,7 @@ import be.doeraene.webcomponents.ui5.Label
 import be.doeraene.webcomponents.ui5.StepInput
 import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.*
+import client2.NetworkUtils.HOST
 import client2.NetworkUtils.JSON_ACCEPT
 import client2.NetworkUtils.JSON_CONTENT_TYPE
 import com.raquo.laminar.api.L.*
@@ -198,7 +199,7 @@ object SettingsPage {
       .map(s =>
         FetchStream
           .post(
-            "https://localhost/api/settings",
+            s"${HOST}/api/settings",
             _.body(s.asJson.toString),
             _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
           )
@@ -213,7 +214,7 @@ object SettingsPage {
   private def deleteChannel(id: String): EventStream[Try[Long]] =
     FetchStream
       .post(
-        "https://localhost/api/channel/delete",
+        s"${HOST}/api/channel/delete",
         _.body(id),
         _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
       )
@@ -233,7 +234,7 @@ object SettingsPage {
 
   private def getSettings(): Modifier[HtmlElement] =
     FetchStream
-      .get("https://localhost/api/settings")
+      .get(s"${HOST}/api/settings")
       .recover { case err: Throwable => Option.empty } --> { item =>
       item match
         case "" => Router.currentPageVar.set(LoginRoute)
@@ -248,14 +249,14 @@ object SettingsPage {
       channelsBus.events.filter(!_.isEmpty()) --> { link =>
         FetchStream
           .post(
-            "https://localhost/api/channel/add",
+            s"${HOST}/api/channel/add",
             _.body(link),
             _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
           )
           .addObserver(
             Observer.fromTry {
-              case Success(value)     => println(value)
-              case Failure(exception) => println(exception)
+              case Success(value)     => infoMessage("Saved")
+              case Failure(exception) => errorMessage("Error")
             }
           )(ctx.owner)
       }

@@ -16,8 +16,6 @@ import org.scalajs.dom.HTMLElement
 
 object NavBar {
 
-  val model = new Model
-
   val openPopoverBus: EventBus[HTMLElement] = new EventBus
   val channelsBus: EventBus[String] = new EventBus
   val profileId = "shellbar-profile-id"

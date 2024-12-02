@@ -1,9 +1,8 @@
 package client2
 
-
 object NetworkUtils {
-
-  def HOST = AppConfig.BASE_URI
+  
+  val HOST = "API_HOST"
 
   val JSON_ACCEPT: (String, String) =
     ("Accept" -> "application/json")

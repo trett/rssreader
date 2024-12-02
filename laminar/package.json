@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 8081 --host=127.0.0.1",
+    "dev": "vite --port 8081 --host=127.0.0.1 --base=https://hui.com",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "bootstrap": "^5.3.3",
     "@ui5/webcomponents": "2.1.0",
     "@ui5/webcomponents-fiori": "2.1.0",
     "@ui5/webcomponents-icons": "2.1.0"
