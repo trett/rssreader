@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 8081 --host=127.0.0.1 --base=https://hui.com",
+    "dev": "vite --port 8081 --host=127.0.0.1",
     "build": "vite build",
     "preview": "vite preview"
   },

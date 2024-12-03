@@ -13,12 +13,17 @@ import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
+import client2.AppConfig.BASE_URI
 
 object NavBar {
+
+  //val model = new Model
+  //import model.*
 
   val openPopoverBus: EventBus[HTMLElement] = new EventBus
   val channelsBus: EventBus[String] = new EventBus
   val profileId = "shellbar-profile-id"
+  val dummyBus: EventBus[Unit] = new EventBus
 
   def render: Element =
     div(
@@ -47,9 +52,17 @@ object NavBar {
               "Settings",
               onClick.mapTo(()) --> { Router.currentPageVar.set(SettingsRoute) }
             ),
-            _.item(_.icon := IconName.log, "Sign out")
+            _.item(
+              _.icon := IconName.refresh,
+              "Update feeds",
+              onClick.mapTo(()).flatMap(_ => refreshFeeds()) --> dummyBus
+            ),
+            _.item(_.icon := IconName.log, "Sign out") // TODO
           )
         )
       )
     )
+
+  private def refreshFeeds(): EventStream[Unit] =
+    FetchStream.get(s"${BASE_URI}/api/channel/refresh").mapTo(())
 }

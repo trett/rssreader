@@ -12,7 +12,6 @@ import client2.NetworkUtils.JSON_ACCEPT
 import client2.NetworkUtils.JSON_CONTENT_TYPE
 import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
-import com.raquo.laminar.codecs.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
 import io.circe.generic.semiauto.*
@@ -29,6 +28,7 @@ import scala.util.Success
 import scala.util.Try
 
 object Home:
+
   val model = new Model
   import model.*
 
@@ -62,8 +62,6 @@ object Home:
       children <-- feedSignal.split(_.id)(renderItem),
       getFeedItems()
     )
-
-  private val wrappingTypeProp = htmlAttr("wrapping-type", StringAsIsCodec)
 
   private def renderItem(
       id: Long,

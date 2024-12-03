@@ -36,24 +36,42 @@ object SettingsPage {
 
   private val formStateBus: EventBus[SettingsData] = new EventBus
   private val openDialogBus: EventBus[Boolean] = new EventBus
-  private val channelsBus: EventBus[String] = new EventBus
+  private val newChannelBus: EventBus[Try[String]] = new EventBus
   private val addChannelVar = Var[String]("")
 
   private val formBlockStyle =
     Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
+
+  private val deleteChannelObserver = Observer[Try[Long]] {
+    case Success(id) =>
+      channelVar.update(xs => xs.filterNot(_.id == id))
+      notifyVar.update(_ :+ infoMessage("Channel deleted"))
+    case Failure(exception) =>
+      notifyVar.update(_ :+ errorMessage("Error"))
+  }
+
+  private val updateChannelObserver = Observer[String] { response =>
+    decode[List[ChannelData]](response).toTry match
+      case Success(xs) => {
+        channelVar.set(xs)
+        notifyVar.update(_ :+ infoMessage("Channel added"))
+      }
+      case Failure(exception) =>
+        notifyVar.update(_ :+ errorMessage(exception.getMessage()))
+  }
 
   def render: Element =
     div(
       cls := "container",
       display.flex,
       flexWrap.wrap,
-      settings(),
+      settingsForm(),
       div(flexBasis.percent := 100),
-      channels(),
-      addChannelComponent()
+      channelsList(),
+      newChannelDialog()
     )
 
-  private def settings(): HtmlElement =
+  private def settingsForm(): HtmlElement =
     div(
       padding.px := 40,
       form(
@@ -112,7 +130,7 @@ object SettingsPage {
       getSettings()
     )
 
-  private def channels(): HtmlElement =
+  private def channelsList(): HtmlElement =
     div(
       borderTopStyle.ridge,
       padding.px := 40,
@@ -136,7 +154,7 @@ object SettingsPage {
         _.selectionMode := ListMode.Delete,
         children <-- channelSignal.split(_.id)(renderChannel)
       ),
-      getChannels()
+      channelsModifier()
     )
 
   private def renderChannel(
@@ -150,14 +168,25 @@ object SettingsPage {
       child <-- itemSignal.map(_.title)
     )
 
-  private def addChannelComponent(): HtmlElement =
+  private def newChannelDialog(): HtmlElement =
     div(
+      onMountBind(ctx =>
+        newChannelBus --> { response =>
+          response match
+            case Success(value) =>
+              getChannels().addObserver(updateChannelObserver)(ctx.owner)
+            case Failure(exception) =>
+              notifyVar.update(_ :+ errorMessage(exception.getMessage()))
+        }
+      ),
       Dialog(
         _.showFromEvents(openDialogBus.events.filter(identity).mapTo(())),
         _.closeFromEvents(
           openDialogBus.events.map(!_).filter(identity).mapTo(())
         ),
-        _.events.onClose.mapTo(addChannelVar.now()) --> channelsBus,
+        _.events.onClose
+          .mapTo(addChannelVar.now())
+          .flatMap(updateChannels(_)) --> newChannelBus,
         _.headerText := "New channel",
         sectionTag(
           div(
@@ -179,18 +208,8 @@ object SettingsPage {
             _.events.onClick.mapTo(false) --> openDialogBus.writer
           )
         )
-      ),
-      updateChannels()
+      )
     )
-
-  private val deleteChannelObserver = Observer[Try[Long]] {
-    case Success(id) => {
-      channelVar.update(xs => xs.filterNot(_.id == id))
-      notifyVar.update(_ :+ infoMessage("Channel deleted"))
-    }
-    case Failure(exception) =>
-      notifyVar.update(_ :+ errorMessage("Error"))
-  }
 
   private def updateSettings(
       settings: Option[SettingsData]
@@ -220,10 +239,8 @@ object SettingsPage {
       )
       .map(response => Try(response.split(" ")(1).toLong))
 
-  private def getChannels(): Modifier[HtmlElement] =
-    FetchStream
-      .get("https://localhost/api/channel/all")
-      .recover { case err: Throwable => Option.empty } --> { item =>
+  private def channelsModifier(): Modifier[HtmlElement] =
+    getChannels() --> { item =>
       item match
         case "" => Router.currentPageVar.set(LoginRoute)
         case value =>
@@ -244,21 +261,20 @@ object SettingsPage {
             case Failure(exception) => Router.currentPageVar.set(ErrorRoute)
     }
 
-  private def updateChannels() =
-    onMountBind(ctx =>
-      channelsBus.events.filter(!_.isEmpty()) --> { link =>
-        FetchStream
-          .post(
-            s"${HOST}/api/channel/add",
-            _.body(link),
-            _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
-          )
-          .addObserver(
-            Observer.fromTry {
-              case Success(value)     => infoMessage("Saved")
-              case Failure(exception) => errorMessage("Error")
-            }
-          )(ctx.owner)
+  private def getChannels(): EventStream[String] =
+    FetchStream
+      .get("https://localhost/api/channel/all")
+      .recover { case err: Throwable => Some(err.getMessage()) }
+
+  private def updateChannels(link: String): EventStream[Try[String]] =
+    FetchStream
+      .post(
+        s"${HOST}/api/channel/add",
+        _.body(link),
+        _.headers(JSON_ACCEPT, "Content-Type" -> "text/plain")
+      )
+      .map {
+        case s if s.isEmpty() => Success(s)
+        case s                => Failure(RuntimeException(s))
       }
-    )
 }

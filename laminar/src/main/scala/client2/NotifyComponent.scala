@@ -31,9 +31,17 @@ object NotifyComponent {
     val nc =
       level match {
         case NotifyLevel.Info =>
-          MessageStrip(_.design := MessageStripDesign.Information, message)
+          MessageStrip(
+            _.design := MessageStripDesign.Information,
+            message,
+            marginBottom.px := 5
+          )
         case NotifyLevel.Error =>
-          MessageStrip(_.design := MessageStripDesign.Critical, message)
+          MessageStrip(
+            _.design := MessageStripDesign.Critical,
+            message,
+            marginBottom.px := 5
+          )
       }
     nc.amend(
       MessageStrip.events.onClose
