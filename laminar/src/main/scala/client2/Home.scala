@@ -26,10 +26,14 @@ import scala.scalajs.js
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import client2.NotifyComponent.notifyVar
+import client2.NotifyComponent.errorMessage
 
 object Home:
 
-  val model = new Model
+  val refreshFeedsBus: EventBus[Unit] = new EventBus
+
+  private val model = new Model
   import model.*
 
   given feedDecoder: Decoder[FeedItemData] = deriveDecoder
@@ -47,20 +51,34 @@ object Home:
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").format(date)
   }
 
-  val itemClickObserver: Observer[Long] =
+  private val itemClickObserver: Observer[Long] =
     feedVar.updater[Long]((xs, x) =>
       xs.zipWithIndex.map { case (elem, idx) =>
         if (xs(idx).id == x) then xs(idx).copy(read = true) else elem
       }
     )
 
-  def render: Element = div(feeds())
+  private val refreshFeedsObserver = Observer[String] { response =>
+    decode[List[FeedItemData]](response).toTry match
+      case Success(xs) => feedVar.set(xs)
+      case Failure(exception) =>
+        notifyVar.update(_ :+ errorMessage(exception.getMessage()))
+  }
+
+  def render: Element = div(
+    onMountBind(ctx =>
+      refreshFeedsBus --> { _ =>
+        getFeeds().addObserver(refreshFeedsObserver)(ctx.owner)
+      }
+    ),
+    feeds()
+  )
 
   private def feeds(): Element =
     UList(
       _.noDataText := "Nothing to read",
       children <-- feedSignal.split(_.id)(renderItem),
-      getFeedItems()
+      feedItemsModifier()
     )
 
   private def renderItem(
@@ -127,10 +145,13 @@ object Home:
         .map(foreignHtmlElement(_))
     )
 
-  private def getFeedItems(): Modifier[HtmlElement] =
+  private def getFeeds(): EventStream[String] =
     FetchStream
       .get(s"${HOST}/api/feed/all")
-      .recover { case err: Throwable => Option.empty } --> { item =>
+      .recover { case err: Throwable => Option.empty }
+
+  private def feedItemsModifier(): Modifier[HtmlElement] =
+    getFeeds() --> { item =>
       item match
         case "" => Router.currentPageVar.set(LoginRoute)
         case value =>

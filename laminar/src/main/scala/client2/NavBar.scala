@@ -17,13 +17,8 @@ import client2.AppConfig.BASE_URI
 
 object NavBar {
 
-  //val model = new Model
-  //import model.*
-
-  val openPopoverBus: EventBus[HTMLElement] = new EventBus
-  val channelsBus: EventBus[String] = new EventBus
-  val profileId = "shellbar-profile-id"
-  val dummyBus: EventBus[Unit] = new EventBus
+  private val openPopoverBus: EventBus[HTMLElement] = new EventBus
+  private val profileId = "shellbar-profile-id"
 
   def render: Element =
     div(
@@ -55,7 +50,9 @@ object NavBar {
             _.item(
               _.icon := IconName.refresh,
               "Update feeds",
-              onClick.mapTo(()).flatMap(_ => refreshFeeds()) --> dummyBus
+              onClick
+                .mapTo(())
+                .flatMap(_ => refreshFeeds()) --> Home.refreshFeedsBus
             ),
             _.item(_.icon := IconName.log, "Sign out") // TODO
           )

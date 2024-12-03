@@ -26,7 +26,7 @@ import scala.util.Try
 
 object SettingsPage {
 
-  val model = new Model
+  private val model = new Model
   import model.*
   import NotifyComponent._
 
