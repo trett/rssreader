@@ -14,6 +14,12 @@ ThisBuild / buildClientDist := {
   new java.io.File(client.base.getPath + "/dist")
 }
 
+lazy val buildImages = taskKey[Unit]("Build docker images")
+buildImages := {
+  (client / Docker / publishLocal).value
+  (server / Docker / publishLocal).value
+}
+
 lazy val client = project
   .in(file("client"))
   .enablePlugins(ScalaJSPlugin, DockerPlugin)
