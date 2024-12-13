@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import ru.trett.rss.core.UserService;
@@ -17,11 +17,12 @@ import ru.trett.rss.models.User;
 import java.io.IOException;
 
 @Component
-public class OAuthLoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
+public class OAuthLoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(OAuthLoginSuccessHandler.class);
 
     @Autowired UserService userService;
+
 
     @Override
     public void onAuthenticationSuccess(

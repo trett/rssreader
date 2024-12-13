@@ -1,8 +1,7 @@
 name: 'Build and Publish'
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   Build-Containers:
@@ -10,34 +9,24 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup Bazelisk
-        uses: bazelbuild/setup-bazelisk@v2
+      - name: Setup NodeJs
+        uses: actions/setup-node@v4
 
-      - name: Build server
-        run: bazel run //server:image
-
-      - name: Build client
-        run: bazel run //client:image --define SERVER_URL=${{ secrets.SERVER_URL }}
-
-      - name: Set outputs
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Tag server image
-        run: docker tag bazel/server:image ${{ secrets.REGISTRY }}/bazel/server:${{ steps.vars.outputs.sha_short }}
-        
-      - name: Tag client image
-        run: docker tag bazel/client:image ${{ secrets.REGISTRY }}/bazel/client:${{ steps.vars.outputs.sha_short }}
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
 
       - name: Login to registry
         run: echo ${{ secrets.TOKEN }} | docker login --username oauth --password-stdin cr.yandex
 
-      - name: Push server image
-        run: docker push ${{ secrets.REGISTRY }}/bazel/server:${{ steps.vars.outputs.sha_short }}
-
-      - name: Push client image
-        run: docker push ${{ secrets.REGISTRY }}/bazel/client:${{ steps.vars.outputs.sha_short }}
-
-
+      - name: Push images
+        run: sbt pushImages
+        env: 
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          REGISTRY: ${{ secrets.REGISTRY }}
