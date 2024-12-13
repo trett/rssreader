@@ -2,7 +2,7 @@
 
 # Simple RSS Reader
 
-Written using Spring Boot 3, Vue.js/Vuetify and Typescript
+Written using Spring Boot 3, ScalaJS/Laminar with UI5 components
 
 Authorization based on Google OAuth2 API
 
@@ -31,8 +31,7 @@ MIT
 ### Local development
 
 ```bash
-cd ./scripts
-./build.sh && CLIENT_ID="<client_id>" CLIENT_SECRET="<client_secret>" docker-compose up -d
+sbt buildImages
 ```
 
 ### Production deploy 
