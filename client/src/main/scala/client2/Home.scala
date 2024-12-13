@@ -5,11 +5,14 @@ import be.doeraene.webcomponents.ui5.CardHeader
 import be.doeraene.webcomponents.ui5.CustomListItem
 import be.doeraene.webcomponents.ui5.Icon
 import be.doeraene.webcomponents.ui5.Link
+import be.doeraene.webcomponents.ui5.Text
 import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.*
 import client2.NetworkUtils.HOST
 import client2.NetworkUtils.JSON_ACCEPT
 import client2.NetworkUtils.JSON_CONTENT_TYPE
+import client2.NotifyComponent.errorMessage
+import client2.NotifyComponent.notifyVar
 import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
@@ -26,8 +29,6 @@ import scala.scalajs.js
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
-import client2.NotifyComponent.notifyVar
-import client2.NotifyComponent.errorMessage
 
 object Home:
 
@@ -87,12 +88,12 @@ object Home:
       itemSignal: Signal[FeedItemData]
   ): HtmlElement =
     div(
+      padding.px := 2,
       Card(
         _.slots.header := CardHeader(
           _.slots.avatar := Icon(_.name := IconName.feed),
           _.titleText <-- itemSignal.map(_.title),
           _.subtitleText <-- itemSignal.map(_.channelTitle),
-          _.additionalText <-- itemSignal.map(_.pubDate),
           _.slots.action <-- itemSignal.map(x =>
             Icon(
               _.name := (if (x.read) IconName.complete else IconName.pending)
@@ -108,7 +109,7 @@ object Home:
           child <-- itemSignal.map(x =>
             CustomListItem(
               div(
-                display.flex,
+                width.percent := 100,
                 flexWrap.wrap,
                 div(
                   unsafeParseToHtmlFragment(x.description)
@@ -117,13 +118,17 @@ object Home:
                 div(
                   paddingTop.px := 10,
                   paddingBottom.px := 10,
+                  display.flex,
+                  alignItems.center,
+                  justifyContent.spaceBetween,
                   Link(
                     "Open feed ",
                     _.href <-- itemSignal.map(_.link),
                     _.target := LinkTarget._blank,
                     _.design := LinkDesign.Emphasized,
                     _.endIcon := IconName.inspect
-                  )
+                  ),
+                  Text(x.pubDate.convert)
                 )
               ),
               dataAttr("feed-id") := x.id.toString()

@@ -15,13 +15,12 @@
 *.iml
 *.ipr
 
-.ijwb/
 .workspace/
 **/node_modules/
-bazel-*
 dist
 
 .DS_Store
 .metals
 .bloop
 **/.bsp/
+.vite

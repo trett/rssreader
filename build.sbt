@@ -6,6 +6,7 @@ import java.io._
 import NativePackagerHelper._
 
 val circeVersion = "0.14.9"
+val projectVersion = "1.0.4"
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 ThisBuild / buildClientDist := {
@@ -20,10 +21,17 @@ buildImages := {
   (server / Docker / publishLocal).value
 }
 
+lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
+pushImages := {
+  (client / Docker / publish).value
+  (server / Docker / publish).value
+}
+
 lazy val client = project
   .in(file("client"))
   .enablePlugins(ScalaJSPlugin, DockerPlugin)
   .settings(
+    version := projectVersion,
     scalaVersion := "3.3.4",
     scalaJSUseMainModuleInitializer := true,
     scalaJSLinkerConfig ~= {
@@ -38,13 +46,14 @@ lazy val client = project
         s"""
         package client2
         object AppConfig {
-          val BASE_URI="${sys.env.getOrElse("BASE_URI", "https://localhost")}"
+          val BASE_URI="${sys.env.getOrElse("SERVER_URL", "https://localhost")}"
         }
         """
       )
       Seq(out)
     },
     Universal / mappings ++= directory(buildClientDist.value),
+    dockerRepository := sys.env.get("REGISTRY"),
     dockerCommands := Seq(
       Cmd("FROM", "nginx:1.26-alpine"),
       Cmd("COPY", "opt/docker/dist/", "/usr/share/nginx/html/")
@@ -73,10 +82,12 @@ lazy val server = project
   .in(file("server"))
   .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(
+    version := projectVersion,
     scriptClasspath := Seq("*"),
     javacOptions ++= Seq("-source", "17", "-target", "17"),
     Compile / mainClass := Some("ru.trett.rss.RssApplication"),
     Compile / packageDoc / mappings := Seq(),
+    dockerRepository := sys.env.get("REGISTRY"),
     dockerBaseImage := "eclipse-temurin:17-jre-noble",
     dockerExposedPorts := Seq(8080),
     excludeDependencies +=

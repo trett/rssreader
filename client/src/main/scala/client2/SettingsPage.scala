@@ -263,7 +263,7 @@ object SettingsPage {
 
   private def getChannels(): EventStream[String] =
     FetchStream
-      .get("https://localhost/api/channel/all")
+      .get(s"${HOST}/api/channel/all")
       .recover { case err: Throwable => Some(err.getMessage()) }
 
   private def updateChannels(link: String): EventStream[Try[String]] =

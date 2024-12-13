@@ -4,6 +4,7 @@ import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.LinkDesign
 import com.raquo.laminar.api.L.*
+import client2.NetworkUtils.HOST
 
 object LoginPage {
 
@@ -16,7 +17,7 @@ object LoginPage {
       transform := "scale(2)",
       Link(
         "Sign In",
-        _.href := "https://localhost/oauth2/authorization/google",
+        _.href := s"${HOST}/oauth2/authorization/google",
         typ("button"),
         _.design := LinkDesign.Emphasized,
         _.icon := IconName.shield
