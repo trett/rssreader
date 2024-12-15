@@ -109,6 +109,7 @@ object Home:
           child <-- itemSignal.map(x =>
             CustomListItem(
               div(
+                cls("feed-content"),
                 width.percent := 100,
                 flexWrap.wrap,
                 div(

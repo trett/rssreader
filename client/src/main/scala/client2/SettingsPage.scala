@@ -23,6 +23,7 @@ import scala.language.implicitConversions
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import be.doeraene.webcomponents.ui5.Link
 
 object SettingsPage {
 
@@ -73,7 +74,14 @@ object SettingsPage {
 
   private def settingsForm(): HtmlElement =
     div(
-      padding.px := 40,
+      paddingLeft.px := 40,
+      paddingBottom.px := 40,
+      Link(
+        "Return to feeds",
+        _.icon := IconName.`nav-back`,
+        _.events.onClick.mapTo(HomeRoute) --> { Router.currentPageVar.set(_) },
+        marginBottom.px := 10
+      ),
       form(
         onSubmit.preventDefault
           .mapTo(settingsSignal.now())
@@ -134,6 +142,7 @@ object SettingsPage {
     div(
       borderTopStyle.ridge,
       padding.px := 40,
+      minWidth.px := 100,
       div(
         formBlockStyle,
         Label("Your channels", _.forId := "channels-list", _.showColon := true),
