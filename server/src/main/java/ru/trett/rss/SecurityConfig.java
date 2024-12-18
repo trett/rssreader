@@ -32,7 +32,7 @@ public class SecurityConfig {
                         handler ->
                                 handler.accessDeniedHandler(
                                         (request, response, accessDeniedException) ->
-                                                response.sendError(401)))
+                                                response.sendError(401, "Access denied")))
                 .oauth2Login(
                         login ->
                                 login.loginPage("/login")

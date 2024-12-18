@@ -14,6 +14,7 @@ import com.raquo.laminar.api.features.unitArrows
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
 import client2.AppConfig.BASE_URI
+import client2.NetworkUtils.responseDecoder
 
 object NavBar {
 
@@ -52,7 +53,7 @@ object NavBar {
               "Update feeds",
               onClick
                 .mapTo(())
-                .flatMap(_ => refreshFeeds()) --> Home.refreshFeedsBus
+                .flatMap(_ => refreshFeedsRequest()) --> Home.refreshFeedsBus
             ),
             _.item(_.icon := IconName.log, "Sign out") // TODO
           )
@@ -60,6 +61,9 @@ object NavBar {
       )
     )
 
-  private def refreshFeeds(): EventStream[Unit] =
-    FetchStream.get(s"${BASE_URI}/api/channel/refresh").mapTo(())
+  private def refreshFeedsRequest(): EventStream[Unit] =
+    FetchStream
+      .withDecoder(responseDecoder[Unit])
+      .get(s"${BASE_URI}/api/channel/refresh")
+      .mapTo(())
 }

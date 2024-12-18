@@ -15,12 +15,13 @@ case class Notify(message: String, level: NotifyLevel)
 object NotifyComponent {
 
   val notifyVar: Var[List[Notify]] = Var(List())
+  val errorBus: EventBus[Throwable] = new EventBus
 
-  def infoMessage(message: String): Notify =
-    Notify(message, NotifyLevel.Info)
+  def infoMessage(message: String) =
+    notifyVar.update(_ :+ Notify(message, NotifyLevel.Info))
 
-  def errorMessage(message: String): Notify =
-    Notify(message, NotifyLevel.Error)
+  def errorMessage(error: Throwable) =
+    notifyVar.update(_ :+ Notify(error.getMessage(), NotifyLevel.Error))
 
   def render = div(
     children <-- notifyVar.signal.map(_.map(NotifyComponent(_)))

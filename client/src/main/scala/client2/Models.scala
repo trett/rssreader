@@ -18,10 +18,10 @@ case class FeedItemData(
 
 case class ChannelData(
     id: Long,
-    title: String,
-    //link: String,
-    //channelLink: String,
-    //feedItems: FeedItemList
+    title: String
+    // link: String,
+    // channelLink: String,
+    // feedItems: FeedItemList
 )
 
 case class SettingsData(hideRead: Boolean, deleteAfter: Int)
