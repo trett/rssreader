@@ -7,7 +7,6 @@ import com.raquo.laminar.api.L.*
 import io.circe.generic.semiauto.*
 import org.scalajs.dom
 
-
 @main
 def createApp(): Unit =
   renderOnDomContentLoaded(
@@ -34,10 +33,10 @@ object Router:
 
   val root = div(
     child <-- currentPageVar.signal.map {
-      case LoginRoute => login
-      case HomeRoute  => div(navbar, notifications, home)
+      case LoginRoute    => login
+      case HomeRoute     => div(navbar, notifications, home)
       case SettingsRoute => div(navbar, notifications, settings)
-      case ErrorRoute => div(Text("An error occured"))
+      case ErrorRoute    => div(Text("An error occured"))
       case NotFoundRoute => div(Text("Not Found"))
     }
   )

@@ -14,14 +14,9 @@ localhost {
 	}
 
     
-    handle {
-        reverse_proxy {
-            to rss_client
-        }
-    }
 
 #   Useful for local development      
-#    reverse_proxy host.docker.internal:8081 {
-#       header_up X-Real-IP {remote_host}
-#    }
+    reverse_proxy host.docker.internal:8081 {
+       header_up X-Real-IP {remote_host}
+    }
 }   

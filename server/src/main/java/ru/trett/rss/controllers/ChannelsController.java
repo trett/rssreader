@@ -12,6 +12,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 import ru.trett.rss.core.ChannelService;
 import ru.trett.rss.core.ClientException;
@@ -127,8 +130,8 @@ public class ChannelsController {
                         });
     }
 
-    @PostMapping(path = "/delete")
-    public String delete(@NotNull @RequestBody Long id, Principal principal) {
+    @PostMapping(path = "/delete", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> delete(@NotNull @RequestBody Long id, Principal principal) {
         LOG.info("Deleting channel with id: " + id);
         return userService
                 .getUser(principal.getName())
@@ -143,7 +146,7 @@ public class ChannelsController {
                                     break;
                                 }
                             }
-                            return "deleted: " + id;
+                            return new ResponseEntity<Long>(id, HttpStatus.OK);
                         })
                 .orElseThrow(() -> new ClientException("Channel not found"));
     }
