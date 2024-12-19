@@ -11,14 +11,11 @@ import be.doeraene.webcomponents.ui5.configkeys.*
 import client2.NetworkUtils.HOST
 import client2.NetworkUtils.JSON_ACCEPT
 import client2.NetworkUtils.JSON_CONTENT_TYPE
-import client2.NotifyComponent.errorMessage
-import client2.NotifyComponent.notifyVar
 import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
 import io.circe.generic.semiauto.*
-import io.circe.parser.decode
 import io.circe.syntax.*
 import org.scalajs.dom
 
@@ -26,60 +23,68 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.language.implicitConversions
 import scala.scalajs.js
-import scala.util.Failure
-import scala.util.Success
 import scala.util.Try
+import client2.NetworkUtils.responseDecoder
+import client2.NetworkUtils.errorObserver
+import scala.util.Success
+import client2.NetworkUtils.handleError
+import scala.util.Failure
 
 object Home:
 
   val refreshFeedsBus: EventBus[Unit] = new EventBus
 
+  private val dateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+
   private val model = new Model
   import model.*
 
   given feedDecoder: Decoder[FeedItemData] = deriveDecoder
+
   given decodeLocalDateTime: Decoder[LocalDateTime] =
     Decoder.decodeString.emapTry { str =>
-      Try(
-        LocalDateTime.parse(
-          str,
-          DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-        )
-      )
+      Try(LocalDateTime.parse(str, dateTimeFormatter))
     }
+
   given localDateTimeToString: Conversion[LocalDateTime, String] with {
-    def apply(date: LocalDateTime): String =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").format(date)
+    def apply(date: LocalDateTime): String = dateTimeFormatter.format(date)
   }
 
-  private val itemClickObserver: Observer[Long] =
-    feedVar.updater[Long]((xs, x) =>
-      xs.zipWithIndex.map { case (elem, idx) =>
-        if (xs(idx).id == x) then xs(idx).copy(read = true) else elem
-      }
-    )
-
-  private val refreshFeedsObserver = Observer[String] { response =>
-    decode[List[FeedItemData]](response).toTry match
-      case Success(xs) => feedVar.set(xs)
-      case Failure(exception) =>
-        notifyVar.update(_ :+ errorMessage(exception.getMessage()))
+  private val itemClickObserver = Observer[Try[Long]] {
+    case Success(x) =>
+      feedVar.update(xs =>
+        xs.zipWithIndex.map { case (elem, idx) =>
+          if (xs(idx).id == x) then xs(idx).copy(read = true) else elem
+        }
+      )
+    case Failure(err) => handleError(err)
   }
+
+  private val feedsObserver = Observer[List[FeedItemData]](feedVar.set(_))
 
   def render: Element = div(
     onMountBind(ctx =>
       refreshFeedsBus --> { _ =>
-        getFeeds().addObserver(refreshFeedsObserver)(ctx.owner)
+        val response = getFeedsRequest()
+        val data = response.collectSuccess
+        val errors = response.collectFailure
+        data.addObserver(feedsObserver)(ctx.owner)
+        errors.addObserver(errorObserver)(ctx.owner)
       }
     ),
     feeds()
   )
 
   private def feeds(): Element =
+    val response = getFeedsRequest()
+    val data = response.collectSuccess
+    val errors = response.collectFailure
     UList(
       _.noDataText := "Nothing to read",
       children <-- feedSignal.split(_.id)(renderItem),
-      feedItemsModifier()
+      data --> feedsObserver,
+      errors --> errorObserver
     )
 
   private def renderItem(
@@ -105,10 +110,11 @@ object Home:
           _.events.onItemClick
             .map(_.detail.item.dataset.get("feedId"))
             .map(_.get)
-            .flatMap(markFeed(_)) --> itemClickObserver,
+            .flatMapStream(updateFeedRequest(_)) --> itemClickObserver,
           child <-- itemSignal.map(x =>
             CustomListItem(
               div(
+                cls("feed-content"),
                 width.percent := 100,
                 flexWrap.wrap,
                 div(
@@ -131,7 +137,8 @@ object Home:
                   Text(x.pubDate.convert)
                 )
               ),
-              dataAttr("feed-id") := x.id.toString()
+              dataAttr("feed-id") := x.id.toString(),
+              dataAttr("seen") := x.read.toString()
             )
           )
         )
@@ -150,26 +157,22 @@ object Home:
         .map(foreignHtmlElement(_))
     )
 
-  private def getFeeds(): EventStream[String] =
+  private def getFeedsRequest(): EventStream[Try[List[FeedItemData]]] =
     FetchStream
+      .withDecoder(responseDecoder[List[FeedItemData]])
       .get(s"${HOST}/api/feed/all")
-      .recover { case err: Throwable => Option.empty }
+      .mapSuccess(_.get)
 
-  private def feedItemsModifier(): Modifier[HtmlElement] =
-    getFeeds() --> { item =>
-      item match
-        case "" => Router.currentPageVar.set(LoginRoute)
-        case value =>
-          decode[List[FeedItemData]](value).toTry match
-            case Success(xs)        => feedVar.set(xs)
-            case Failure(exception) => Router.currentPageVar.set(ErrorRoute)
-    }
-
-  private def markFeed(id: String): EventStream[Long] =
-    FetchStream
-      .post(
-        s"${HOST}/api/feed/read",
-        _.body(List(id).asJson.toString),
-        _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
-      )
-      .map(_ => id.toLong)
+  private def updateFeedRequest(id: String): EventStream[Try[Long]] =
+    val seen =
+      feedSignal.now().find(_.id == id.toLong).map(_.read).getOrElse(true)
+    if (seen) EventStream.empty
+    else
+      FetchStream
+        .withDecoder(responseDecoder[String])
+        .post(
+          s"${HOST}/api/feed/read",
+          _.body(List(id).asJson.toString),
+          _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
+        )
+        .mapSuccess(_ => id.toLong)
