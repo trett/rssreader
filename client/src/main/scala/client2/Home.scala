@@ -26,6 +26,9 @@ import scala.scalajs.js
 import scala.util.Try
 import client2.NetworkUtils.responseDecoder
 import client2.NetworkUtils.errorObserver
+import scala.util.Success
+import client2.NetworkUtils.handleError
+import scala.util.Failure
 
 object Home:
 
@@ -48,17 +51,17 @@ object Home:
     def apply(date: LocalDateTime): String = dateTimeFormatter.format(date)
   }
 
-  private val itemClickObserver: Observer[Long] =
-    feedVar.updater[Long]((xs, x) =>
-      xs.zipWithIndex.map { case (elem, idx) =>
-        if (xs(idx).id == x) then xs(idx).copy(read = true) else elem
-      }
-    )
-
-  private val feedObserver = Observer[Option[List[FeedItemData]]] {
-    case Some(feeds) => feedVar.set(feeds)
-    case None        => Router.currentPageVar.set(ErrorRoute)
+  private val itemClickObserver = Observer[Try[Long]] {
+    case Success(x) =>
+      feedVar.update(xs =>
+        xs.zipWithIndex.map { case (elem, idx) =>
+          if (xs(idx).id == x) then xs(idx).copy(read = true) else elem
+        }
+      )
+    case Failure(err) => handleError(err)
   }
+
+  private val feedsObserver = Observer[List[FeedItemData]](feedVar.set(_))
 
   def render: Element = div(
     onMountBind(ctx =>
@@ -66,7 +69,7 @@ object Home:
         val response = getFeedsRequest()
         val data = response.collectSuccess
         val errors = response.collectFailure
-        data.addObserver(feedObserver)(ctx.owner)
+        data.addObserver(feedsObserver)(ctx.owner)
         errors.addObserver(errorObserver)(ctx.owner)
       }
     ),
@@ -80,7 +83,7 @@ object Home:
     UList(
       _.noDataText := "Nothing to read",
       children <-- feedSignal.split(_.id)(renderItem),
-      data --> feedObserver,
+      data --> feedsObserver,
       errors --> errorObserver
     )
 
@@ -154,23 +157,22 @@ object Home:
         .map(foreignHtmlElement(_))
     )
 
-  private def getFeedsRequest(): EventStream[Try[Option[List[FeedItemData]]]] =
+  private def getFeedsRequest(): EventStream[Try[List[FeedItemData]]] =
     FetchStream
       .withDecoder(responseDecoder[List[FeedItemData]])
       .get(s"${HOST}/api/feed/all")
+      .mapSuccess(_.get)
 
-  private def updateFeedRequest(id: String): EventStream[Long] =
+  private def updateFeedRequest(id: String): EventStream[Try[Long]] =
     val seen =
       feedSignal.now().find(_.id == id.toLong).map(_.read).getOrElse(true)
     if (seen) EventStream.empty
     else
-      val responses = FetchStream
+      FetchStream
         .withDecoder(responseDecoder[String])
         .post(
           s"${HOST}/api/feed/read",
           _.body(List(id).asJson.toString),
           _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
         )
-      val result = responses.collectSuccess
-      val errors = responses.collectFailure // TODO
-      result.mapTo(id.toLong)
+        .mapSuccess(_ => id.toLong)

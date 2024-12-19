@@ -10,6 +10,7 @@ import io.circe.parser.decode
 import scala.util.Try
 import client2.NotifyComponent.errorMessage
 import com.raquo.airstream.core.Observer
+import com.raquo.airstream.core.AirstreamError
 
 object NetworkUtils {
 
@@ -20,7 +21,7 @@ object NetworkUtils {
   val JSON_CONTENT_TYPE: (String, String) =
     ("Content-Type" -> "application/json")
 
-  val errorObserver = Observer[Throwable] { dispatchNetworkErrors(_) }
+  val errorObserver = Observer[Throwable] { handleError(_) }
 
   def responseDecoder[A](using
       decoder: Decoder[A]
@@ -40,9 +41,11 @@ object NetworkUtils {
               .`then`(x => Success(decode[A](x).toOption))
           )
 
-  private def dispatchNetworkErrors(ex: Throwable): Unit =
+  def handleError(ex: Throwable): Unit =
     ex.getMessage() match
       case "Unauthorized" | "Session expired" =>
         Router.currentPageVar.set(LoginRoute)
       case _ => errorMessage(ex)
+
+  AirstreamError.registerUnhandledErrorCallback(err => errorMessage(err))
 }

@@ -24,6 +24,9 @@ import be.doeraene.webcomponents.ui5.Link
 import client2.NotifyComponent.infoMessage
 import client2.NetworkUtils.responseDecoder
 import client2.NetworkUtils.errorObserver
+import scala.util.Success
+import scala.util.Failure
+import client2.NetworkUtils.handleError
 
 object SettingsPage {
 
@@ -42,18 +45,25 @@ object SettingsPage {
   private val formBlockStyle =
     Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
 
-  private val deleteChannelObserver = Observer[Long] { id =>
-    channelVar.update(xs => xs.filterNot(_.id == id))
-    infoMessage("Channel deleted")
+  private val channelObserver = Observer[List[ChannelData]](channelVar.set(_))
+
+  private val updateChannelObserver = Observer[Try[Unit]] {
+    case Success(_) =>
+      newChannelBus.emit(())
+      infoMessage("Settings saved")
+    case Failure(err) => handleError(err)
   }
 
-  private val channelObserver = Observer[Option[List[ChannelData]]] {
-    case Some(channels) => channelVar.set(channels)
-    case None           => Router.currentPageVar.set(ErrorRoute)
+  private val deleteChannelObserver = Observer[Try[Long]] {
+    case Success(id) =>
+      channelVar.update(xs => xs.filterNot(_.id == id))
+      infoMessage("Channel deleted")
+    case Failure(err) => handleError(err)
   }
 
-  private val settingsObserver = Observer[Unit] { _ =>
-    infoMessage("Settings saved")
+  private val updateSettingsObserver = Observer[Try[Unit]] {
+    case Success(_)   => infoMessage("Settings saved")
+    case Failure(err) => handleError(err)
   }
 
   def render: Element =
@@ -83,7 +93,7 @@ object SettingsPage {
       form(
         onSubmit.preventDefault
           .mapTo(settingsSignal.now())
-          .flatMap(updateSettingsRequest(_)) --> settingsObserver,
+          .flatMap(updateSettingsRequest(_)) --> updateSettingsObserver,
         div(
           formBlockStyle,
           Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
@@ -130,7 +140,7 @@ object SettingsPage {
             _.tpe := ButtonType.Submit
           )
         ),
-        data.map(_.get) --> settingsVar.writer,
+        data --> settingsVar.writer,
         errors --> errorObserver
       )
     )
@@ -196,7 +206,7 @@ object SettingsPage {
         ),
         _.events.onClose
           .mapTo(addChannelVar.now())
-          .flatMapStream(updateChannelRequest(_)) --> newChannelBus,
+          .flatMapStream(updateChannelRequest(_)) --> updateChannelObserver,
         _.headerText := "New channel",
         sectionTag(
           div(
@@ -223,56 +233,50 @@ object SettingsPage {
 
   private def updateSettingsRequest(
       settings: Option[SettingsData]
-  ): EventStream[Unit] = {
+  ): EventStream[Try[Unit]] = {
     settings match
       case Some(s) => {
-        val response = FetchStream
+        FetchStream
           .withDecoder(responseDecoder[String])
           .post(
             s"${HOST}/api/settings",
             _.body(s.asJson.toString),
             _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
           )
-        val success = response.collectSuccess
-        val errors = response.collectFailure // TODO
-        success.mapToUnit
+          .mapSuccess(_ => ())
       }
       case None => EventStream.empty
   }
 
-  private def deleteChannelRequest(id: String): EventStream[Long] =
-    val response = FetchStream
+  private def deleteChannelRequest(id: String): EventStream[Try[Long]] =
+    FetchStream
       .withDecoder(responseDecoder[Long])
       .post(
         s"${HOST}/api/channel/delete",
         _.body(id),
         _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
       )
-    val success = response.collectSuccess
-    val errors = response.collectFailure // TODO
-    success.map(_.get)
+      .mapSuccess(_.get)
 
-  private def getSettingsRequest()
-      : EventStream[Try[Option[Option[SettingsData]]]] =
+  private def getSettingsRequest(): EventStream[Try[Option[SettingsData]]] =
     FetchStream
       .withDecoder(responseDecoder[Option[SettingsData]])
       .get(s"${HOST}/api/settings")
+      .mapSuccess(_.get)
 
-  private def getChannelsRequest()
-      : EventStream[Try[Option[List[ChannelData]]]] =
+  private def getChannelsRequest(): EventStream[Try[List[ChannelData]]] =
     FetchStream
       .withDecoder(responseDecoder[List[ChannelData]])
       .get(s"${HOST}/api/channel/all")
+      .mapSuccess(_.get)
 
-  private def updateChannelRequest(link: String): EventStream[Unit] =
-    val responses = FetchStream
+  private def updateChannelRequest(link: String): EventStream[Try[Unit]] =
+    FetchStream
       .withDecoder(responseDecoder[String])
       .post(
         s"${HOST}/api/channel/add",
         _.body(link),
         _.headers(JSON_ACCEPT, "Content-Type" -> "text/plain")
       )
-    val channels = responses.collectSuccess
-    val errors = responses.collectFailure // TODO
-    channels.mapToUnit
+      .mapSuccess(_ => ())
 }
