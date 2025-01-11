@@ -30,9 +30,9 @@ type ChannelList = List[ChannelData]
 type FeedItemList = List[FeedItemData]
 
 final class Model:
-  val feedVar: Var[FeedItemList] = Var(List())
-  val channelVar: Var[ChannelList] = Var(List())
-  val settingsVar: Var[Option[SettingsData]] = Var(Option.empty)
-  val feedSignal = feedVar.signal
-  val channelSignal = channelVar.signal
-  val settingsSignal = settingsVar.signal
+    val feedVar: Var[FeedItemList] = Var(List())
+    val channelVar: Var[ChannelList] = Var(List())
+    val settingsVar: Var[Option[SettingsData]] = Var(Option.empty)
+    val feedSignal = feedVar.signal
+    val channelSignal = channelVar.signal
+    val settingsSignal = settingsVar.signal
