@@ -7,6 +7,7 @@ import NativePackagerHelper._
 
 val circeVersion = "0.14.9"
 val projectVersion = "1.0.7-2"
+val htt4sVersion = "1.0.0-M39"
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 ThisBuild / buildClientDist := {
@@ -115,5 +116,38 @@ lazy val server = project
       "org.flywaydb" % "flyway-core" % "10.11.1",
       "jakarta.validation" % "jakarta.validation-api" % "3.0.2",
       "jakarta.servlet" % "jakarta.servlet-api" % "6.0.0"
+    )
+  )
+
+lazy val server2 = (project in file("server2"))
+  .settings(
+    version := projectVersion,
+    scalaVersion := "3.3.4",
+    name := "server2",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-ember-server",
+      "org.http4s" %% "http4s-ember-client",
+      "org.http4s" %% "http4s-circe",
+      "org.http4s" %% "http4s-dsl"
+    ).map(_ % htt4sVersion),
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % "3.5.0",
+      "org.slf4j" % "slf4j-api" % "2.0.9",
+      "ch.qos.logback" % "logback-classic" % "1.4.11",
+      "org.typelevel" %% "log4cats-core" % "2.7.0",
+      "org.typelevel" %% "log4cats-slf4j" % "2.7.0"
+    ),
+    libraryDependencies ++= Seq(
+      "io.circe" %%% "circe-core",
+      "io.circe" %%% "circe-generic",
+      "io.circe" %%% "circe-parser"
+    ).map(_ % circeVersion),
+    scalacOptions += "-Wunused:imports",
+    inThisBuild(
+      List(
+        scalaVersion := "3.3.3",
+        semanticdbEnabled := true,
+        semanticdbVersion := scalafixSemanticdb.revision
+      )
     )
   )
