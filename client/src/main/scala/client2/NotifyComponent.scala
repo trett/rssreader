@@ -10,7 +10,10 @@ import scala.language.implicitConversions
 enum NotifyLevel:
   case Info, Error
 
-case class Notify(message: String, level: NotifyLevel)
+case class Notify(
+  message: String,
+  level: NotifyLevel
+)
 
 object NotifyComponent {
 
@@ -18,13 +21,22 @@ object NotifyComponent {
   val errorBus: EventBus[Throwable] = new EventBus
 
   def infoMessage(message: String) =
-    notifyVar.update(_ :+ Notify(message, NotifyLevel.Info))
+    notifyVar.update(
+      _ :+ Notify(message, NotifyLevel.Info)
+    )
 
   def errorMessage(error: Throwable) =
-    notifyVar.update(_ :+ Notify(error.getMessage(), NotifyLevel.Error))
+    notifyVar.update(
+      _ :+ Notify(
+        error.getMessage(),
+        NotifyLevel.Error
+      )
+    )
 
   def render = div(
-    children <-- notifyVar.signal.map(_.map(NotifyComponent(_)))
+    children <-- notifyVar.signal.map(
+      _.map(NotifyComponent(_))
+    )
   )
 
   def apply(notify: Notify): HtmlElement = {
@@ -46,9 +58,7 @@ object NotifyComponent {
       }
     nc.amend(
       MessageStrip.events.onClose
-        .mapTo(message) --> notifyVar.updater((xs, x) =>
-        xs.filterNot(_.message == x)
-      )
+        .mapTo(message) --> notifyVar.updater((xs, x) => xs.filterNot(_.message == x))
     )
     nc
   }

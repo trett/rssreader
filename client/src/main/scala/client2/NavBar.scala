@@ -8,13 +8,13 @@ import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
+import client2.AppConfig.BASE_URI
+import client2.NetworkUtils.responseDecoder
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
-import client2.AppConfig.BASE_URI
-import client2.NetworkUtils.responseDecoder
 
 object NavBar {
 
@@ -29,16 +29,22 @@ object NavBar {
           _.icon := IconName.customer,
           idAttr := profileId
         ),
-        _.slots.logo := Icon(_.name := IconName.home),
+        _.slots.logo := Icon(
+          _.name := IconName.home
+        ),
         _.events.onProfileClick
-          .map(_.detail.targetRef) --> openPopoverBus.writer,
+          .map(
+            _.detail.targetRef
+          ) --> openPopoverBus.writer,
         _.events.onLogoClick.mapTo(()) --> {
           Router.currentPageVar.set(HomeRoute)
         }
       ),
       Popover(
         _.openerId := profileId,
-        _.open <-- openPopoverBus.events.mapTo(true),
+        _.open <-- openPopoverBus.events.mapTo(
+          true
+        ),
         _.placement := PopoverPlacementType.Bottom,
         div(
           UList(
@@ -46,16 +52,32 @@ object NavBar {
             _.item(
               _.icon := IconName.settings,
               "Settings",
-              onClick.mapTo(()) --> { Router.currentPageVar.set(SettingsRoute) }
+              onClick.mapTo(()) --> {
+                Router.currentPageVar.set(
+                  SettingsRoute
+                )
+              }
             ),
             _.item(
               _.icon := IconName.refresh,
               "Update feeds",
               onClick
                 .mapTo(())
-                .flatMap(_ => refreshFeedsRequest()) --> Home.refreshFeedsBus
+                .flatMap(_ =>
+                  refreshFeedsRequest()
+                ) --> Home.refreshFeedsBus
             ),
-            _.item(_.icon := IconName.log, "Sign out") // TODO
+            _.item(
+              _.icon := IconName.complete,
+              "Mark all as read",
+              onClick.mapTo(
+                ()
+              ) --> Home.markAllAsReadBus
+            ),
+            _.item(
+              _.icon := IconName.log,
+              "Sign out"
+            ) // TODO
           )
         )
       )

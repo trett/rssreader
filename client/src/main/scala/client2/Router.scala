@@ -33,10 +33,13 @@ object Router:
 
   val root = div(
     child <-- currentPageVar.signal.map {
-      case LoginRoute    => login
-      case HomeRoute     => div(navbar, notifications, home)
-      case SettingsRoute => div(navbar, notifications, settings)
-      case ErrorRoute    => div(Text("An error occured"))
+      case LoginRoute => login
+      case HomeRoute =>
+        div(navbar, notifications, home)
+      case SettingsRoute =>
+        div(navbar, notifications, settings)
+      case ErrorRoute =>
+        div(Text("An error occured"))
       case NotFoundRoute => div(Text("Not Found"))
     }
   )

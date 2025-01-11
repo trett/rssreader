@@ -3,8 +3,8 @@ package client2
 import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.LinkDesign
-import com.raquo.laminar.api.L.*
 import client2.NetworkUtils.HOST
+import com.raquo.laminar.api.L.*
 
 object LoginPage {
 
