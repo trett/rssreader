@@ -30,328 +30,229 @@ import scala.util.Try
 
 object SettingsPage {
 
-  private val model = new Model
-  import model.*
+    private val model = new Model
+    import model.*
 
-  given channelDecoder: Decoder[ChannelData] =
-    deriveDecoder
-  given settingsDecoder: Decoder[SettingsData] =
-    deriveDecoder
-  given settingsEncoder: Encoder[SettingsData] =
-    deriveEncoder
+    given channelDecoder: Decoder[ChannelData] = deriveDecoder
+    given settingsDecoder: Decoder[SettingsData] = deriveDecoder
+    given settingsEncoder: Encoder[SettingsData] = deriveEncoder
 
-  private val formStateBus: EventBus[SettingsData] = new EventBus
-  private val openDialogBus: EventBus[Boolean] =
-    new EventBus
-  private val newChannelBus: EventBus[Unit] =
-    new EventBus
-  private val addChannelVar = Var[String]("")
+    private val formStateBus: EventBus[SettingsData] = new EventBus
+    private val openDialogBus: EventBus[Boolean] = new EventBus
+    private val newChannelBus: EventBus[Unit] = new EventBus
+    private val addChannelVar = Var[String]("")
 
-  private val formBlockStyle =
-    Seq(
-      display.flex,
-      alignItems.center,
-      justifyContent.spaceBetween
-    )
+    private val formBlockStyle = Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
 
-  private val channelObserver =
-    Observer[List[ChannelData]](channelVar.set(_))
+    private val channelObserver = Observer[List[ChannelData]](channelVar.set(_))
 
-  private val updateChannelObserver =
-    Observer[Try[Unit]] {
-      case Success(_) =>
-        newChannelBus.emit(())
-        infoMessage("Settings saved")
-      case Failure(err) => handleError(err)
+    private val updateChannelObserver = Observer[Try[Unit]] {
+        case Success(_) =>
+            newChannelBus.emit(())
+            infoMessage("Settings saved")
+        case Failure(err) => handleError(err)
     }
 
-  private val deleteChannelObserver =
-    Observer[Try[Long]] {
-      case Success(id) =>
-        channelVar.update(xs =>
-          xs.filterNot(_.id == id)
+    private val deleteChannelObserver = Observer[Try[Long]] {
+        case Success(id) =>
+            channelVar.update(xs => xs.filterNot(_.id == id))
+            infoMessage("Channel deleted")
+        case Failure(err) => handleError(err)
+    }
+
+    private val updateSettingsObserver = Observer[Try[Unit]] {
+        case Success(_)   => infoMessage("Settings saved")
+        case Failure(err) => handleError(err)
+    }
+
+    def render: Element = div(
+        cls := "container",
+        display.flex,
+        flexWrap.wrap,
+        settingsForm(),
+        div(flexBasis.percent := 100),
+        channelsList(),
+        newChannelDialog()
+    )
+
+    private def settingsForm(): HtmlElement =
+        val response = getSettingsRequest(); val data = response.collectSuccess
+        val errors = response.collectFailure
+        div(
+            paddingLeft.px := 40,
+            paddingBottom.px := 40,
+            Link(
+                "Return to feeds",
+                _.icon := IconName.`nav-back`,
+                _.events.onClick.mapTo(HomeRoute) --> { Router.currentPageVar.set(_) },
+                marginBottom.px := 10
+            ),
+            form(
+                onSubmit.preventDefault
+                    .mapTo(settingsSignal.now())
+                    .flatMap(updateSettingsRequest(_)) --> updateSettingsObserver,
+                div(
+                    formBlockStyle,
+                    Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
+                    CheckBox(
+                        _.id := "hide-read-cb",
+                        _.checked <-- settingsSignal.map(x => x.map(_.hideRead).getOrElse(true)),
+                        _.events.onChange.mapToChecked --> settingsVar.updater[Boolean]((a, b) =>
+                            a.map(x => x.copy(hideRead = b))
+                        )
+                    )
+                ),
+                br(),
+                div(
+                    formBlockStyle,
+                    Label(
+                        "Days to keep",
+                        _.forId := "days-to-keep-cmb",
+                        _.showColon := true,
+                        _.wrappingType := WrappingType.None,
+                        paddingRight.px := 20
+                    ),
+                    StepInput(
+                        _.id := "days-to-keep-cmb",
+                        _.value <-- settingsSignal.map(x =>
+                            x.map(_.deleteAfter.toDouble).getOrElse(3)
+                        ),
+                        _.min := 1,
+                        _.max := 14,
+                        _.step := 1,
+                        _.events.onChange.map(x => x.target.value) --> settingsVar.updater[Double](
+                            (a, b) => a.map(x => x.copy(deleteAfter = b.toInt))
+                        )
+                    )
+                ),
+                div(
+                    paddingTop.px := 10,
+                    Button(
+                        _.design := ButtonDesign.Emphasized,
+                        "Save",
+                        _.icon := IconName.save,
+                        _.tpe := ButtonType.Submit
+                    )
+                ),
+                data --> settingsVar.writer,
+                errors --> errorObserver
+            )
         )
-        infoMessage("Channel deleted")
-      case Failure(err) => handleError(err)
-    }
 
-  private val updateSettingsObserver =
-    Observer[Try[Unit]] {
-      case Success(_) =>
-        infoMessage("Settings saved")
-      case Failure(err) => handleError(err)
-    }
-
-  def render: Element =
-    div(
-      cls := "container",
-      display.flex,
-      flexWrap.wrap,
-      settingsForm(),
-      div(flexBasis.percent := 100),
-      channelsList(),
-      newChannelDialog()
-    )
-
-  private def settingsForm(): HtmlElement =
-    val response = getSettingsRequest();
-    val data = response.collectSuccess
-    val errors = response.collectFailure
-    div(
-      paddingLeft.px := 40,
-      paddingBottom.px := 40,
-      Link(
-        "Return to feeds",
-        _.icon := IconName.`nav-back`,
-        _.events.onClick.mapTo(HomeRoute) --> {
-          Router.currentPageVar.set(_)
-        },
-        marginBottom.px := 10
-      ),
-      form(
-        onSubmit.preventDefault
-          .mapTo(settingsSignal.now())
-          .flatMap(
-            updateSettingsRequest(_)
-          ) --> updateSettingsObserver,
+    private def channelsList(): HtmlElement =
+        val response = getChannelsRequest()
+        val channels = response.collectSuccess
+        val errors = response.collectFailure
         div(
-          formBlockStyle,
-          Label(
-            "Hide read",
-            _.forId := "hide-read-cb",
-            _.showColon := true
-          ),
-          CheckBox(
-            _.id := "hide-read-cb",
-            _.checked <-- settingsSignal.map(x =>
-              x.map(_.hideRead).getOrElse(true)
-            ),
-            _.events.onChange.mapToChecked --> settingsVar
-              .updater[Boolean]((a, b) =>
-                a.map(x => x.copy(hideRead = b))
-              )
-          )
-        ),
-        br(),
-        div(
-          formBlockStyle,
-          Label(
-            "Days to keep",
-            _.forId := "days-to-keep-cmb",
-            _.showColon := true,
-            _.wrappingType := WrappingType.None,
-            paddingRight.px := 20
-          ),
-          StepInput(
-            _.id := "days-to-keep-cmb",
-            _.value <-- settingsSignal.map(x =>
-              x.map(_.deleteAfter.toDouble)
-                .getOrElse(3)
-            ),
-            _.min := 1,
-            _.max := 14,
-            _.step := 1,
-            _.events.onChange
-              .map(x =>
-                x.target.value
-              ) --> settingsVar.updater[Double]((a, b) =>
-                a.map(x =>
-                  x.copy(deleteAfter = b.toInt)
+            borderTopStyle.ridge,
+            padding.px := 40,
+            minWidth.px := 200,
+            div(
+                formBlockStyle,
+                Label("Your channels", _.forId := "channels-list", _.showColon := true),
+                Button(
+                    _.design := ButtonDesign.Default,
+                    _.icon := IconName.add,
+                    _.iconOnly := true,
+                    _.events.onClick.mapTo(true) --> openDialogBus
                 )
-              )
-          )
-        ),
-        div(
-          paddingTop.px := 10,
-          Button(
-            _.design := ButtonDesign.Emphasized,
-            "Save",
-            _.icon := IconName.save,
-            _.tpe := ButtonType.Submit
-          )
-        ),
-        data --> settingsVar.writer,
-        errors --> errorObserver
-      )
-    )
-
-  private def channelsList(): HtmlElement =
-    val response = getChannelsRequest()
-    val channels = response.collectSuccess
-    val errors = response.collectFailure
-    div(
-      borderTopStyle.ridge,
-      padding.px := 40,
-      minWidth.px := 200,
-      div(
-        formBlockStyle,
-        Label(
-          "Your channels",
-          _.forId := "channels-list",
-          _.showColon := true
-        ),
-        Button(
-          _.design := ButtonDesign.Default,
-          _.icon := IconName.add,
-          _.iconOnly := true,
-          _.events.onClick
-            .mapTo(true) --> openDialogBus
-        )
-      ),
-      UList(
-        _.id := "channels-list",
-        _.events.onItemDelete
-          .map(
-            _.detail.item.dataset
-              .get("channelId")
-              .get
-          )
-          .flatMap(
-            deleteChannelRequest(_)
-          ) --> deleteChannelObserver,
-        _.selectionMode := ListMode.Delete,
-        children <-- channelSignal.split(_.id)(
-          renderChannel
-        ),
-        channels --> channelObserver,
-        errors --> errorObserver
-      )
-    )
-
-  private def renderChannel(
-    id: Long,
-    item: ChannelData,
-    itemSignal: Signal[ChannelData]
-  ): HtmlElement =
-    UList.item(
-      _.icon := IconName.list,
-      dataAttr("channel-id") <-- itemSignal.map(
-        _.id.text
-      ),
-      child <-- itemSignal.map(_.title)
-    )
-
-  private def newChannelDialog(): HtmlElement =
-    div(
-      onMountBind(ctx =>
-        newChannelBus --> { _ =>
-          val response = getChannelsRequest();
-          val channels = response.collectSuccess
-          val errors = response.collectFailure
-          channels.addObserver(channelObserver)(
-            ctx.owner
-          )
-          errors.addObserver(errorObserver)(
-            ctx.owner
-          )
-        }
-      ),
-      Dialog(
-        _.showFromEvents(
-          openDialogBus.events
-            .filter(identity)
-            .mapTo(())
-        ),
-        _.closeFromEvents(
-          openDialogBus.events
-            .map(!_)
-            .filter(identity)
-            .mapTo(())
-        ),
-        _.events.onClose
-          .mapTo(addChannelVar.now())
-          .flatMapStream(
-            updateChannelRequest(_)
-          ) --> updateChannelObserver,
-        _.headerText := "New channel",
-        sectionTag(
-          div(
-            formBlockStyle,
-            Label(
-              _.forId := "rss_url",
-              "RSS Url:"
             ),
-            Input(
-              _.id := "rss_url",
-              _.events.onInput.mapToValue --> addChannelVar
+            UList(
+                _.id := "channels-list",
+                _.events.onItemDelete
+                    .map(_.detail.item.dataset.get("channelId").get)
+                    .flatMap(deleteChannelRequest(_)) --> deleteChannelObserver,
+                _.selectionMode := ListMode.Delete,
+                children <-- channelSignal.split(_.id)(renderChannel),
+                channels --> channelObserver,
+                errors --> errorObserver
             )
-          )
-        ),
-        _.slots.footer := div(
-          paddingTop.px := 10,
-          div(flex := "1"),
-          Button(
-            _.design := ButtonDesign.Emphasized,
-            "Add",
-            _.icon := IconName.save,
-            _.events.onClick.mapTo(
-              false
-            ) --> openDialogBus.writer
-          )
         )
-      )
+
+    private def renderChannel(
+        id: Long,
+        item: ChannelData,
+        itemSignal: Signal[ChannelData]
+    ): HtmlElement = UList.item(
+        _.icon := IconName.list,
+        dataAttr("channel-id") <-- itemSignal.map(_.id.text),
+        child <-- itemSignal.map(_.title)
     )
 
-  private def updateSettingsRequest(
-    settings: Option[SettingsData]
-  ): EventStream[Try[Unit]] = {
-    settings match
-      case Some(s) => {
-        FetchStream
-          .withDecoder(responseDecoder[String])
-          .post(
-            s"${HOST}/api/settings",
-            _.body(s.asJson.toString),
-            _.headers(
-              JSON_ACCEPT,
-              JSON_CONTENT_TYPE
+    private def newChannelDialog(): HtmlElement = div(
+        onMountBind(ctx =>
+            newChannelBus --> { _ =>
+                val response = getChannelsRequest(); val channels = response.collectSuccess
+                val errors = response.collectFailure
+                channels.addObserver(channelObserver)(ctx.owner)
+                errors.addObserver(errorObserver)(ctx.owner)
+            }
+        ),
+        Dialog(
+            _.showFromEvents(openDialogBus.events.filter(identity).mapTo(())),
+            _.closeFromEvents(openDialogBus.events.map(!_).filter(identity).mapTo(())),
+            _.events.onClose
+                .mapTo(addChannelVar.now())
+                .flatMapStream(updateChannelRequest(_)) --> updateChannelObserver,
+            _.headerText := "New channel",
+            sectionTag(
+                div(
+                    formBlockStyle,
+                    Label(_.forId := "rss_url", "RSS Url:"),
+                    Input(_.id := "rss_url", _.events.onInput.mapToValue --> addChannelVar)
+                )
+            ),
+            _.slots.footer := div(
+                paddingTop.px := 10,
+                div(flex := "1"),
+                Button(
+                    _.design := ButtonDesign.Emphasized,
+                    "Add",
+                    _.icon := IconName.save,
+                    _.events.onClick.mapTo(false) --> openDialogBus.writer
+                )
             )
-          )
-          .mapSuccess(_ => ())
-      }
-      case None => EventStream.empty
-  }
-
-  private def deleteChannelRequest(
-    id: String
-  ): EventStream[Try[Long]] =
-    FetchStream
-      .withDecoder(responseDecoder[Long])
-      .post(
-        s"${HOST}/api/channel/delete",
-        _.body(id),
-        _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
-      )
-      .mapSuccess(_.get)
-
-  private def getSettingsRequest(): EventStream[Try[Option[SettingsData]]] =
-    FetchStream
-      .withDecoder(
-        responseDecoder[Option[SettingsData]]
-      )
-      .get(s"${HOST}/api/settings")
-      .mapSuccess(_.get)
-
-  private def getChannelsRequest(): EventStream[Try[List[ChannelData]]] =
-    FetchStream
-      .withDecoder(
-        responseDecoder[List[ChannelData]]
-      )
-      .get(s"${HOST}/api/channel/all")
-      .mapSuccess(_.get)
-
-  private def updateChannelRequest(
-    link: String
-  ): EventStream[Try[Unit]] =
-    FetchStream
-      .withDecoder(responseDecoder[String])
-      .post(
-        s"${HOST}/api/channel/add",
-        _.body(link),
-        _.headers(
-          JSON_ACCEPT,
-          "Content-Type" -> "text/plain"
         )
-      )
-      .mapSuccess(_ => ())
+    )
+
+    private def updateSettingsRequest(settings: Option[SettingsData]): EventStream[Try[Unit]] = {
+        settings match
+            case Some(s) => {
+                FetchStream
+                    .withDecoder(responseDecoder[String])
+                    .post(
+                        s"${HOST}/api/settings",
+                        _.body(s.asJson.toString),
+                        _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
+                    )
+                    .mapSuccess(_ => ())
+            }
+            case None => EventStream.empty
+    }
+
+    private def deleteChannelRequest(id: String): EventStream[Try[Long]] = FetchStream
+        .withDecoder(responseDecoder[Long])
+        .post(s"${HOST}/api/channel/delete", _.body(id), _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE))
+        .mapSuccess(_.get)
+
+    private def getSettingsRequest(): EventStream[Try[Option[SettingsData]]] =
+        FetchStream
+            .withDecoder(responseDecoder[Option[SettingsData]])
+            .get(s"${HOST}/api/settings")
+            .mapSuccess(_.get)
+
+    private def getChannelsRequest(): EventStream[Try[List[ChannelData]]] =
+        FetchStream
+            .withDecoder(responseDecoder[List[ChannelData]])
+            .get(s"${HOST}/api/channel/all")
+            .mapSuccess(_.get)
+
+    private def updateChannelRequest(link: String): EventStream[Try[Unit]] = FetchStream
+        .withDecoder(responseDecoder[String])
+        .post(
+            s"${HOST}/api/channel/add",
+            _.body(link),
+            _.headers(JSON_ACCEPT, "Content-Type" -> "text/plain")
+        )
+        .mapSuccess(_ => ())
 }

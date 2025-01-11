@@ -9,10 +9,7 @@ import org.scalajs.dom
 
 @main
 def createApp(): Unit =
-  renderOnDomContentLoaded(
-    dom.document.getElementById("app"),
-    Router.appElement()
-  )
+    renderOnDomContentLoaded(dom.document.getElementById("app"), Router.appElement())
 
 sealed trait Route
 case object LoginRoute extends Route
@@ -23,25 +20,20 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-  val currentPageVar = Var[Route](HomeRoute)
+    val currentPageVar = Var[Route](HomeRoute)
 
-  def login = LoginPage.render
-  def home = Home.render
-  def settings = SettingsPage.render
-  def navbar = NavBar.render
-  def notifications = NotifyComponent.render
+    def login = LoginPage.render
+    def home = Home.render
+    def settings = SettingsPage.render
+    def navbar = NavBar.render
+    def notifications = NotifyComponent.render
 
-  val root = div(
-    child <-- currentPageVar.signal.map {
-      case LoginRoute => login
-      case HomeRoute =>
-        div(navbar, notifications, home)
-      case SettingsRoute =>
-        div(navbar, notifications, settings)
-      case ErrorRoute =>
-        div(Text("An error occured"))
-      case NotFoundRoute => div(Text("Not Found"))
-    }
-  )
+    val root = div(child <-- currentPageVar.signal.map {
+        case LoginRoute    => login
+        case HomeRoute     => div(navbar, notifications, home)
+        case SettingsRoute => div(navbar, notifications, settings)
+        case ErrorRoute    => div(Text("An error occured"))
+        case NotFoundRoute => div(Text("Not Found"))
+    })
 
-  def appElement(): Element = div(root)
+    def appElement(): Element = div(root)
