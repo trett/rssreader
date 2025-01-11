@@ -72,7 +72,6 @@ object Home:
             markAllAsReadBus --> { _ =>
                 val ids = feedVar.now().map(_.id.toString)
                 if (ids.nonEmpty) {
-                    println(ids)
                     val response = updateFeedRequest(ids)
                     response.addObserver(itemClickObserver)(ctx.owner)
                 }

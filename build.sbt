@@ -6,7 +6,7 @@ import java.io._
 import NativePackagerHelper._
 
 val circeVersion = "0.14.9"
-val projectVersion = "1.0.7"
+val projectVersion = "1.0.7-1"
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 ThisBuild / buildClientDist := {
