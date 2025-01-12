@@ -6,7 +6,7 @@ import java.io._
 import NativePackagerHelper._
 
 val circeVersion = "0.14.9"
-val projectVersion = "1.0.7-1"
+val projectVersion = "1.0.7-2"
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 ThisBuild / buildClientDist := {
@@ -60,7 +60,7 @@ lazy val client = project
     ),
     dockerExposedPorts := Seq(80),
     libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0",
-    libraryDependencies += "com.raquo" %%% "laminar" % "17.0.0",
+    libraryDependencies += "com.raquo" %%% "laminar" % "17.2.0",
     libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.0.0",
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0",
     libraryDependencies ++= Seq(

@@ -18,7 +18,7 @@ import org.scalajs.dom.HTMLElement
 
 object NavBar {
 
-    private val openPopoverBus: EventBus[HTMLElement] = new EventBus
+    private val popoverBus: EventBus[Option[HTMLElement]] = new EventBus
     private val profileId = "shellbar-profile-id"
 
     def render: Element = div(
@@ -26,12 +26,12 @@ object NavBar {
             _.primaryTitle := "RSS Reader",
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
-            _.events.onProfileClick.map(_.detail.targetRef) --> openPopoverBus.writer,
+            _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
             _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) }
         ),
         Popover(
             _.openerId := profileId,
-            _.open <-- openPopoverBus.events.mapTo(true),
+            _.showAtAndCloseFromEvents(popoverBus.events),
             _.placement := PopoverPlacementType.Bottom,
             div(
                 UList(
@@ -46,12 +46,17 @@ object NavBar {
                         "Update feeds",
                         onClick
                             .mapTo(())
-                            .flatMap(_ => refreshFeedsRequest()) --> Home.refreshFeedsBus
+                            // TODO: show loading spinner
+                            .flatMap(_ => refreshFeedsRequest()) --> { _ =>
+                            EventBus.emit(Home.refreshFeedsBus -> (), popoverBus -> None)
+                        }
                     ),
                     _.item(
                         _.icon := IconName.complete,
                         "Mark all as read",
-                        onClick.mapTo(()) --> Home.markAllAsReadBus
+                        onClick.mapTo(()) --> { _ =>
+                            EventBus.emit(Home.markAllAsReadBus -> (), popoverBus -> None)
+                        }
                     ),
                     _.item(_.icon := IconName.log, "Sign out") // TODO
                 )
