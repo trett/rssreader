@@ -53,7 +53,7 @@ object LoginController {
               token = "remove later"
             )
             sessionId <- sessionManager.createSession(sessionData)
-            response <- Ok(s"Session created with ID: $sessionId")
+            response <- SeeOther(Location(uri"/api/channels"))
               .map(
                 _.addCookie(
                   ResponseCookie(
@@ -68,16 +68,16 @@ object LoginController {
           } yield response
         }
 
-      //case req @ GET -> Root / "protected" =>
-        //req.cookies.find(_.name == "sessionId") match {
-          //case Some(cookie) =>
-            //sessionManager.getSession(cookie.content).flatMap {
-              //case Some(sessionData) =>
-                //Ok(s"Welcome ${sessionData.userEmail}, you are logged in!")
-              //case None => Forbidden("Invalid session")
-            //}
-          //case None => Forbidden("No session")
-        //}
+      // case req @ GET -> Root / "protected" =>
+      // req.cookies.find(_.name == "sessionId") match {
+      // case Some(cookie) =>
+      // sessionManager.getSession(cookie.content).flatMap {
+      // case Some(sessionData) =>
+      // Ok(s"Welcome ${sessionData.userEmail}, you are logged in!")
+      // case None => Forbidden("Invalid session")
+      // }
+      // case None => Forbidden("No session")
+      // }
 
       case req @ POST -> Root / "logout" =>
         req.cookies.find(_.name == "sessionId") match {

@@ -19,13 +19,13 @@ ThisBuild / buildClientDist := {
 lazy val buildImages = taskKey[Unit]("Build docker images")
 buildImages := {
   (client / Docker / publishLocal).value
-  (server / Docker / publishLocal).value
+  // (server / Docker / publishLocal).value
 }
 
 lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
 pushImages := {
   (client / Docker / publish).value
-  (server / Docker / publish).value
+  // (server / Docker / publish).value
 }
 
 lazy val client = project
@@ -79,45 +79,45 @@ lazy val client = project
     )
   )
 
-lazy val server = project
-  .in(file("server"))
-  .enablePlugins(JavaAppPackaging, DockerPlugin)
-  .settings(
-    version := projectVersion,
-    scriptClasspath := Seq("*"),
-    javacOptions ++= Seq("-source", "17", "-target", "17"),
-    Compile / mainClass := Some("ru.trett.rss.RssApplication"),
-    Compile / packageDoc / mappings := Seq(),
-    dockerRepository := sys.env.get("REGISTRY"),
-    dockerBaseImage := "eclipse-temurin:17-jre-noble",
-    dockerExposedPorts := Seq(8080),
-    excludeDependencies +=
-      ExclusionRule("ch.qos.logback", "logback-classic"),
-    libraryDependencies ++= Seq(
-      "org.postgresql" % "postgresql" % "42.7.3",
-      "com.zaxxer" % "HikariCP" % "5.1.0",
-      "org.springframework.boot" % "spring-boot" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-loader" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-autoconfigure" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-starter-test" % "3.1.0",
-      "org.springframework.boot" % "spring-boot-starter-jdbc" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-starter-web" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-starter-security" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-starter-oauth2-client" % "3.2.5",
-      "org.springframework.boot" % "spring-boot-starter-validation" % "3.2.5",
-      "com.h2database" % "h2" % "1.4.200",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.17.0",
-      "org.flywaydb" % "flyway-database-postgresql" % "10.11.1",
-      "org.apache.httpcomponents.client5" % "httpclient5" % "5.3.1",
-      "org.apache.commons" % "commons-lang3" % "3.14.0",
-      "com.rometools" % "rome" % "2.1.0",
-      "org.slf4j" % "slf4j-simple" % "2.0.13",
-      "junit" % "junit" % "4.13.2",
-      "org.flywaydb" % "flyway-core" % "10.11.1",
-      "jakarta.validation" % "jakarta.validation-api" % "3.0.2",
-      "jakarta.servlet" % "jakarta.servlet-api" % "6.0.0"
-    )
-  )
+// lazy val server = project
+//   .in(file("server"))
+//   .enablePlugins(JavaAppPackaging, DockerPlugin)
+//   .settings(
+//     version := projectVersion,
+//     scriptClasspath := Seq("*"),
+//     javacOptions ++= Seq("-source", "17", "-target", "17"),
+//     Compile / mainClass := Some("ru.trett.rss.RssApplication"),
+//     Compile / packageDoc / mappings := Seq(),
+//     dockerRepository := sys.env.get("REGISTRY"),
+//     dockerBaseImage := "eclipse-temurin:17-jre-noble",
+//     dockerExposedPorts := Seq(8080),
+//     excludeDependencies +=
+//       ExclusionRule("ch.qos.logback", "logback-classic"),
+//     libraryDependencies ++= Seq(
+//       "org.postgresql" % "postgresql" % "42.7.3",
+//       "com.zaxxer" % "HikariCP" % "5.1.0",
+//       "org.springframework.boot" % "spring-boot" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-loader" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-autoconfigure" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-starter-test" % "3.1.0",
+//       "org.springframework.boot" % "spring-boot-starter-jdbc" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-starter-web" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-starter-security" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-starter-oauth2-client" % "3.2.5",
+//       "org.springframework.boot" % "spring-boot-starter-validation" % "3.2.5",
+//       "com.h2database" % "h2" % "1.4.200",
+//       "com.fasterxml.jackson.core" % "jackson-databind" % "2.17.0",
+//       "org.flywaydb" % "flyway-database-postgresql" % "10.11.1",
+//       "org.apache.httpcomponents.client5" % "httpclient5" % "5.3.1",
+//       "org.apache.commons" % "commons-lang3" % "3.14.0",
+//       "com.rometools" % "rome" % "2.1.0",
+//       "org.slf4j" % "slf4j-simple" % "2.0.13",
+//       "junit" % "junit" % "4.13.2",
+//       "org.flywaydb" % "flyway-core" % "10.11.1",
+//       "jakarta.validation" % "jakarta.validation-api" % "3.0.2",
+//       "jakarta.servlet" % "jakarta.servlet-api" % "6.0.0"
+//     )
+//   )
 
 lazy val server2 = (project in file("server2"))
   .settings(
@@ -142,6 +142,11 @@ lazy val server2 = (project in file("server2"))
       "io.circe" %%% "circe-generic",
       "io.circe" %%% "circe-parser"
     ).map(_ % circeVersion),
+    libraryDependencies ++= Seq(
+      "org.tpolecat" %% "doobie-core" % "1.0.0-RC5",
+      "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC5",
+      "org.tpolecat" %% "doobie-postgres" % "1.0.0-RC5"
+    ),
     scalacOptions += "-Wunused:imports",
     inThisBuild(
       List(
