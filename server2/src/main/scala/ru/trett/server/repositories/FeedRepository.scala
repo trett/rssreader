@@ -7,6 +7,8 @@ import doobie.implicits.javatime.*
 import doobie.util.transactor.Transactor
 import ru.trett.server.models.Feed
 
+import java.time.Instant
+
 class FeedRepository(transactor: Transactor[IO]) {
 
   def insertFeed(feed: Feed): IO[Int] = {
@@ -53,6 +55,26 @@ class FeedRepository(transactor: Transactor[IO]) {
       FROM feeds 
       WHERE channelId = $channelId AND isRead = false
     """.query[Int].unique.transact(transactor)
+  }
+
+  def updateFeeds(feeds: List[Feed]): IO[Int] = {
+    val sql = """
+      UPDATE feeds 
+      SET title = ?, 
+          link = ?, 
+          description = ?, 
+          pubDate = ?, 
+          isRead = ? 
+      WHERE id = ? AND channelId = ?
+    """
+    
+    Update[(String, String, String, Option[Instant], Boolean, Long, Long)](sql)
+      .updateMany(
+        feeds.map(f => 
+          (f.title, f.link, f.description, f.pubDate, f.isRead, f.id, f.channelId)
+        )
+      )
+      .transact(transactor)
   }
 }
 

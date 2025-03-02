@@ -147,6 +147,8 @@ lazy val server2 = (project in file("server2"))
       "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC5",
       "org.tpolecat" %% "doobie-postgres" % "1.0.0-RC5"
     ),
+    libraryDependencies += "org.flywaydb" % "flyway-core" % "9.22.3",
+    libraryDependencies += "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
     scalacOptions += "-Wunused:imports",
     inThisBuild(
       List(

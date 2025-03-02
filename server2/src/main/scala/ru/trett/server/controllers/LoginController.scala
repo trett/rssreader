@@ -11,6 +11,7 @@ import org.http4s.headers.Location
 import org.http4s.implicits._
 import org.http4s.headers.Authorization
 import ru.trett.server.authorization._
+import ru.trett.server.config.OAuthConfig
 
 object LoginController {
 
@@ -27,16 +28,9 @@ object LoginController {
   private given userInfoResponseEntityDecoder: EntityDecoder[IO, UserInfo] =
     jsonOf
 
-  private val oauthConfig = GoogleOAuthConfig(
-    clientId = sys.env.get("CLIENT_ID").get,
-    clientSecret = sys.env.get("CLIENT_SECRET").get,
-    redirectUri =
-      sys.env.getOrElse("SERVER_URL", "http://localhost:8080/callback")
-  )
-
   object CodeQueryParamMatcher extends QueryParamDecoderMatcher[String]("code")
 
-  def routes(sessionManager: SessionManager[IO]): HttpRoutes[IO] =
+  def routes(sessionManager: SessionManager[IO], oauthConfig: OAuthConfig): HttpRoutes[IO] =
     HttpRoutes.of[IO] {
       case GET -> Root / "login" =>
         val authUri = googleAuthUrl(oauthConfig)
@@ -87,7 +81,7 @@ object LoginController {
         }
     }
 
-  private def googleAuthUrl(config: GoogleOAuthConfig): Uri =
+  private def googleAuthUrl(config: OAuthConfig): Uri =
     val baseUrl = "https://accounts.google.com/o/oauth2/v2/auth"
     Uri
       .unsafeFromString(baseUrl)
@@ -103,7 +97,7 @@ object LoginController {
   private def getToken(
       client: Client[IO],
       code: String,
-      config: GoogleOAuthConfig
+      config: OAuthConfig
   ): IO[OAuthResponse] =
     val tokenUri = Uri.unsafeFromString("https://oauth2.googleapis.com/token")
     val request = Request[IO](Method.POST, tokenUri).withEntity(
