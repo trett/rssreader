@@ -4,6 +4,7 @@ import cats.effect.IO
 import ru.trett.server.models.Feed
 import ru.trett.server.repositories.FeedRepository
 import java.time.Instant
+import ru.trett.server.models.User
 
 class FeedService(feedRepository: FeedRepository) {
 
@@ -28,8 +29,8 @@ class FeedService(feedRepository: FeedRepository) {
     feedRepository.findFeedsByChannelId(channelId)
   }
 
-  def markAsRead(id: Long): IO[Int] = {
-    feedRepository.markFeedAsRead(id)
+  def markAsRead(ids: List[Long], user: User): IO[Int] = {
+    feedRepository.markFeedAsRead(ids, user)
   }
 
   def getUnreadCount(channelId: Long): IO[Int] = {

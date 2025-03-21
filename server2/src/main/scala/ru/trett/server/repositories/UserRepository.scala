@@ -6,8 +6,6 @@ import doobie.implicits.*
 import doobie.postgres.implicits.*
 import ru.trett.server.models.User
 
-import java.util.UUID
-
 class UserRepository(transactor: HikariTransactor[IO]) {
 
   def insertUser(user: User): IO[Int] = {
@@ -15,14 +13,14 @@ class UserRepository(transactor: HikariTransactor[IO]) {
       .transact(transactor)
   }
 
-  def findUserById(id: UUID): IO[Option[User]] = {
+  def findUserById(id: String): IO[Option[User]] = {
     sql"SELECT id, name, email FROM users WHERE id = $id"
       .query[User]
       .option
       .transact(transactor)
   }
 
-  def deleteUser(id: UUID): IO[Int] = {
+  def deleteUser(id: String): IO[Int] = {
     sql"DELETE FROM users WHERE id = $id".update.run
       .transact(transactor)
   }

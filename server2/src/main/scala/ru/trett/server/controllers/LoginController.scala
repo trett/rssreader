@@ -12,6 +12,7 @@ import org.http4s.implicits._
 import org.http4s.headers.Authorization
 import ru.trett.server.authorization._
 import ru.trett.server.config.OAuthConfig
+import ru.trett.server.services.UserService
 
 object LoginController {
 
@@ -28,15 +29,43 @@ object LoginController {
   private given userInfoResponseEntityDecoder: EntityDecoder[IO, UserInfo] =
     jsonOf
 
+  private val baseUrl = "https://accounts.google.com/o/oauth2/v2/auth"
+
   object CodeQueryParamMatcher extends QueryParamDecoderMatcher[String]("code")
 
-  def routes(sessionManager: SessionManager[IO], oauthConfig: OAuthConfig): HttpRoutes[IO] =
+  def routes(
+      sessionManager: SessionManager[IO],
+      oauthConfig: OAuthConfig,
+      userService: UserService
+  ): HttpRoutes[IO] =
     HttpRoutes.of[IO] {
-      case GET -> Root / "login" =>
-        val authUri = googleAuthUrl(oauthConfig)
+      case GET -> Root / "signin" =>
+        val authUri = Uri
+          .unsafeFromString(baseUrl)
+          .withQueryParams(
+            Map(
+              "client_id" -> oauthConfig.clientId,
+              "redirect_uri" -> (oauthConfig.redirectUri + "/signin_callback"),
+              "response_type" -> "code",
+              "scope" -> "openid email profile"
+            )
+          )
         SeeOther(Location(authUri))
 
-      case GET -> Root / "callback" :? CodeQueryParamMatcher(code) =>
+      case GET -> Root / "signup" =>
+        val authUri = Uri
+          .unsafeFromString(baseUrl)
+          .withQueryParams(
+            Map(
+              "client_id" -> oauthConfig.clientId,
+              "redirect_uri" -> (oauthConfig.redirectUri + "/signup_callback"),
+              "response_type" -> "code",
+              "scope" -> "openid email profile"
+            )
+          )
+        SeeOther(Location(authUri))
+
+      case GET -> Root / "signin_callback" :? CodeQueryParamMatcher(code) =>
         val client = EmberClientBuilder.default[IO].build
         client.use { c =>
           for {
@@ -62,6 +91,21 @@ object LoginController {
           } yield response
         }
 
+      case GET -> Root / "signup_callback" :? CodeQueryParamMatcher(code) =>
+        val client = EmberClientBuilder.default[IO].build
+        client.use { c =>
+          for {
+            token <- getToken(c, code, oauthConfig)
+            userInfo <- getUserInfo(c, token.access_token)
+            sessionData = SessionData(
+              userEmail = userInfo.email,
+              token = "remove later"
+            )
+            _ <- userService.createUser(userInfo.id, userInfo.email, "dsdsd")
+            response <- SeeOther(Location(uri"/"))
+          } yield response
+        }
+
       // case req @ GET -> Root / "protected" =>
       // req.cookies.find(_.name == "sessionId") match {
       // case Some(cookie) =>
@@ -82,7 +126,6 @@ object LoginController {
     }
 
   private def googleAuthUrl(config: OAuthConfig): Uri =
-    val baseUrl = "https://accounts.google.com/o/oauth2/v2/auth"
     Uri
       .unsafeFromString(baseUrl)
       .withQueryParams(

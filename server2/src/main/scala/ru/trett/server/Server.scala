@@ -76,7 +76,7 @@ object Server extends IOApp {
       oauthConfig: OAuthConfig
   ): HttpRoutes[IO] =
     LoginController
-      .routes(sessionManager, oauthConfig) <+> AuthFilter.middleware(
+      .routes(sessionManager, oauthConfig, userService) <+> AuthFilter.middleware(
       sessionManager,
       userService
     )(
@@ -91,11 +91,11 @@ object Server extends IOApp {
         corsPolicy = createCorsPolicy(appConfig.cors)
         sessionManager <- SessionManager.create[IO]
         channelRepository = ChannelRepository(transactor)
-        channelService = ChannelService(channelRepository)
         feedRepository = FeedRepository(transactor)
         feedService = FeedService(feedRepository)
         userRepository = UserRepository(transactor)
         userService = UserService(userRepository)
+        channelService = ChannelService(channelRepository, feedRepository)
         exitCode <- EmberServerBuilder
           .default[IO]
           .withHost(ipv4"0.0.0.0")

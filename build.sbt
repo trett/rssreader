@@ -8,6 +8,7 @@ import NativePackagerHelper._
 val circeVersion = "0.14.9"
 val projectVersion = "1.0.7-2"
 val htt4sVersion = "1.0.0-M39"
+val catsEffectVersion = "2.7.0"
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 ThisBuild / buildClientDist := {
@@ -125,30 +126,33 @@ lazy val server2 = (project in file("server2"))
     scalaVersion := "3.3.4",
     name := "server2",
     libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % "3.5.0",
+      "org.slf4j" % "slf4j-api" % "2.0.9",
+      "ch.qos.logback" % "logback-classic" % "1.4.11",
+      "org.flywaydb" % "flyway-core" % "9.22.3",
+      "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
+      "com.rometools" % "rome" % "2.1.0"
+    ),
+    libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-ember-server",
       "org.http4s" %% "http4s-ember-client",
       "org.http4s" %% "http4s-circe",
       "org.http4s" %% "http4s-dsl"
     ).map(_ % htt4sVersion),
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % "3.5.0",
-      "org.slf4j" % "slf4j-api" % "2.0.9",
-      "ch.qos.logback" % "logback-classic" % "1.4.11",
-      "org.typelevel" %% "log4cats-core" % "2.7.0",
-      "org.typelevel" %% "log4cats-slf4j" % "2.7.0"
-    ),
+      "org.typelevel" %% "log4cats-core",
+      "org.typelevel" %% "log4cats-slf4j"
+    ).map(_ % catsEffectVersion),
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-core",
       "io.circe" %%% "circe-generic",
       "io.circe" %%% "circe-parser"
     ).map(_ % circeVersion),
     libraryDependencies ++= Seq(
-      "org.tpolecat" %% "doobie-core" % "1.0.0-RC5",
-      "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC5",
-      "org.tpolecat" %% "doobie-postgres" % "1.0.0-RC5"
-    ),
-    libraryDependencies += "org.flywaydb" % "flyway-core" % "9.22.3",
-    libraryDependencies += "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
+      "org.tpolecat" %% "doobie-core",
+      "org.tpolecat" %% "doobie-hikari",
+      "org.tpolecat" %% "doobie-postgres"
+    ).map(_ % "1.0.0-RC5"),
     scalacOptions += "-Wunused:imports",
     inThisBuild(
       List(
