@@ -19,20 +19,20 @@ object ChannelController {
 
   def routes(channelService: ChannelService)(using LoggerFactory[IO]): AuthedRoutes[User, IO] =
     val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
+    logger.info("HUI")
     AuthedRoutes.of {
-      case GET -> Root / "api" / "channels" as user =>
+      case req @ GET -> Root / "api" / "channels" as user =>
         for {
+          _ <- logger.info("Fetching all channels for user: " + user.email)
           channels <- channelService.getAllChannels(user)
           response <- Ok(channels)
         } yield response
 
       case POST -> Root / "api" / "channels" / "refresh" as user =>
         for {
-          channels <- channelService.getAllChannels(user)
           _ <- channelService.updateFeeds(user)
-          response <- Ok(channels)
+          response <- Ok("Feeds updated successfully")
         } yield response
-        Ok(s"channel: ")
 
       case req @ POST -> Root / "api" / "channels" as user =>
         for {

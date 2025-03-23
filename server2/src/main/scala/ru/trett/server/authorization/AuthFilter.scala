@@ -15,14 +15,16 @@ object AuthFilter {
       userService: UserService
   ): Kleisli[[A] =>> OptionT[IO, A], Request[IO], User] =
     Kleisli(req => {
+      
       req.cookies.find(_.name == "sessionId") match {
-        case Some(sessionId) =>
+        case Some(sessionId) => {
           OptionT
             .some(sessionId.content)
             .flatMapF(sessionManager.getSession(_))
             .flatMapF(sessionData =>
               userService.getUserByEmail(sessionData.userEmail)
             )
+        }
         case None => OptionT.none[IO, User]
       }
     })

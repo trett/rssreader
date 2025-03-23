@@ -32,6 +32,11 @@ import ru.trett.server.repositories.UserRepository
 import ru.trett.server.services.ChannelService
 import ru.trett.server.services.FeedService
 import ru.trett.server.services.UserService
+import doobie.util.log.LogHandler
+import doobie.util.log.LogEvent
+import org.http4s.server.middleware.ErrorAction
+import org.http4s.server.middleware.ErrorHandling
+import cats.data.OptionT
 
 object Server extends IOApp {
 
@@ -57,7 +62,10 @@ object Server extends IOApp {
         hikariConfig.setPassword(config.password)
         hikariConfig
       }
-      xa <- HikariTransactor.fromHikariConfig[IO](hikariConfig)
+      xa <- HikariTransactor.fromHikariConfig[IO](
+        hikariConfig,
+        logHandler = Some(printSqlLogHandler)
+      )
     } yield xa
 
   private def createCorsPolicy(config: CorsConfig): CORSPolicy =
@@ -75,14 +83,32 @@ object Server extends IOApp {
       userService: UserService,
       oauthConfig: OAuthConfig
   ): HttpRoutes[IO] =
-    LoginController
-      .routes(sessionManager, oauthConfig, userService) <+> AuthFilter.middleware(
-      sessionManager,
-      userService
-    )(
-      authedRoutes(channelService)
+    LoginController.routes(sessionManager, oauthConfig, userService) <+>
+      AuthFilter.middleware(sessionManager, userService)(
+        authedRoutes(channelService)
+      )
+
+  def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
+    OptionT.liftF(
+      IO.println(msg) >>
+        IO.println(t) >>
+        IO(t.printStackTrace())
     )
 
+  def withErrorLogging(routes: HttpRoutes[IO]) = ErrorHandling.Recover.total(
+    ErrorAction.log(
+      routes,
+      messageFailureLogAction = errorHandler,
+      serviceErrorLogAction = errorHandler
+    )
+  )
+
+  val printSqlLogHandler: LogHandler[IO] = new LogHandler[IO] {
+    def run(logEvent: LogEvent): IO[Unit] =
+      IO {
+        println(logEvent.sql)
+      }
+  }
   override def run(args: List[String]): IO[ExitCode] =
     val appConfig = loadConfig
     transactor(appConfig.db).use { transactor =>
@@ -96,13 +122,21 @@ object Server extends IOApp {
         userRepository = UserRepository(transactor)
         userService = UserService(userRepository)
         channelService = ChannelService(channelRepository, feedRepository)
+        _ <- logger.info("Starting server on port: " + appConfig.server.port)
         exitCode <- EmberServerBuilder
           .default[IO]
           .withHost(ipv4"0.0.0.0")
           .withPort(Port.fromInt(appConfig.server.port).get)
           .withHttpApp(
-            corsPolicy(
-              routes(sessionManager, channelService, userService, appConfig.oauth)
+            withErrorLogging(
+              corsPolicy(
+                routes(
+                  sessionManager,
+                  channelService,
+                  userService,
+                  appConfig.oauth
+                )
+              )
             ).orNotFound
           )
           .build

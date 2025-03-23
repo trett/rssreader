@@ -3,52 +3,51 @@ package ru.trett.server.repositories
 import cats.effect.IO
 import doobie.*
 import doobie.implicits.*
-import doobie.implicits.javatime.*
+import doobie.postgres.implicits.*
 import doobie.util.transactor.Transactor
 import ru.trett.server.models.Channel
-import ru.trett.server.models.User
 import ru.trett.server.models.Feed
-import java.time.Instant
+import ru.trett.server.models.User
+
+import java.time.OffsetDateTime
 
 class ChannelRepository(transactor: Transactor[IO]) {
 
-  def insertChannel(channel: Channel, user: User): IO[Unit] = {
+  def insertChannel(channel: Channel, user: User): IO[Long] = {
     val insertChannelQuery = sql"""
-      INSERT INTO channels (channel_link, title, link) 
-      VALUES (${channel.channelLink}, ${channel.title}, ${channel.link})
-    """
+      INSERT INTO channels (title, link) 
+      VALUES (${channel.title}, ${channel.link})
+    """.update.withUniqueGeneratedKeys[Long]("id")
 
-    def insertUserChannelsQuery(userId: String, channelId: Long): Fragment =
+    def insertUserChannelsQuery(userId: String, channelId: Long) =
       sql"""
         INSERT INTO user_channels (user_id, channel_id)
         VALUES (${userId}, ${channelId})
-      """
+      """.update.run
 
-    def insertFeedItemsQuery(
-        channelId: Long,
-        feeds: List[Feed]
-    ): ConnectionIO[Int] =
+    def insertFeedItemsQuery(channelId: Long, feeds: List[Feed]) = {
       val sql = """
-        UPDATE feeds 
-        SET channel_id = ?, title = ?, link = ?, description = ?, pub_date = ?, read = ?
-        """
-      type FeedInfo = (Long, String, String, String, Option[Instant], Boolean)
+        INSERT INTO feeds (channel_id, title, link, description, pub_date, read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      """
+      type FeedInfo =
+        (Long, String, String, String, Option[OffsetDateTime], Boolean)
       Update[FeedInfo](
         sql
       ).updateMany {
         feeds.map { f =>
-          (f.channelId, f.title, f.link, f.description, f.pubDate, f.isRead)
+          (channelId, f.title, f.link, f.description, f.pubDate, f.isRead)
         }
       }
+    }
 
-    val insertChannelTransaction = for {
-      channelId <- insertChannelQuery.update.withGeneratedKeys[Long]("id")
-      _ <- fs2.Stream(insertUserChannelsQuery(user.id, channelId).update.run)
-      _ <- fs2.Stream(insertFeedItemsQuery(channelId, channel.feedItems))
+    val transaction = for {
+      channelId <- insertChannelQuery
+      _ <- insertUserChannelsQuery(user.id, channelId)
+      _ <- insertFeedItemsQuery(channelId, channel.feedItems)
     } yield channelId
-
-    insertChannelTransaction.compile.drain.transact(transactor)
-  } 
+    transaction.transact(transactor)
+  }
 
   def findChannelById(id: Long): IO[Option[Channel]] = {
     sql"""
@@ -63,14 +62,22 @@ class ChannelRepository(transactor: Transactor[IO]) {
 
   def findChannelsByUser(user: User): IO[List[Channel]] = {
     sql"""
-      SELECT c.id, c.channel_link, c.title, c.link 
+      SELECT c.id, c.title, c.link, 
+      f.id, f.channel_id, f.title, f.link, f.description, f.pub_date, f.read
       FROM channels c
       JOIN user_channels uc ON c.id = uc.channel_id
       JOIN feeds f ON c.id = f.channel_id
       WHERE uc.user_id = ${user.id}
     """
-      .query[Channel]
+      .query[(Channel, Feed)]
       .to[List]
+      .map(
+        _.groupBy(_._1)
+          .map { case (channel, feeds) =>
+            channel.copy(feedItems = feeds.map(_._2))
+          }
+          .toList
+      )
       .transact(transactor)
   }
 

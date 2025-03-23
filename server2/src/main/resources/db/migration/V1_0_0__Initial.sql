@@ -13,22 +13,16 @@ CREATE TABLE public.users
 CREATE TABLE public.channels
 (
     id int NOT NULL PRIMARY KEY DEFAULT NEXTVAL('rss_sequence'),
-    channel_link varchar(255),
     title varchar(255),
-    link varchar(255),
+    link varchar(255)
 );
-
-ALTER TABLE public.channels
-    ADD CONSTRAINT FK_channel_users FOREIGN KEY (user_id)
-    REFERENCES public.users(id);
 
 CREATE TABLE public.feeds
 (
     id int NOT NULL PRIMARY KEY DEFAULT NEXTVAL('rss_sequence'),
-    guid varchar(255),
     title varchar(255),
     link varchar(255),
-    pub_date timestamp,
+    pub_date timestamp with time zone,
     description text,
     read boolean,
     channel_id int

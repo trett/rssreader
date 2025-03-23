@@ -2,11 +2,15 @@ package ru.trett.server.services
 
 import cats.effect.IO
 import ru.trett.server.models.Feed
-import ru.trett.server.repositories.FeedRepository
-import java.time.Instant
 import ru.trett.server.models.User
+import ru.trett.server.repositories.FeedRepository
+
+import java.time.Instant
+import java.time.OffsetDateTime
 
 class FeedService(feedRepository: FeedRepository) {
+
+  private val ZoneId = java.time.ZoneId.systemDefault()
 
   def createFeed(channelId: Long, title: String, link: String, description: String): IO[Int] = {
     val feed = Feed(
@@ -15,7 +19,7 @@ class FeedService(feedRepository: FeedRepository) {
       title = title, 
       link = link, 
       description = description,
-      pubDate = Some(Instant.now()),
+      pubDate = Some(OffsetDateTime.ofInstant(Instant.now(), ZoneId)),
       isRead = false
     )
     feedRepository.insertFeed(feed)

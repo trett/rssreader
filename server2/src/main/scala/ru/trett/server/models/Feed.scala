@@ -2,7 +2,7 @@ package ru.trett.server.models
 
 import doobie.util.Read
 import doobie.postgres.implicits._
-import java.time.Instant
+import java.time.OffsetDateTime
 
 case class Feed(
   id: Long,
@@ -10,12 +10,12 @@ case class Feed(
   title: String,
   link: String,
   description: String,
-  pubDate: Option[Instant] = None,
+  pubDate: Option[OffsetDateTime] = None,
   isRead: Boolean = false
 )
 
 object Feed {
-  implicit val read: Read[Feed] = Read[(Long, Long, String, String, String, Option[Instant], Boolean)].map {
+  given Read[Feed] = Read[(Long, Long, String, String, String, Option[OffsetDateTime], Boolean)].map {
     case (id, channelId, title, link, description, pubDate, isRead) => 
       Feed(id, channelId, title, link, description, pubDate, isRead)
   }

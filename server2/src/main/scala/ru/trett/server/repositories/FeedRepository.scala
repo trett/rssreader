@@ -6,9 +6,9 @@ import doobie.implicits.*
 import doobie.implicits.javatime.*
 import doobie.util.transactor.Transactor
 import ru.trett.server.models.Feed
-
-import java.time.Instant
 import ru.trett.server.models.User
+
+import java.time.OffsetDateTime
 
 class FeedRepository(transactor: Transactor[IO]) {
 
@@ -77,7 +77,7 @@ class FeedRepository(transactor: Transactor[IO]) {
           read = ? 
       WHERE id = ? AND channel_id = ?
     """
-    Update[(String, String, String, Option[Instant], Boolean, Long, Long)](sql)
+    Update[(String, String, String, Option[OffsetDateTime], Boolean, Long, Long)](sql)
       .updateMany(
         feeds.map(f =>
           (

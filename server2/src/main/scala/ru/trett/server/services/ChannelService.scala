@@ -1,7 +1,7 @@
 package ru.trett.server.services
 
 import cats.effect.IO
-import cats.implicits._
+import cats.syntax.all.*
 import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import org.http4s.Method
@@ -14,10 +14,10 @@ import ru.trett.server.models.Channel
 import ru.trett.server.models.Feed
 import ru.trett.server.models.User
 import ru.trett.server.repositories.ChannelRepository
-
-import java.time.Instant
-import scala.jdk.CollectionConverters.*
 import ru.trett.server.repositories.FeedRepository
+
+import java.time.OffsetDateTime
+import scala.jdk.CollectionConverters.*
 
 class ChannelService(
     channelRepository: ChannelRepository,
@@ -31,7 +31,7 @@ class ChannelService(
   private val logger: SelfAwareStructuredLogger[IO] =
     LoggerFactory[IO].getLogger
 
-  def createChannel(link: String, user: User): IO[Unit] = {
+  def createChannel(link: String, user: User): IO[Long] = {
     for {
       channel <- getChannel(link)
       result <- channelRepository.insertChannel(channel, user)
@@ -44,7 +44,7 @@ class ChannelService(
       channels <- channelRepository.findChannelsByUser(user)
       feeds <- channels.traverse { channel =>
         logger.info(s"Updating channel: ${channel.title}")
-        getChannel(channel.channelLink)
+        getChannel(channel.link)
           .map(channel => feedsRepository.updateFeeds(channel.feedItems))
       }
     } yield feeds
@@ -101,7 +101,6 @@ class ChannelService(
 
       channel = Channel(
         id = 0L,
-        channelLink = syndFeed.getLink,
         title = title,
         link = syndFeed.getLink,
         feedItems = feedItems
@@ -127,10 +126,10 @@ class ChannelService(
 
   private def extractDate(
       entry: com.rometools.rome.feed.synd.SyndEntry
-  ): Instant = {
+  ): OffsetDateTime = {
     Option(entry.getPublishedDate)
       .orElse(Option(entry.getUpdatedDate))
-      .map(_.toInstant)
+      .map(t => OffsetDateTime.ofInstant(t.toInstant, ZoneId))
       .getOrElse(
         throw new RuntimeException(
           s"Date must not be empty! Feed: ${entry.getUri}"

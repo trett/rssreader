@@ -22,7 +22,7 @@ object LoginController {
       redirectUri: String
   )
   private case class OAuthResponse(access_token: String)
-  private case class UserInfo(id: String, email: String)
+  private case class UserInfo(id: String, name: String, email: String)
 
   private given oauthResponseEntityDecoder: EntityDecoder[IO, OAuthResponse] =
     jsonOf
@@ -69,7 +69,7 @@ object LoginController {
         val client = EmberClientBuilder.default[IO].build
         client.use { c =>
           for {
-            token <- getToken(c, code, oauthConfig)
+            token <- getToken(c, code, oauthConfig, oauthConfig.redirectUri + "/signin_callback")
             userInfo <- getUserInfo(c, token.access_token)
             sessionData = SessionData(
               userEmail = userInfo.email,
@@ -95,13 +95,13 @@ object LoginController {
         val client = EmberClientBuilder.default[IO].build
         client.use { c =>
           for {
-            token <- getToken(c, code, oauthConfig)
+            token <- getToken(c, code, oauthConfig, oauthConfig.redirectUri + "/signup_callback") 
             userInfo <- getUserInfo(c, token.access_token)
             sessionData = SessionData(
               userEmail = userInfo.email,
               token = "remove later"
             )
-            _ <- userService.createUser(userInfo.id, userInfo.email, "dsdsd")
+            _ <- userService.createUser(userInfo.id, userInfo.name, userInfo.email)
             response <- SeeOther(Location(uri"/"))
           } yield response
         }
@@ -140,7 +140,8 @@ object LoginController {
   private def getToken(
       client: Client[IO],
       code: String,
-      config: OAuthConfig
+      config: OAuthConfig,
+      redirectUri: String
   ): IO[OAuthResponse] =
     val tokenUri = Uri.unsafeFromString("https://oauth2.googleapis.com/token")
     val request = Request[IO](Method.POST, tokenUri).withEntity(
@@ -148,7 +149,7 @@ object LoginController {
         "code" -> code,
         "client_id" -> config.clientId,
         "client_secret" -> config.clientSecret,
-        "redirect_uri" -> config.redirectUri,
+        "redirect_uri" -> redirectUri,
         "grant_type" -> "authorization_code"
       )
     )
