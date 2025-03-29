@@ -1,27 +1,27 @@
 package ru.trett.server.controllers
 
 import cats.effect.IO
+import io.circe.generic.auto.*
 import org.http4s.AuthedRoutes
-import org.http4s.dsl.io.*
-import ru.trett.server.services.ChannelService
-import org.http4s.circe.CirceEntityEncoder._
-import ru.trett.server.models.User
-import ru.trett.server.models.Channel
-import io.circe.generic.auto._
 import org.http4s.circe.CirceEntityDecoder.circeEntityDecoder
-import scala.util.Try
-import scala.util.Failure
-import scala.util.Success
+import org.http4s.circe.CirceEntityEncoder.*
+import org.http4s.dsl.io.*
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.SelfAwareStructuredLogger
+import ru.trett.server.models.Channel
+import ru.trett.server.models.User
+import ru.trett.server.services.ChannelService
 
-object ChannelController {
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+
+object ChannelController:
 
   def routes(channelService: ChannelService)(using LoggerFactory[IO]): AuthedRoutes[User, IO] =
     val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
-    logger.info("HUI")
     AuthedRoutes.of {
-      case req @ GET -> Root / "api" / "channels" as user =>
+      case GET -> Root / "api" / "channels" as user =>
         for {
           _ <- logger.info("Fetching all channels for user: " + user.email)
           channels <- channelService.getAllChannels(user)
@@ -30,8 +30,8 @@ object ChannelController {
 
       case POST -> Root / "api" / "channels" / "refresh" as user =>
         for {
-          _ <- channelService.updateFeeds(user)
-          response <- Ok("Feeds updated successfully")
+          r <- channelService.updateFeeds(user)
+          response <- Ok(s"$r feeds updated")
         } yield response
 
       case req @ POST -> Root / "api" / "channels" as user =>
@@ -53,4 +53,3 @@ object ChannelController {
             Ok(s"Channel deleted with result: $result")
         }
     }
-}

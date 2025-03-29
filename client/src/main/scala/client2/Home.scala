@@ -22,12 +22,16 @@ import io.circe.generic.semiauto.*
 import io.circe.syntax.*
 import org.scalajs.dom
 
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.language.implicitConversions
 import scala.scalajs.js
-import scala.util.Failure
+import scala.util.Try
+import client2.NetworkUtils.responseDecoder
+import client2.NetworkUtils.errorObserver
 import scala.util.Success
+import client2.NetworkUtils.handleError
+import scala.util.Failure
+import java.time.OffsetDateTime
 import scala.util.Try
 
 object Home:
@@ -41,11 +45,14 @@ object Home:
     import model.*
 
     given feedDecoder: Decoder[FeedItemData] = deriveDecoder
-
+  given Decoder[FeedItemData] = deriveDecoder
+  given Decoder[ChannelData] = deriveDecoder
+  // given Decoder[OffsetDateTime] =
+  //   Decoder.decodeString.emapTry { str =>
     given decodeLocalDateTime: Decoder[LocalDateTime] = Decoder.decodeString.emapTry { str =>
         Try(LocalDateTime.parse(str, dateTimeFormatter))
-    }
-
+  //   }
+  given Conversion[OffsetDateTime, String] with {
     given localDateTimeToString: Conversion[LocalDateTime, String] with {
         def apply(date: LocalDateTime): String = dateTimeFormatter.format(date)
     }
@@ -92,7 +99,7 @@ object Home:
         )
 
     private def renderItem(
-        id: Long,
+      id: String,
         item: FeedItemData,
         itemSignal: Signal[FeedItemData]
     ): HtmlElement = div(
@@ -101,15 +108,16 @@ object Home:
             _.slots.header := CardHeader(
                 _.slots.avatar := Icon(_.name := IconName.feed),
                 _.titleText <-- itemSignal.map(_.title),
-                _.subtitleText <-- itemSignal.map(_.channelTitle),
+          // _.subtitleText <-- itemSignal.map(_.channelTitle),
                 _.slots.action <-- itemSignal.map(x =>
                     Icon(_.name := (if (x.read) IconName.complete else IconName.pending))
+              _.name := (if (x.isRead) IconName.complete else IconName.pending)
                 )
             ),
             UList(
                 _.separators := ListSeparator.None,
                 _.events.onItemClick
-                    .map(_.detail.item.dataset.get("feedId"))
+            .map(_.detail.item.dataset.get("feedLink"))
                     .map(id => List(id.get))
                     .flatMapStream(updateFeedRequest(_)) --> itemClickObserver,
                 child <-- itemSignal.map(x =>
@@ -136,8 +144,8 @@ object Home:
                                 Text(x.pubDate.convert)
                             )
                         ),
-                        dataAttr("feed-id") := x.id.toString(),
-                        dataAttr("seen") := x.read.toString()
+              dataAttr("feed-link") := x.link,
+              dataAttr("seen") := x.isRead.toString()
                     )
                 )
             )
@@ -155,11 +163,14 @@ object Home:
             .map(foreignHtmlElement(_))
     )
 
-    private def getFeedsRequest(): EventStream[Try[List[FeedItemData]]] =
+  private def getFeedsRequest(): EventStream[Try[FeedItemList]] =
         FetchStream
-            .withDecoder(responseDecoder[List[FeedItemData]])
-            .get(s"${HOST}/api/feed/all")
-            .mapSuccess(_.get)
+      .withDecoder(responseDecoder[ChannelList])
+      .get(s"${HOST}/api/channels")
+      .mapSuccess(c => {
+        println(s"Response: $c")
+        c.get.flatMap(_.feedItems)
+      })
 
     private def updateFeedRequest(ids: List[String]): EventStream[Try[List[Long]]] =
         val seen = feedSignal.now().filter(feed => ids.contains(feed.id.toString)).filter(!_.read)
@@ -168,7 +179,7 @@ object Home:
             FetchStream
                 .withDecoder(responseDecoder[String])
                 .post(
-                    s"${HOST}/api/feed/read",
+          s"${HOST}/api/feeds/read",
                     _.body(ids.asJson.toString),
                     _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
                 )

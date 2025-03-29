@@ -10,7 +10,7 @@ case class SessionData(userEmail: String, token: String)
 
 class SessionManager[F[_]: Sync] private (
     sessions: MapRef[F, String, Option[SessionData]]
-) {
+):
 
   def createSession(data: SessionData): F[String] =
     for {
@@ -23,11 +23,9 @@ class SessionManager[F[_]: Sync] private (
 
   def deleteSession(sessionId: String): F[Unit] =
     sessions(sessionId).update(_ => None)
-}
 
-object SessionManager {
+object SessionManager:
   def create[F[_]: Sync]: F[SessionManager[F]] =
     new SessionManager(
       MapRef.fromConcurrentHashMap(new ConcurrentHashMap[String, SessionData])
     ).pure[F]
-}

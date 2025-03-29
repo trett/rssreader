@@ -5,13 +5,11 @@
         </encoder>
     </appender>
 
-    <!-- Set default logging level -->
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
 
-    <!-- Set specific logger levels -->
     <logger name="ru.trett.server" level="DEBUG"/>
-    <logger name="org.http4s" level="DEBUG"/>
+    <logger name="org.http4s" level="INFO"/>
     <logger name="org.http4s.server.message-failures" level="DEBUG"/>
 </configuration>

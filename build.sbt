@@ -20,13 +20,13 @@ ThisBuild / buildClientDist := {
 lazy val buildImages = taskKey[Unit]("Build docker images")
 buildImages := {
   (client / Docker / publishLocal).value
-  // (server / Docker / publishLocal).value
+  (server2 / Docker / publishLocal).value
 }
 
 lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
 pushImages := {
   (client / Docker / publish).value
-  // (server / Docker / publish).value
+  (server2 / Docker / publish).value
 }
 
 lazy val client = project
@@ -120,11 +120,16 @@ lazy val client = project
 //     )
 //   )
 
-lazy val server2 = (project in file("server2"))
+lazy val server2 = project
+  .in(file("server2"))
+  .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(
     version := projectVersion,
     scalaVersion := "3.3.4",
     name := "server2",
+    dockerBaseImage := "eclipse-temurin:17-jre-noble",
+    dockerRepository := sys.env.get("REGISTRY"),
+    dockerExposedPorts := Seq(8080),
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect" % "3.5.0",
       "org.slf4j" % "slf4j-api" % "2.0.9",
@@ -151,7 +156,8 @@ lazy val server2 = (project in file("server2"))
     libraryDependencies ++= Seq(
       "org.tpolecat" %% "doobie-core",
       "org.tpolecat" %% "doobie-hikari",
-      "org.tpolecat" %% "doobie-postgres"
+      "org.tpolecat" %% "doobie-postgres",
+      "org.tpolecat" %% "doobie-postgres-circe"
     ).map(_ % "1.0.0-RC5"),
     scalacOptions += "-Wunused:imports",
     inThisBuild(

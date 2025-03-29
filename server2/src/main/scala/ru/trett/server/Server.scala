@@ -1,10 +1,13 @@
 package ru.trett.server
 
+import cats.data.OptionT
 import cats.effect.*
 import cats.implicits.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
+import doobie.util.log.LogEvent
+import doobie.util.log.LogHandler
 import org.http4s.AuthedRoutes
 import org.http4s.HttpRoutes
 import org.http4s.Uri
@@ -12,6 +15,8 @@ import org.http4s.ember.server.*
 import org.http4s.implicits.*
 import org.http4s.server.middleware.CORS
 import org.http4s.server.middleware.CORSPolicy
+import org.http4s.server.middleware.ErrorAction
+import org.http4s.server.middleware.ErrorHandling
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
 import org.typelevel.log4cats.slf4j.Slf4jFactory
@@ -23,7 +28,9 @@ import ru.trett.server.config.CorsConfig
 import ru.trett.server.config.DbConfig
 import ru.trett.server.config.OAuthConfig
 import ru.trett.server.controllers.ChannelController
+import ru.trett.server.controllers.FeedController
 import ru.trett.server.controllers.LoginController
+import ru.trett.server.controllers.UserController
 import ru.trett.server.db.FlywayMigration
 import ru.trett.server.models.User
 import ru.trett.server.repositories.ChannelRepository
@@ -32,13 +39,8 @@ import ru.trett.server.repositories.UserRepository
 import ru.trett.server.services.ChannelService
 import ru.trett.server.services.FeedService
 import ru.trett.server.services.UserService
-import doobie.util.log.LogHandler
-import doobie.util.log.LogEvent
-import org.http4s.server.middleware.ErrorAction
-import org.http4s.server.middleware.ErrorHandling
-import cats.data.OptionT
 
-object Server extends IOApp {
+object Server extends IOApp:
 
   given LoggerFactory[IO] = Slf4jFactory[IO]
 
@@ -64,7 +66,7 @@ object Server extends IOApp {
       }
       xa <- HikariTransactor.fromHikariConfig[IO](
         hikariConfig,
-        logHandler = Some(printSqlLogHandler)
+        logHandler = Some(withSqlLogHandler)
       )
     } yield xa
 
@@ -74,54 +76,69 @@ object Server extends IOApp {
       .withAllowCredentials(config.allowCredentials)
       .withMaxAge(config.maxAge)
 
-  def authedRoutes(channelService: ChannelService): AuthedRoutes[User, IO] =
-    ChannelController.routes(channelService)
+  private def unprotectedRoutes(
+      sessionManager: SessionManager[IO],
+      oauthConfig: OAuthConfig,
+      userService: UserService
+  ): HttpRoutes[IO] =
+    LoginController.routes(sessionManager, oauthConfig, userService)
 
-  def routes(
+  private def authedRoutes(
+      channelService: ChannelService,
+      userService: UserService,
+      feedService: FeedService
+  ): AuthedRoutes[User, IO] =
+    ChannelController.routes(channelService)
+      <+> UserController.routes(userService)
+      <+> FeedController.routes(feedService)
+
+  private def routes(
       sessionManager: SessionManager[IO],
       channelService: ChannelService,
       userService: UserService,
+      feedService: FeedService,
       oauthConfig: OAuthConfig
   ): HttpRoutes[IO] =
-    LoginController.routes(sessionManager, oauthConfig, userService) <+>
+    unprotectedRoutes(sessionManager, oauthConfig, userService) <+>
       AuthFilter.middleware(sessionManager, userService)(
-        authedRoutes(channelService)
+        authedRoutes(channelService, userService, feedService)
       )
 
-  def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
+  private def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
     OptionT.liftF(
       IO.println(msg) >>
-        IO.println(t) >>
         IO(t.printStackTrace())
     )
 
-  def withErrorLogging(routes: HttpRoutes[IO]) = ErrorHandling.Recover.total(
-    ErrorAction.log(
-      routes,
-      messageFailureLogAction = errorHandler,
-      serviceErrorLogAction = errorHandler
+  private def withErrorLogging(routes: HttpRoutes[IO]) =
+    ErrorHandling.Recover.total(
+      ErrorAction.log(
+        routes,
+        messageFailureLogAction = errorHandler,
+        serviceErrorLogAction = errorHandler
+      )
     )
-  )
 
-  val printSqlLogHandler: LogHandler[IO] = new LogHandler[IO] {
+  private val withSqlLogHandler: LogHandler[IO] = new LogHandler[IO] {
     def run(logEvent: LogEvent): IO[Unit] =
       IO {
         println(logEvent.sql)
       }
   }
+
   override def run(args: List[String]): IO[ExitCode] =
     val appConfig = loadConfig
-    transactor(appConfig.db).use { transactor =>
+    transactor(appConfig.db).use { xa =>
       for {
         _ <- FlywayMigration.migrate(appConfig.db)
         corsPolicy = createCorsPolicy(appConfig.cors)
         sessionManager <- SessionManager.create[IO]
-        channelRepository = ChannelRepository(transactor)
-        feedRepository = FeedRepository(transactor)
+        channelRepository = ChannelRepository(xa)
+        feedRepository = FeedRepository(xa)
         feedService = FeedService(feedRepository)
-        userRepository = UserRepository(transactor)
+        userRepository = UserRepository(xa)
         userService = UserService(userRepository)
-        channelService = ChannelService(channelRepository, feedRepository)
+        channelService = ChannelService(channelRepository)
         _ <- logger.info("Starting server on port: " + appConfig.server.port)
         exitCode <- EmberServerBuilder
           .default[IO]
@@ -134,6 +151,7 @@ object Server extends IOApp {
                   sessionManager,
                   channelService,
                   userService,
+                  feedService,
                   appConfig.oauth
                 )
               )
@@ -143,4 +161,3 @@ object Server extends IOApp {
           .use(_ => IO.never)
       } yield exitCode
     }
-}

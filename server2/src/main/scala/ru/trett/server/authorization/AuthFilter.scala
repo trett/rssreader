@@ -8,14 +8,14 @@ import org.http4s.server.*
 import ru.trett.server.models.User
 import ru.trett.server.services.UserService
 
-object AuthFilter {
+object AuthFilter:
 
   def authUser(
       sessionManager: SessionManager[IO],
       userService: UserService
   ): Kleisli[[A] =>> OptionT[IO, A], Request[IO], User] =
     Kleisli(req => {
-      
+
       req.cookies.find(_.name == "sessionId") match {
         case Some(sessionId) => {
           OptionT
@@ -34,4 +34,3 @@ object AuthFilter {
       userService: UserService
   ): AuthMiddleware[IO, User] =
     AuthMiddleware(authUser(sessionManager, userService))
-}

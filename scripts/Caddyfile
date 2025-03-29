@@ -2,9 +2,10 @@ localhost {
 	@apipath {
 		path /api/*
 		path /error
-		path /login
-		path /login/*
-		path /oauth2/*
+		path /signin
+		path /signup
+		path /signin_callback
+		path /signup_callback
 	}
 
 	handle @apipath {
@@ -13,14 +14,14 @@ localhost {
 		}
 	}
 
-    handle {
-        reverse_proxy {
-            to rss_client
-        }
-    }
+    # handle {
+    #     reverse_proxy {
+    #         to rss_client
+    #     }
+    # }
 
-#   Useful for local development      
-#    reverse_proxy host.docker.internal:8081 {
-#       header_up X-Real-IP {remote_host}
-#    }
+  # Useful for local development      
+   reverse_proxy host.docker.internal:8081 {
+      header_up X-Real-IP {remote_host}
+   }
 }   

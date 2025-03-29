@@ -7,90 +7,40 @@ import doobie.implicits.javatime.*
 import doobie.util.transactor.Transactor
 import ru.trett.server.models.Feed
 import ru.trett.server.models.User
-
 import java.time.OffsetDateTime
 
-class FeedRepository(transactor: Transactor[IO]) {
+class FeedRepository(xa: Transactor[IO]):
 
-  def insertFeed(feed: Feed): IO[Int] = {
-    sql"""
-      INSERT INTO feeds (
-        id, channel_id, title, link, description, pub_date, read
-      ) VALUES (
-        ${feed.id}, ${feed.channelId}, ${feed.title},
-        ${feed.link}, ${feed.description}, ${feed.pubDate}, false
-      )
-    """.update.run.transact(transactor)
+  given Read[Feed] = Read[(String, Long, String, String, Option[OffsetDateTime], Boolean)].map {
+    case (link, channelId, title, description, pubDate, isRead) => 
+      Feed(link, channelId, title, description, pubDate, isRead)
   }
 
-  def findFeedById(id: Long): IO[Option[Feed]] = {
+  def findFeedsByChannelId(channelId: Long): IO[List[Feed]] =
     sql"""
-      SELECT id, channel_id, title, link, description, pub_date, read 
-      FROM feeds 
-      WHERE id = $id
-    """.query[Feed].option.transact(transactor)
-  }
-
-  def deleteFeed(id: Long): IO[Int] = {
-    sql"DELETE FROM feeds WHERE id = $id".update.run.transact(transactor)
-  }
-
-  def findFeedsByChannelId(channelId: Long): IO[List[Feed]] = {
-    sql"""
-      SELECT id, channel_id, title, link, description, pub_date, read 
+      SELECT link, channel_id, title, description, pub_date, read 
       FROM feeds 
       WHERE channel_id = $channelId
       ORDER BY pub_date DESC
-    """.query[Feed].to[List].transact(transactor)
-  }
+    """.query[Feed].to[List].transact(xa)
 
-  def markFeedAsRead(ids: List[Long], user: User): IO[Int] = {
+  def markFeedAsRead(links: List[String], user: User): IO[Int] =
     val sql = """
       UPDATE feeds 
       SET read = true 
-      WHERE id = ? AND channel_id IN (
+      WHERE link = ? AND channel_id IN (
         SELECT channel_id 
         FROM user_channels 
         WHERE user_id = ?
       )
     """
-    Update[(Long, String)](sql)
-      .updateMany(ids.map(id => (id, user.id)))
-      .transact(transactor)
-  }
+    Update[(String, String)](sql)
+      .updateMany(links.map(link => (link, user.id)))
+      .transact(xa)
 
-  def getUnreadCount(channelId: Long): IO[Int] = {
+  def getUnreadCount(channelId: Long): IO[Int] =
     sql"""
       SELECT COUNT(*) 
       FROM feeds 
       WHERE channel_id = $channelId AND read = false
-    """.query[Int].unique.transact(transactor)
-  }
-
-  def updateFeeds(feeds: List[Feed]): IO[Int] = {
-    val sql = """
-      UPDATE feeds 
-      SET title = ?, 
-          link = ?, 
-          description = ?, 
-          pub_date = ?, 
-          read = ? 
-      WHERE id = ? AND channel_id = ?
-    """
-    Update[(String, String, String, Option[OffsetDateTime], Boolean, Long, Long)](sql)
-      .updateMany(
-        feeds.map(f =>
-          (
-            f.title,
-            f.link,
-            f.description,
-            f.pubDate,
-            f.isRead,
-            f.id,
-            f.channelId
-          )
-        )
-      )
-      .transact(transactor)
-  }
-}
+    """.query[Int].unique.transact(xa)

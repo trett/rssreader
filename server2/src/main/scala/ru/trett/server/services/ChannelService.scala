@@ -14,52 +14,49 @@ import ru.trett.server.models.Channel
 import ru.trett.server.models.Feed
 import ru.trett.server.models.User
 import ru.trett.server.repositories.ChannelRepository
-import ru.trett.server.repositories.FeedRepository
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
 
 class ChannelService(
     channelRepository: ChannelRepository,
-    feedsRepository: FeedRepository
-)(using
-    LoggerFactory[IO]
-) {
+    // feedsRepository: FeedRepository
+)(using LoggerFactory[IO]):
 
   private val ZoneId = java.time.ZoneId.systemDefault()
 
   private val logger: SelfAwareStructuredLogger[IO] =
     LoggerFactory[IO].getLogger
 
-  def createChannel(link: String, user: User): IO[Long] = {
+  def createChannel(link: String, user: User): IO[Long] =
     for {
       channel <- getChannel(link)
       result <- channelRepository.insertChannel(channel, user)
     } yield result
-  }
 
-  def updateFeeds(user: User): IO[List[IO[Int]]] = {
+  def updateFeeds(user: User): IO[List[Int]] =
     for {
-      _ <- logger.info("Starting to update feeds")
-      channels <- channelRepository.findChannelsByUser(user)
-      feeds <- channels.traverse { channel =>
-        logger.info(s"Updating channel: ${channel.title}")
-        getChannel(channel.link)
-          .map(channel => feedsRepository.updateFeeds(channel.feedItems))
+      channels <- channelRepository.findUserChannels(user)
+      result <- channels.traverse { channel =>
+        for {
+          _ <- logger.info(s"Updating channel: ${channel.title}")
+          updatedChannel <- getChannel(channel.link)
+          rows <- channelRepository.insertFeeds(
+            updatedChannel.feedItems,
+            channel.id
+          )
+          _ <- logger.info(s"Inserted ${rows} feeds for channel: ${channel.title}")
+        } yield rows
       }
-    } yield feeds
-  }
-
-  def getChannelById(id: Long): IO[Option[Channel]] =
-    channelRepository.findChannelById(id)
+    } yield result
 
   def getAllChannels(user: User): IO[List[Channel]] =
-    channelRepository.findChannelsByUser(user)
+    channelRepository.getChannelsWithFeedsByUser(user)
 
   def removeChannel(id: Long, user: User): IO[Int] =
     channelRepository.deleteChannel(id, user)
 
-  private def getChannel(link: String): IO[Channel] = {
+  private def getChannel(link: String): IO[Channel] =
     val client = EmberClientBuilder.default[IO].build
     for {
       uri <- IO.fromEither(Uri.fromString(link))
@@ -69,16 +66,15 @@ class ChannelService(
           .get(link) { response =>
             response.body.compile.to(Array).flatMap { bytes =>
               val stream = new java.io.ByteArrayInputStream(bytes)
-              parse(stream)
+              parse(stream, link)
             }
           }
       }
     } yield channel
-  }
 
-  private def parse(stream: java.io.InputStream): IO[Channel] = {
+  private def parse(stream: java.io.InputStream, link: String): IO[Channel] = {
     for {
-      _ <- logger.info("Starting to parse RSS feed")
+      _ <- logger.info(s"Starting to parse RSS feed: $link")
       input = new SyndFeedInput()
       xmlReader = new XmlReader(stream)
       syndFeed <- IO.blocking(input.build(xmlReader))
@@ -89,10 +85,9 @@ class ChannelService(
 
       feedItems = syndFeed.getEntries.asScala.map { entry =>
         Feed(
-          id = 0L,
           channelId = 0L, // This will be set after channel creation
           title = entry.getTitle,
-          link = entry.getLink,
+          link = entry.getLink(),
           description = extractDescription(entry),
           pubDate = Some(extractDate(entry)),
           isRead = false
@@ -102,7 +97,7 @@ class ChannelService(
       channel = Channel(
         id = 0L,
         title = title,
-        link = syndFeed.getLink,
+        link = link,
         feedItems = feedItems
       )
 
@@ -113,7 +108,7 @@ class ChannelService(
 
   private def extractDescription(
       entry: com.rometools.rome.feed.synd.SyndEntry
-  ): String = {
+  ): String =
     Option(entry.getDescription)
       .orElse {
         Option(entry.getContents)
@@ -122,11 +117,10 @@ class ChannelService(
       }
       .map(_.getValue)
       .getOrElse("")
-  }
 
   private def extractDate(
       entry: com.rometools.rome.feed.synd.SyndEntry
-  ): OffsetDateTime = {
+  ): OffsetDateTime =
     Option(entry.getPublishedDate)
       .orElse(Option(entry.getUpdatedDate))
       .map(t => OffsetDateTime.ofInstant(t.toInstant, ZoneId))
@@ -135,5 +129,3 @@ class ChannelService(
           s"Date must not be empty! Feed: ${entry.getUri}"
         )
       )
-  }
-}

@@ -33,6 +33,7 @@ object SettingsPage {
     private val model = new Model
     import model.*
 
+  given feedItemDecoder: Decoder[FeedItemData] = deriveDecoder
     given channelDecoder: Decoder[ChannelData] = deriveDecoder
     given settingsDecoder: Decoder[SettingsData] = deriveDecoder
     given settingsEncoder: Encoder[SettingsData] = deriveEncoder

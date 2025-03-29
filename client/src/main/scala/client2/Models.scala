@@ -2,26 +2,26 @@ package client2
 
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
+import java.time.OffsetDateTime
 
-import java.time.LocalDateTime
 
 case class FeedItemData(
-    id: Long,
+    // id: Long,
     title: String,
-    channelTitle: String,
-    guid: Option[String],
+    // channelTitle: String,
+    // guid: Option[String],
     link: String,
     description: String,
-    pubDate: LocalDateTime,
-    read: Boolean
+    pubDate: OffsetDateTime,
+    isRead: Boolean
 )
 
 case class ChannelData(
     id: Long,
-    title: String
-    // link: String,
+    title: String,
+    link: String,
     // channelLink: String,
-    // feedItems: FeedItemList
+    feedItems: FeedItemList
 )
 
 case class SettingsData(hideRead: Boolean, deleteAfter: Int)
