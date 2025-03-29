@@ -4,7 +4,6 @@ import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import java.time.OffsetDateTime
 
-
 case class FeedItemData(
     // id: Long,
     title: String,

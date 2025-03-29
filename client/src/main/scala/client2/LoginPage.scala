@@ -16,20 +16,20 @@ object LoginPage {
             marginTop := "20%",
             transform := "scale(2)",
             Link(
-        "Sign Up",
-        _.href := s"${HOST}/signup",
-        typ("button"),
-        _.design := LinkDesign.Emphasized,
-        _.icon := IconName.`sys-add`
-      ),
-      div(
-        Link(
-          "Sign In",
-          _.href := s"${HOST}/signin",
-          typ("button"),
-          _.design := LinkDesign.Emphasized,
-          _.icon := IconName.`sys-enter`
-        )
+                "Sign Up",
+                _.href := s"${HOST}/signup",
+                typ("button"),
+                _.design := LinkDesign.Emphasized,
+                _.icon := IconName.`sys-add`
+            ),
+            div(
+                Link(
+                    "Sign In",
+                    _.href := s"${HOST}/signin",
+                    typ("button"),
+                    _.design := LinkDesign.Emphasized,
+                    _.icon := IconName.`sys-enter`
+                )
             )
         )
     )
