@@ -25,20 +25,20 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 
-  server:
-    image: server2:1.0.7-2
-    container_name: rss_server
-    restart: always
-    depends_on:
-      - caddy
-    environment:
-      SERVER_PORT: 8080
-      DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/rss
-      DATASOURCE_USER: rss_user
-      DATASOURCE_PASS: 123456
-      CORS_URL: https://localhost
-      CLIENT_ID: ${CLIENT_ID}
-      CLIENT_SECRET: ${CLIENT_SECRET}
+  # server:
+  #   image: server2:1.0.7-2
+  #   container_name: rss_server
+  #   restart: always
+  #   depends_on:
+  #     - caddy
+  #   environment:
+  #     SERVER_PORT: 8080
+  #     DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/rss
+  #     DATASOURCE_USER: rss_user
+  #     DATASOURCE_PASS: 123456
+  #     CORS_URL: https://localhost
+  #     CLIENT_ID: ${CLIENT_ID}
+  #     CLIENT_SECRET: ${CLIENT_SECRET}
 
   # client:
   #   image: client:1.0.6

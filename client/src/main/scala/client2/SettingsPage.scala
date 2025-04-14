@@ -22,6 +22,7 @@ import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
+import ru.trett.reader.models.*
 
 import scala.language.implicitConversions
 import scala.util.Failure
@@ -35,17 +36,17 @@ object SettingsPage {
 
     given feedItemDecoder: Decoder[FeedItemData] = deriveDecoder
     given channelDecoder: Decoder[ChannelData] = deriveDecoder
-    given settingsDecoder: Decoder[SettingsData] = deriveDecoder
-    given settingsEncoder: Encoder[SettingsData] = deriveEncoder
+    given settingsDecoder: Decoder[UserSettings] = deriveDecoder
+    given settingsEncoder: Encoder[UserSettings] = deriveEncoder
 
-    private val formStateBus: EventBus[SettingsData] = new EventBus
+    private val formStateBus: EventBus[UserSettings] = new EventBus
     private val openDialogBus: EventBus[Boolean] = new EventBus
     private val newChannelBus: EventBus[Unit] = new EventBus
     private val addChannelVar = Var[String]("")
 
     private val formBlockStyle = Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
 
-    private val channelObserver = Observer[List[ChannelData]](channelVar.set(_))
+    private val channelObserver = Observer[ChannelList](channelVar.set(_))
 
     private val updateChannelObserver = Observer[Try[Unit]] {
         case Success(_) =>
@@ -97,9 +98,9 @@ object SettingsPage {
                     Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
                     CheckBox(
                         _.id := "hide-read-cb",
-                        _.checked <-- settingsSignal.map(x => x.map(_.hideRead).getOrElse(true)),
+                        _.checked <-- settingsSignal.map(x => x.map(_.read).getOrElse(true)),
                         _.events.onChange.mapToChecked --> settingsVar.updater[Boolean]((a, b) =>
-                            a.map(x => x.copy(hideRead = b))
+                            a.map(x => x.copy(read = b))
                         )
                     )
                 ),
@@ -116,13 +117,13 @@ object SettingsPage {
                     StepInput(
                         _.id := "days-to-keep-cmb",
                         _.value <-- settingsSignal.map(x =>
-                            x.map(_.deleteAfter.toDouble).getOrElse(3)
+                            x.map(_.retentionDays.toDouble).getOrElse(3)
                         ),
                         _.min := 1,
                         _.max := 14,
                         _.step := 1,
                         _.events.onChange.map(x => x.target.value) --> settingsVar.updater[Double](
-                            (a, b) => a.map(x => x.copy(deleteAfter = b.toInt))
+                            (a, b) => a.map(x => x.copy(retentionDays = b.toInt))
                         )
                     )
                 ),
@@ -174,11 +175,12 @@ object SettingsPage {
         id: Long,
         item: ChannelData,
         itemSignal: Signal[ChannelData]
-    ): HtmlElement = UList.item(
-        _.icon := IconName.list,
-        dataAttr("channel-id") <-- itemSignal.map(_.id.text),
-        child <-- itemSignal.map(_.title)
-    )
+    ): HtmlElement =
+        UList.item(
+            _.icon := IconName.list,
+            dataAttr("channel-id") <-- itemSignal.map(_.id.text),
+            child <-- itemSignal.map(_.title)
+        )
 
     private def newChannelDialog(): HtmlElement = div(
         onMountBind(ctx =>
@@ -216,13 +218,13 @@ object SettingsPage {
         )
     )
 
-    private def updateSettingsRequest(settings: Option[SettingsData]): EventStream[Try[Unit]] = {
+    private def updateSettingsRequest(settings: Option[UserSettings]): EventStream[Try[Unit]] = {
         settings match
             case Some(s) => {
                 FetchStream
                     .withDecoder(responseDecoder[String])
                     .post(
-                        s"${HOST}/api/settings",
+                        s"${HOST}/api/user/settings",
                         _.body(s.asJson.toString),
                         _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
                     )
@@ -233,25 +235,25 @@ object SettingsPage {
 
     private def deleteChannelRequest(id: String): EventStream[Try[Long]] = FetchStream
         .withDecoder(responseDecoder[Long])
-        .post(s"${HOST}/api/channel/delete", _.body(id), _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE))
+        .apply(_.DELETE, s"${HOST}/api/channels/delete${id}")
         .mapSuccess(_.get)
 
-    private def getSettingsRequest(): EventStream[Try[Option[SettingsData]]] =
+    private def getSettingsRequest(): EventStream[Try[Option[UserSettings]]] =
         FetchStream
-            .withDecoder(responseDecoder[Option[SettingsData]])
-            .get(s"${HOST}/api/settings")
+            .withDecoder(responseDecoder[Option[UserSettings]])
+            .get(s"${HOST}/api/user/settings")
             .mapSuccess(_.get)
 
-    private def getChannelsRequest(): EventStream[Try[List[ChannelData]]] =
+    private def getChannelsRequest(): EventStream[Try[ChannelList]] =
         FetchStream
-            .withDecoder(responseDecoder[List[ChannelData]])
-            .get(s"${HOST}/api/channel/all")
+            .withDecoder(responseDecoder[ChannelList])
+            .get(s"${HOST}/api/channels")
             .mapSuccess(_.get)
 
     private def updateChannelRequest(link: String): EventStream[Try[Unit]] = FetchStream
         .withDecoder(responseDecoder[String])
         .post(
-            s"${HOST}/api/channel/add",
+            s"${HOST}/api/channels",
             _.body(link),
             _.headers(JSON_ACCEPT, "Content-Type" -> "text/plain")
         )

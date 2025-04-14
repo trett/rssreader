@@ -11,6 +11,9 @@ import be.doeraene.webcomponents.ui5.configkeys.*
 import client2.NetworkUtils.HOST
 import client2.NetworkUtils.JSON_ACCEPT
 import client2.NetworkUtils.JSON_CONTENT_TYPE
+import client2.NetworkUtils.errorObserver
+import client2.NetworkUtils.handleError
+import client2.NetworkUtils.responseDecoder
 import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
@@ -18,16 +21,14 @@ import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
 import org.scalajs.dom
+import ru.trett.reader.models.{FeedItemData, ChannelData}
 
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.language.implicitConversions
 import scala.scalajs.js
-import client2.NetworkUtils.responseDecoder
-import client2.NetworkUtils.errorObserver
-import scala.util.Success
-import client2.NetworkUtils.handleError
 import scala.util.Failure
-import java.time.OffsetDateTime
+import scala.util.Success
 import scala.util.Try
 
 object Home:
@@ -40,6 +41,7 @@ object Home:
     private val model = new Model
     import model.*
 
+    // given Decoder[FeedItemData] = deriveDecoder
     given Decoder[FeedItemData] = deriveDecoder
     given Decoder[ChannelData] = deriveDecoder
     given Conversion[OffsetDateTime, String] with {
@@ -56,12 +58,12 @@ object Home:
         case Failure(err) => handleError(err)
     }
 
-    private val feedsObserver = Observer[List[FeedItemData]](feedVar.set(_))
+    private val feedsObserver = Observer[FeedItemList](feedVar.set(_))
 
     def render: Element = div(
         onMountBind(ctx =>
             refreshFeedsBus --> { _ =>
-                val response = getFeedsRequest()
+                val response = getChannelsRequest()
                 val data = response.collectSuccess
                 val errors = response.collectFailure
                 data.addObserver(feedsObserver)(ctx.owner)
@@ -78,8 +80,22 @@ object Home:
         feeds()
     )
 
+    // private def mapChannelTitle(s: ChannelList): FeedItemList =
+    //     s.flatMap { case Channel(id, title, link, feedItems) =>
+    //         feedItems.map(item =>
+    //             FeedItemData(
+    //                 item.link,
+    //                 title,
+    //                 item.title,
+    //                 item.description,
+    //                 item.pubDate.get,
+    //                 item.isRead
+    //             )
+    //         )
+    //     }
+
     private def feeds(): Element =
-        val response = getFeedsRequest()
+        val response = getChannelsRequest()
         val data = response.collectSuccess
         val errors = response.collectFailure
         UList(
@@ -99,7 +115,7 @@ object Home:
             _.slots.header := CardHeader(
                 _.slots.avatar := Icon(_.name := IconName.feed),
                 _.titleText <-- itemSignal.map(_.title),
-                // _.subtitleText <-- itemSignal.map(_.channelTitle),
+                _.subtitleText <-- itemSignal.map(_.channelTitle),
                 _.slots.action <-- itemSignal.map(x =>
                     Icon(_.name := (if (x.isRead) IconName.complete else IconName.pending))
                 )
@@ -153,14 +169,11 @@ object Home:
             .map(foreignHtmlElement(_))
     )
 
-    private def getFeedsRequest(): EventStream[Try[FeedItemList]] =
+    private def getChannelsRequest(): EventStream[Try[FeedItemList]] =
         FetchStream
-            .withDecoder(responseDecoder[ChannelList])
+            .withDecoder(responseDecoder[FeedItemList])
             .get(s"${HOST}/api/channels")
-            .mapSuccess(c => {
-                println(s"Response: $c")
-                c.get.flatMap(_.feedItems)
-            })
+            .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =
         val seen =

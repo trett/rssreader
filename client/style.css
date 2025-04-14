@@ -3,3 +3,17 @@
     color: #475e75;
 }
 
+.google-button {
+    background-color: #4285f4;
+    color: white;
+    border-radius: 5px;
+    padding: 10px 20px;
+    text-decoration: none;
+    font-size: 16px;
+    text-shadow: 0 0px !important;
+    width: 80px;
+    height: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

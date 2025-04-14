@@ -8,11 +8,11 @@ localhost {
 		path /signup_callback
 	}
 
-	handle @apipath {
-		reverse_proxy {
-			to rss_server:8080
-		}
-	}
+	# handle @apipath {
+	# 	reverse_proxy {
+	# 		to rss_server:8080
+	# 	}
+	# }
 
     # handle {
     #     reverse_proxy {
@@ -24,4 +24,10 @@ localhost {
    reverse_proxy host.docker.internal:8081 {
       header_up X-Real-IP {remote_host}
    }
+
+	handle @apipath  {
+		reverse_proxy host.docker.internal:8080 {
+			header_up X-Real-IP {remote_host}
+		}
+	}
 }   

@@ -7,25 +7,26 @@ import doobie.implicits.javatime.*
 import doobie.util.transactor.Transactor
 import ru.trett.server.models.Feed
 import ru.trett.server.models.User
+
 import java.time.OffsetDateTime
 
 class FeedRepository(xa: Transactor[IO]):
 
-  given Read[Feed] = Read[(String, Long, String, String, Option[OffsetDateTime], Boolean)].map {
-    case (link, channelId, title, description, pubDate, isRead) => 
-      Feed(link, channelId, title, description, pubDate, isRead)
-  }
+    given Read[Feed] = Read[(String, Long, String, String, Option[OffsetDateTime], Boolean)].map {
+        case (link, channelId, title, description, pubDate, isRead) =>
+            Feed(link, channelId, title, description, pubDate, isRead)
+    }
 
-  def findFeedsByChannelId(channelId: Long): IO[List[Feed]] =
-    sql"""
+    def findFeedsByChannelId(channelId: Long): IO[List[Feed]] =
+        sql"""
       SELECT link, channel_id, title, description, pub_date, read 
       FROM feeds 
       WHERE channel_id = $channelId
       ORDER BY pub_date DESC
     """.query[Feed].to[List].transact(xa)
 
-  def markFeedAsRead(links: List[String], user: User): IO[Int] =
-    val sql = """
+    def markFeedAsRead(links: List[String], user: User): IO[Int] =
+        val sql = """
       UPDATE feeds 
       SET read = true 
       WHERE link = ? AND channel_id IN (
@@ -34,12 +35,12 @@ class FeedRepository(xa: Transactor[IO]):
         WHERE user_id = ?
       )
     """
-    Update[(String, String)](sql)
-      .updateMany(links.map(link => (link, user.id)))
-      .transact(xa)
+        Update[(String, String)](sql)
+            .updateMany(links.map(link => (link, user.id)))
+            .transact(xa)
 
-  def getUnreadCount(channelId: Long): IO[Int] =
-    sql"""
+    def getUnreadCount(channelId: Long): IO[Int] =
+        sql"""
       SELECT COUNT(*) 
       FROM feeds 
       WHERE channel_id = $channelId AND read = false

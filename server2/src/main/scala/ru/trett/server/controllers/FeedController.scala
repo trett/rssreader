@@ -10,18 +10,18 @@ import ru.trett.server.services.FeedService
 
 object FeedController:
 
-  def routes(feedService: FeedService): AuthedRoutes[User, IO] =
-    AuthedRoutes.of {
-      case req @ POST -> Root / "api" / "feeds" / "read" as user =>
-        for {
-          markRequest <- req.req.as[List[String]]
-          result <- feedService.markAsRead(markRequest, user)
-          response <- Ok(s"Feed marked as read: $result")
-        } yield response
+    def routes(feedService: FeedService): AuthedRoutes[User, IO] =
+        AuthedRoutes.of {
+            case req @ POST -> Root / "api" / "feeds" / "read" as user =>
+                for {
+                    markRequest <- req.req.as[List[String]]
+                    result <- feedService.markAsRead(markRequest, user)
+                    response <- Ok(s"Feed marked as read: $result")
+                } yield response
 
-      case GET -> Root / "api" / "feeds" / "channel" / LongVar(channelId) / "unread" as _ =>
-        for {
-          count <- feedService.getUnreadCount(channelId)
-          response <- Ok(count)
-        } yield response
-    }
+            case GET -> Root / "api" / "feeds" / "channel" / LongVar(channelId) / "unread" as _ =>
+                for {
+                    count <- feedService.getUnreadCount(channelId)
+                    response <- Ok(count)
+                } yield response
+        }
