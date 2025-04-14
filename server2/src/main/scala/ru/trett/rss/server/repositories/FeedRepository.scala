@@ -1,12 +1,12 @@
-package ru.trett.server.repositories
+package ru.trett.rss.server.repositories
 
 import cats.effect.IO
 import doobie.*
 import doobie.implicits.*
 import doobie.implicits.javatime.*
 import doobie.util.transactor.Transactor
-import ru.trett.server.models.Feed
-import ru.trett.server.models.User
+import ru.trett.rss.server.models.Feed
+import ru.trett.rss.server.models.User
 
 import java.time.OffsetDateTime
 

@@ -1,4 +1,4 @@
-package ru.trett.server.authorization
+package ru.trett.rss.server.authorization
 
 import cats.effect._
 import cats.syntax.all._

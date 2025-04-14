@@ -1,4 +1,4 @@
-package ru.trett.server.controllers
+package ru.trett.rss.server.controllers
 
 import cats.effect.IO
 import io.circe.generic.auto.*
@@ -8,8 +8,8 @@ import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.SelfAwareStructuredLogger
-import ru.trett.server.models.User
-import ru.trett.server.services.ChannelService
+import ru.trett.rss.server.models.User
+import ru.trett.rss.server.services.ChannelService
 
 import scala.util.Failure
 import scala.util.Success

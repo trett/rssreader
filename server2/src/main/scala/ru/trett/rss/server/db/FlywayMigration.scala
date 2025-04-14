@@ -1,8 +1,8 @@
-package ru.trett.server.db
+package ru.trett.rss.server.db
 
 import cats.effect.IO
 import org.flywaydb.core.Flyway
-import ru.trett.server.config.DbConfig
+import ru.trett.rss.server.config.DbConfig
 
 object FlywayMigration:
     def migrate(config: DbConfig): IO[Unit] = {

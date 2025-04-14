@@ -1,4 +1,4 @@
-package ru.trett.server.repositories
+package ru.trett.rss.server.repositories
 
 import cats.effect.IO
 import doobie.hikari.HikariTransactor
@@ -10,7 +10,7 @@ import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.generic.semiauto.deriveEncoder
 import io.circe.syntax.*
-import ru.trett.server.models.User
+import ru.trett.rss.server.models.User
 
 class UserRepository(xa: HikariTransactor[IO]):
 

@@ -1,4 +1,4 @@
-package ru.trett.server
+package ru.trett.rss.server
 
 import cats.data.OptionT
 import cats.effect.*
@@ -21,24 +21,24 @@ import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 import pureconfig.ConfigSource
-import ru.trett.server.authorization.AuthFilter
-import ru.trett.server.authorization.SessionManager
-import ru.trett.server.config.AppConfig
-import ru.trett.server.config.CorsConfig
-import ru.trett.server.config.DbConfig
-import ru.trett.server.config.OAuthConfig
-import ru.trett.server.controllers.ChannelController
-import ru.trett.server.controllers.FeedController
-import ru.trett.server.controllers.LoginController
-import ru.trett.server.controllers.UserController
-import ru.trett.server.db.FlywayMigration
-import ru.trett.server.models.User
-import ru.trett.server.repositories.ChannelRepository
-import ru.trett.server.repositories.FeedRepository
-import ru.trett.server.repositories.UserRepository
-import ru.trett.server.services.ChannelService
-import ru.trett.server.services.FeedService
-import ru.trett.server.services.UserService
+import ru.trett.rss.server.authorization.AuthFilter
+import ru.trett.rss.server.authorization.SessionManager
+import ru.trett.rss.server.config.AppConfig
+import ru.trett.rss.server.config.CorsConfig
+import ru.trett.rss.server.config.DbConfig
+import ru.trett.rss.server.config.OAuthConfig
+import ru.trett.rss.server.controllers.ChannelController
+import ru.trett.rss.server.controllers.FeedController
+import ru.trett.rss.server.controllers.LoginController
+import ru.trett.rss.server.controllers.UserController
+import ru.trett.rss.server.db.FlywayMigration
+import ru.trett.rss.server.models.User
+import ru.trett.rss.server.repositories.ChannelRepository
+import ru.trett.rss.server.repositories.FeedRepository
+import ru.trett.rss.server.repositories.UserRepository
+import ru.trett.rss.server.services.ChannelService
+import ru.trett.rss.server.services.FeedService
+import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
 

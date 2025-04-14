@@ -1,4 +1,4 @@
-package ru.trett.server.controllers
+package ru.trett.rss.server.controllers
 
 import cats.effect.IO
 import io.circe.Decoder
@@ -9,9 +9,9 @@ import org.http4s.AuthedRoutes
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
-import ru.trett.server.models.User
-import ru.trett.server.services.UserService
-import ru.trett.reader.models.UserSettings
+import ru.trett.rss.server.models.User
+import ru.trett.rss.server.services.UserService
+import ru.trett.rss.models.UserSettings
 
 object UserController {
 

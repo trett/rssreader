@@ -22,7 +22,7 @@ import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
-import ru.trett.reader.models.*
+import ru.trett.rss.models.*
 
 import scala.language.implicitConversions
 import scala.util.Failure

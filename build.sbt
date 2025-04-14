@@ -5,10 +5,13 @@ import scala.sys.process._
 import java.io._
 import NativePackagerHelper._
 
+val organizationName = "ru.trett"
+
 val circeVersion = "0.14.9"
 val projectVersion = "1.0.7-2"
 val htt4sVersion = "1.0.0-M39"
 val catsEffectVersion = "2.7.0"
+lazy val scala3Version = "3.3.5"
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 ThisBuild / buildClientDist := {
@@ -30,18 +33,17 @@ pushImages := {
 }
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
+    .crossType(CrossType.Pure)
     .in(file("shared"))
     .settings(
-        // sharedJvmAndJsLibraryDependencies,
-        scalacOptions += "-Wunused:imports",
-        inThisBuild(
-            List(
-                scalaVersion := "3.3.5",
-                semanticdbEnabled := true,
-                semanticdbVersion := scalafixSemanticdb.revision
-            )
-        )
+        name := "shared",
+        version := projectVersion,
+        organization := organizationName,
+        scalaVersion := scala3Version,
+         scalacOptions += "-Wunused:imports"
     )
+    .jsSettings()
+    .jvmSettings()
 
 lazy val client = project
     .in(file("client"))
@@ -49,7 +51,8 @@ lazy val client = project
     .enablePlugins(ScalaJSPlugin, DockerPlugin)
     .settings(
         version := projectVersion,
-        scalaVersion := "3.3.4",
+        organization := organizationName,
+        scalaVersion := scala3Version,
         scalaJSUseMainModuleInitializer := true,
         scalaJSLinkerConfig ~= {
             _.withModuleKind(ModuleKind.ESModule)
@@ -95,53 +98,14 @@ lazy val client = project
         )
     )
 
-// lazy val server = project
-//   .in(file("server"))
-//   .enablePlugins(JavaAppPackaging, DockerPlugin)
-//   .settings(
-//     version := projectVersion,
-//     scriptClasspath := Seq("*"),
-//     javacOptions ++= Seq("-source", "17", "-target", "17"),
-//     Compile / mainClass := Some("ru.trett.rss.RssApplication"),
-//     Compile / packageDoc / mappings := Seq(),
-//     dockerRepository := sys.env.get("REGISTRY"),
-//     dockerBaseImage := "eclipse-temurin:17-jre-noble",
-//     dockerExposedPorts := Seq(8080),
-//     excludeDependencies +=
-//       ExclusionRule("ch.qos.logback", "logback-classic"),
-//     libraryDependencies ++= Seq(
-//       "org.postgresql" % "postgresql" % "42.7.3",
-//       "com.zaxxer" % "HikariCP" % "5.1.0",
-//       "org.springframework.boot" % "spring-boot" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-loader" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-autoconfigure" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-starter-test" % "3.1.0",
-//       "org.springframework.boot" % "spring-boot-starter-jdbc" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-starter-web" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-starter-security" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-starter-oauth2-client" % "3.2.5",
-//       "org.springframework.boot" % "spring-boot-starter-validation" % "3.2.5",
-//       "com.h2database" % "h2" % "1.4.200",
-//       "com.fasterxml.jackson.core" % "jackson-databind" % "2.17.0",
-//       "org.flywaydb" % "flyway-database-postgresql" % "10.11.1",
-//       "org.apache.httpcomponents.client5" % "httpclient5" % "5.3.1",
-//       "org.apache.commons" % "commons-lang3" % "3.14.0",
-//       "com.rometools" % "rome" % "2.1.0",
-//       "org.slf4j" % "slf4j-simple" % "2.0.13",
-//       "junit" % "junit" % "4.13.2",
-//       "org.flywaydb" % "flyway-core" % "10.11.1",
-//       "jakarta.validation" % "jakarta.validation-api" % "3.0.2",
-//       "jakarta.servlet" % "jakarta.servlet-api" % "6.0.0"
-//     )
-//   )
-
 lazy val server2 = project
     .in(file("server2"))
     .dependsOn(shared.jvm)
     .enablePlugins(JavaAppPackaging, DockerPlugin)
     .settings(
         version := projectVersion,
-        scalaVersion := "3.3.4",
+        organization := organizationName,
+        scalaVersion := scala3Version,
         name := "server2",
         dockerBaseImage := "eclipse-temurin:17-jre-noble",
         dockerRepository := sys.env.get("REGISTRY"),

@@ -21,7 +21,7 @@ import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
 import org.scalajs.dom
-import ru.trett.reader.models.{FeedItemData, ChannelData}
+import ru.trett.rss.models.{FeedItemData, ChannelData}
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter

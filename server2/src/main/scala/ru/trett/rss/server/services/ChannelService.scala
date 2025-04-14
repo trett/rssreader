@@ -1,4 +1,4 @@
-package ru.trett.server.services
+package ru.trett.rss.server.services
 
 import cats.effect.IO
 import cats.syntax.all.*
@@ -11,14 +11,14 @@ import org.http4s.Uri
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.SelfAwareStructuredLogger
-import ru.trett.reader.models.FeedItemData
-import ru.trett.server.models.Channel
-import ru.trett.server.models.Feed
-import ru.trett.server.models.User
-import ru.trett.server.repositories.ChannelRepository
+import ru.trett.rss.server.models.Channel
+import ru.trett.rss.server.models.Feed
+import ru.trett.rss.server.models.User
+import ru.trett.rss.server.repositories.ChannelRepository
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
+import ru.trett.rss.models.FeedItemData
 
 class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[IO]):
 

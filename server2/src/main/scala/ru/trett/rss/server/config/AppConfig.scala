@@ -1,4 +1,4 @@
-package ru.trett.server.config
+package ru.trett.rss.server.config
 
 import pureconfig.*
 import pureconfig.generic.derivation.default.*

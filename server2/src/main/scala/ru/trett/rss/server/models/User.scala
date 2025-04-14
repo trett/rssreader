@@ -1,4 +1,4 @@
-package ru.trett.server.models
+package ru.trett.rss.server.models
 
 case class User(id: String, name: String, email: String, settings: User.Settings)
 

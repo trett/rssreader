@@ -1,4 +1,4 @@
-package ru.trett.server.repositories
+package ru.trett.rss.server.repositories
 
 import cats.effect.IO
 import doobie.*
@@ -7,9 +7,9 @@ import doobie.postgres.implicits.*
 import doobie.util.transactor.Transactor
 
 import java.time.OffsetDateTime
-import ru.trett.server.models.Channel
-import ru.trett.server.models.Feed
-import ru.trett.server.models.User
+import ru.trett.rss.server.models.Channel
+import ru.trett.rss.server.models.Feed
+import ru.trett.rss.server.models.User
 
 class ChannelRepository(xa: Transactor[IO]):
 

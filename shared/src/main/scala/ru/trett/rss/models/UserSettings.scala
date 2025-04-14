@@ -1,3 +1,3 @@
-package ru.trett.reader.models
+package ru.trett.rss.models
 
 final case class UserSettings(name: String, retentionDays: Int, read: Boolean)

@@ -1,4 +1,4 @@
-package ru.trett.server.controllers
+package ru.trett.rss.server.controllers
 
 import cats.effect.*
 import io.circe.generic.auto.*
@@ -10,9 +10,9 @@ import org.http4s.ember.client.*
 import org.http4s.headers.Authorization
 import org.http4s.headers.Location
 import org.http4s.implicits.*
-import ru.trett.server.authorization.*
-import ru.trett.server.config.OAuthConfig
-import ru.trett.server.services.UserService
+import ru.trett.rss.server.authorization.*
+import ru.trett.rss.server.config.OAuthConfig
+import ru.trett.rss.server.services.UserService
 
 object LoginController:
 

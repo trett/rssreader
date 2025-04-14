@@ -1,4 +1,4 @@
-package ru.trett.server.models
+package ru.trett.rss.server.models
 
 import java.time.OffsetDateTime
 

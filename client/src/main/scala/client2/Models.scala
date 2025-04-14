@@ -1,7 +1,7 @@
 package client2
 
 import com.raquo.airstream.state.Var
-import ru.trett.reader.models.*
+import ru.trett.rss.models.*
 
 type ChannelList = List[ChannelData]
 type FeedItemList = List[FeedItemData]

@@ -1,8 +1,8 @@
-package ru.trett.server.services
+package ru.trett.rss.server.services
 
 import cats.effect.IO
-import ru.trett.server.models.User
-import ru.trett.server.repositories.FeedRepository
+import ru.trett.rss.server.models.User
+import ru.trett.rss.server.repositories.FeedRepository
 
 class FeedService(feedRepository: FeedRepository):
 

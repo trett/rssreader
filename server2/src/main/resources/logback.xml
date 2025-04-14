@@ -9,7 +9,7 @@
         <appender-ref ref="STDOUT" />
     </root>
 
-    <logger name="ru.trett.server" level="DEBUG"/>
+    <logger name="ru.trett.rss.server" level="DEBUG"/>
     <logger name="org.http4s" level="INFO"/>
     <logger name="org.http4s.server.message-failures" level="DEBUG"/>
 </configuration>

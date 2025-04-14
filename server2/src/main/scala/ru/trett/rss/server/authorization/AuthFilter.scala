@@ -1,12 +1,12 @@
-package ru.trett.server.authorization
+package ru.trett.rss.server.authorization
 
 import cats.*
 import cats.data.*
 import cats.effect.*
 import org.http4s.*
 import org.http4s.server.*
-import ru.trett.server.models.User
-import ru.trett.server.services.UserService
+import ru.trett.rss.server.models.User
+import ru.trett.rss.server.services.UserService
 
 object AuthFilter:
 
