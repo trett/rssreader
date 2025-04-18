@@ -1,37 +1,13 @@
-import com.typesafe.sbt.packager.docker.ExecCmd
+import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.*
 import com.typesafe.sbt.packager.docker.Cmd
 import org.scalajs.linker.interface.ModuleSplitStyle
-import scala.sys.process._
-import java.io._
-import NativePackagerHelper._
 
-val organizationName = "ru.trett"
+import scala.sys.process.*
 
-val circeVersion = "0.14.9"
-val projectVersion = "1.0.7-2"
-val htt4sVersion = "1.0.0-M39"
-val catsEffectVersion = "2.7.0"
 lazy val scala3Version = "3.3.5"
-
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
-ThisBuild / buildClientDist := {
-    Process("npm install", client.base).!
-    Process("npm run build", client.base).!
-    new java.io.File(client.base.getPath + "/dist")
-}
-
 lazy val buildImages = taskKey[Unit]("Build docker images")
-buildImages := {
-    (client / Docker / publishLocal).value
-    (server2 / Docker / publishLocal).value
-}
-
 lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
-pushImages := {
-    (client / Docker / publish).value
-    (server2 / Docker / publish).value
-}
-
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
     .crossType(CrossType.Pure)
     .in(file("shared"))
@@ -40,11 +16,10 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
         version := projectVersion,
         organization := organizationName,
         scalaVersion := scala3Version,
-         scalacOptions += "-Wunused:imports"
+        scalacOptions += "-Wunused:imports"
     )
     .jsSettings()
     .jvmSettings()
-
 lazy val client = project
     .in(file("client"))
     .dependsOn(shared.js)
@@ -97,7 +72,6 @@ lazy val client = project
             )
         )
     )
-
 lazy val server2 = project
     .in(file("server2"))
     .dependsOn(shared.jvm)
@@ -148,3 +122,21 @@ lazy val server2 = project
             )
         )
     )
+ThisBuild / buildClientDist := {
+    Process("npm install", client.base).!
+    Process("npm run build", client.base).!
+    new java.io.File(client.base.getPath + "/dist")
+}
+val organizationName = "ru.trett"
+buildImages := {
+    (client / Docker / publishLocal).value
+    (server2 / Docker / publishLocal).value
+}
+val circeVersion = "0.14.9"
+pushImages := {
+    (client / Docker / publish).value
+    (server2 / Docker / publish).value
+}
+val projectVersion = "1.0.7-2"
+val htt4sVersion = "1.0.0-M39"
+val catsEffectVersion = "2.7.0"

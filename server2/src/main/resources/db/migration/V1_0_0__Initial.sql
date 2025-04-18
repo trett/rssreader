@@ -26,7 +26,7 @@ CREATE TABLE public.feeds
     read BOOLEAN,
     channel_id INT,
     CONSTRAINT FK_feeds_channels FOREIGN KEY (channel_id)
-        REFERENCES public.channels(id)
+        REFERENCES public.channels(id) ON DELETE CASCADE
 );
 
 CREATE TABLE public.user_channels

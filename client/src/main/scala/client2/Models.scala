@@ -1,6 +1,6 @@
 package client2
 
-import com.raquo.airstream.state.Var
+import com.raquo.airstream.state.{StrictSignal, Var}
 import ru.trett.rss.models.*
 
 type ChannelList = List[ChannelData]
@@ -10,6 +10,6 @@ final class Model:
     val feedVar: Var[FeedItemList] = Var(List())
     val channelVar: Var[ChannelList] = Var(List())
     val settingsVar: Var[Option[UserSettings]] = Var(Option.empty)
-    val feedSignal = feedVar.signal
-    val channelSignal = channelVar.signal
-    val settingsSignal = settingsVar.signal
+    val feedSignal: StrictSignal[FeedItemList] = feedVar.signal
+    val channelSignal: StrictSignal[ChannelList] = channelVar.signal
+    val settingsSignal: StrictSignal[Option[UserSettings]] = settingsVar.signal

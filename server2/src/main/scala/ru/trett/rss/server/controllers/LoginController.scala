@@ -16,11 +16,6 @@ import ru.trett.rss.server.services.UserService
 
 object LoginController:
 
-    private case class GoogleOAuthConfig(
-        clientId: String,
-        clientSecret: String,
-        redirectUri: String
-    )
     private case class OAuthResponse(access_token: String)
     private case class UserInfo(id: String, name: String, email: String)
 
@@ -32,7 +27,7 @@ object LoginController:
     private val OAuthBaseUrl =
         Uri.unsafeFromString("https://accounts.google.com/o/oauth2/v2/auth")
 
-    object CodeQueryParamMatcher extends QueryParamDecoderMatcher[String]("code")
+    private object CodeQueryParamMatcher extends QueryParamDecoderMatcher[String]("code")
 
     def routes(
         sessionManager: SessionManager[IO],
@@ -106,10 +101,6 @@ object LoginController:
                             oauthConfig.redirectUri + "/signup_callback"
                         )
                         userInfo <- getUserInfo(c, token.access_token)
-                        sessionData = SessionData(
-                            userEmail = userInfo.email,
-                            token = "remove later"
-                        )
                         _ <- userService.createUser(userInfo.id, userInfo.name, userInfo.email)
                         response <- SeeOther(Location(uri"/"))
                     } yield response
@@ -122,17 +113,6 @@ object LoginController:
                     case None => BadRequest("No session to log out from")
                 }
         }
-
-    private def googleAuthUrl(config: OAuthConfig): Uri =
-        OAuthBaseUrl
-            .withQueryParams(
-                Map(
-                    "client_id" -> config.clientId,
-                    "redirect_uri" -> config.redirectUri,
-                    "response_type" -> "code",
-                    "scope" -> "openid email profile"
-                )
-            )
 
     private def getToken(
         client: Client[IO],

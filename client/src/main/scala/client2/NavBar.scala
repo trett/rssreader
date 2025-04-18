@@ -67,6 +67,6 @@ object NavBar {
     private def refreshFeedsRequest(): EventStream[Unit] =
         FetchStream
             .withDecoder(responseDecoder[Unit])
-            .get(s"${BASE_URI}/api/channel/refresh")
+            .post(s"$BASE_URI/api/channels/refresh")
             .mapTo(())
 }

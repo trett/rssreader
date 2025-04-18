@@ -1,17 +1,15 @@
 package ru.trett.rss.server.controllers
 
 import cats.effect.IO
-import io.circe.Decoder
-import io.circe.Encoder
-import io.circe.generic.semiauto.deriveDecoder
-import io.circe.generic.semiauto.deriveEncoder
+import io.circe.{Decoder, Encoder}
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import org.http4s.AuthedRoutes
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
+import ru.trett.rss.models.UserSettings
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
-import ru.trett.rss.models.UserSettings
 
 object UserController {
 
@@ -20,8 +18,7 @@ object UserController {
 
     def routes(userService: UserService): AuthedRoutes[User, IO] =
         AuthedRoutes.of {
-
-            case req @ GET -> Root / "api" / "user" / "settings" as user =>
+            case GET -> Root / "api" / "user" / "settings" as user =>
                 for {
                     settings <- userService.getUserSettings(user.id)
                     response <- Ok(settings)

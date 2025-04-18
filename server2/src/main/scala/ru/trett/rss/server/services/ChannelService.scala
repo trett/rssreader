@@ -3,22 +3,16 @@ package ru.trett.rss.server.services
 import cats.effect.IO
 import cats.syntax.all.*
 import com.rometools.rome.feed.synd.SyndEntry
-import com.rometools.rome.io.SyndFeedInput
-import com.rometools.rome.io.XmlReader
-import org.http4s.Method
-import org.http4s.Request
+import com.rometools.rome.io.{SyndFeedInput, XmlReader}
 import org.http4s.Uri
 import org.http4s.ember.client.EmberClientBuilder
-import org.typelevel.log4cats.LoggerFactory
-import org.typelevel.log4cats.SelfAwareStructuredLogger
-import ru.trett.rss.server.models.Channel
-import ru.trett.rss.server.models.Feed
-import ru.trett.rss.server.models.User
+import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
+import ru.trett.rss.models.{ChannelData, FeedItemData}
+import ru.trett.rss.server.models.{Channel, Feed, User}
 import ru.trett.rss.server.repositories.ChannelRepository
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
-import ru.trett.rss.models.FeedItemData
 
 class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[IO]):
 
@@ -33,44 +27,10 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
             result <- channelRepository.insertChannel(channel, user)
         } yield result
 
-    def updateFeeds(user: User): IO[List[Int]] =
-        for {
-            channels <- channelRepository.findUserChannels(user)
-            result <- channels.traverse { channel =>
-                for {
-                    _ <- logger.info(s"Updating channel: ${channel.title}")
-                    updatedChannel <- getChannel(channel.link)
-                    rows <- channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
-                    _ <- logger.info(s"Inserted ${rows} feeds for channel: ${channel.title}")
-                } yield rows
-            }
-        } yield result
-
-    def getAllChannels(user: User): IO[List[FeedItemData]] =
-        val channels = channelRepository.getChannelsWithFeedsByUser(user)
-        channels.flatMap {
-            _.traverse { case (channel, feed) =>
-                IO.pure(
-                    FeedItemData(
-                        feed.link,
-                        channel.title,
-                        feed.title,
-                        feed.description,
-                        feed.pubDate.getOrElse(OffsetDateTime.now()),
-                        feed.isRead
-                    )
-                )
-            }
-        }
-
-    def removeChannel(id: Long, user: User): IO[Int] =
-        channelRepository.deleteChannel(id, user)
-
     private def getChannel(link: String): IO[Channel] =
         val client = EmberClientBuilder.default[IO].build
         for {
-            uri <- IO.fromEither(Uri.fromString(link))
-            request = Request[IO](Method.GET, uri)
+            _ <- IO.fromEither(Uri.fromString(link))
             channel <- client.use { client =>
                 client
                     .get(link) { response =>
@@ -95,10 +55,9 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
                 Feed(
                     channelId = 0L, // This will be set after channel creation
                     title = entry.getTitle,
-                    link = entry.getLink(),
+                    link = entry.getLink,
                     description = extractDescription(entry),
-                    pubDate = extractDate(entry),
-                    isRead = false
+                    pubDate = extractDate(entry)
                 )
             }.toList
 
@@ -123,3 +82,46 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
         Option(entry.getPublishedDate)
             .orElse(Option(entry.getUpdatedDate))
             .map(t => OffsetDateTime.ofInstant(t.toInstant, ZoneId))
+
+    def updateFeeds(user: User): IO[List[Int]] =
+        for {
+            channels <- channelRepository.findUserChannels(user)
+            result <- channels.traverse { channel =>
+                for {
+                    _ <- logger.info(s"Updating channel: ${channel.title}")
+                    updatedChannel <- getChannel(channel.link)
+                    rows <- channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
+                    _ <- logger.info(s"Inserted $rows feeds for channel: ${channel.title}")
+                } yield rows
+            }
+        } yield result
+
+    def getChannels(user: User): IO[List[ChannelData]] =
+        channelRepository.findUserChannels(user).flatMap {
+            _.traverse { channel =>
+                IO.pure(ChannelData(channel.id, channel.title, channel.link))
+            }
+        }
+
+    def getChannelsAndFeeds(user: User): IO[List[FeedItemData]] =
+        val channels = channelRepository.getChannelsWithFeedsByUser(user)
+        channels.flatMap {
+            _.traverse { case (channel, feed) =>
+                IO.pure(
+                    FeedItemData(
+                        feed.link,
+                        channel.title,
+                        feed.title,
+                        feed.description,
+                        feed.pubDate.getOrElse(OffsetDateTime.now()),
+                        feed.isRead
+                    )
+                )
+            }
+        }
+
+    def removeChannel(id: Long, user: User): IO[String] =
+        channelRepository.deleteChannel(id, user).flatMap {
+            case 0 => IO.raiseError(Exception("Channel does not belong to the user"))
+            case _ => "Channel deleted".pure[IO]
+        }

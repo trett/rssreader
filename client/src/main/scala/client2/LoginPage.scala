@@ -42,14 +42,14 @@ object LoginPage {
                 Link(
                     cls("google-button"),
                     "Sign Up",
-                    _.href := s"${HOST}/signup",
+                    _.href := s"$HOST/signup",
                     typ("button"),
                     _.icon := IconName.`sys-add`
                 ),
                 Link(
                     cls("google-button"),
                     "Sign In",
-                    _.href := s"${HOST}/signin",
+                    _.href := s"$HOST/signin",
                     typ("button"),
                     _.icon := IconName.`sys-enter`
                 )

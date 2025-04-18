@@ -50,7 +50,10 @@ object Server extends IOApp:
     private def loadConfig: Option[AppConfig] =
         ConfigSource.default.load[AppConfig] match {
             case Right(config) => Some(config)
-            case Left(error)   => None
+            case Left(err)   => {
+                println(s"Failed to load configuration: $err")
+                None
+            }
         }
 
     private def transactor(config: DbConfig): Resource[IO, HikariTransactor[IO]] =
@@ -116,11 +119,8 @@ object Server extends IOApp:
             )
         )
 
-    private val withSqlLogHandler: LogHandler[IO] = new LogHandler[IO] {
-        def run(logEvent: LogEvent): IO[Unit] =
-            IO {
-                println(logEvent.sql)
-            }
+    private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) => IO {
+        println(logEvent.sql)
     }
 
     override def run(args: List[String]): IO[ExitCode] =

@@ -20,15 +20,15 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-    val currentPageVar = Var[Route](HomeRoute)
+    val currentPageVar: Var[Route] = Var[Route](HomeRoute)
 
-    def login = LoginPage.render
-    def home = Home.render
-    def settings = SettingsPage.render
-    def navbar = NavBar.render
-    def notifications = NotifyComponent.render
+    private def login = LoginPage.render
+    private def navbar = NavBar.render
+    private def notifications = NotifyComponent.render
+    def home: Element = Home.render
+    def settings: Element = SettingsPage.render
 
-    val root = div(child <-- currentPageVar.signal.map {
+    private val root = div(child <-- currentPageVar.signal.map {
         case LoginRoute    => login
         case HomeRoute     => div(navbar, notifications, home)
         case SettingsRoute => div(navbar, notifications, settings)

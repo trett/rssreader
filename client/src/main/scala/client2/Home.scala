@@ -58,19 +58,19 @@ object Home:
         case Failure(err) => handleError(err)
     }
 
-    private val feedsObserver = Observer[FeedItemList](feedVar.set(_))
+    private val feedsObserver = Observer[FeedItemList](feedVar.set)
 
     def render: Element = div(
         onMountBind(ctx =>
             refreshFeedsBus --> { _ =>
-                val response = getChannelsRequest()
+                val response = getChannelsAndFeedsRequest
                 val data = response.collectSuccess
                 val errors = response.collectFailure
                 data.addObserver(feedsObserver)(ctx.owner)
                 errors.addObserver(errorObserver)(ctx.owner)
             }
             markAllAsReadBus --> { _ =>
-                val link = feedVar.now().map(_.link.toString)
+                val link = feedVar.now().map(_.link)
                 if (link.nonEmpty) {
                     val response = updateFeedRequest(link)
                     response.addObserver(itemClickObserver)(ctx.owner)
@@ -95,7 +95,7 @@ object Home:
     //     }
 
     private def feeds(): Element =
-        val response = getChannelsRequest()
+        val response = getChannelsAndFeedsRequest
         val data = response.collectSuccess
         val errors = response.collectFailure
         UList(
@@ -125,7 +125,7 @@ object Home:
                 _.events.onItemClick
                     .map(_.detail.item.dataset.get("feedLink"))
                     .map(link => List(link.get))
-                    .flatMapStream(updateFeedRequest(_)) --> itemClickObserver,
+                    .flatMapStream(updateFeedRequest _) --> itemClickObserver,
                 child <-- itemSignal.map(x =>
                     CustomListItem(
                         div(
@@ -151,7 +151,7 @@ object Home:
                             )
                         ),
                         dataAttr("feed-link") := x.link,
-                        dataAttr("seen") := x.isRead.toString()
+                        dataAttr("seen") := x.isRead.toString
                     )
                 )
             )
@@ -165,25 +165,25 @@ object Home:
                 case el: dom.html.Element => Some(el)
                 case raw                  => Some(div(raw.textContent).ref)
             }
-            .filter(!_.textContent.isEmpty())
-            .map(foreignHtmlElement(_))
+            .filter(_.textContent.nonEmpty)
+            .map(foreignHtmlElement)
     )
 
-    private def getChannelsRequest(): EventStream[Try[FeedItemList]] =
+    private def getChannelsAndFeedsRequest: EventStream[Try[FeedItemList]] =
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
-            .get(s"${HOST}/api/channels")
+            .get(s"$HOST/api/channels/feeds")
             .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =
         val seen =
-            feedSignal.now().filter(feed => links.contains(feed.link.toString)).filter(!_.isRead)
+            feedSignal.now().filter(feed => links.contains(feed.link)).filter(!_.isRead)
         if (seen.isEmpty) EventStream.empty
         else
             FetchStream
                 .withDecoder(responseDecoder[String])
                 .post(
-                    s"${HOST}/api/feeds/read",
+                    s"$HOST/api/feeds/read",
                     _.body(links.asJson.toString),
                     _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
                 )

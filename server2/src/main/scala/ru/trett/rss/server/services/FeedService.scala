@@ -6,8 +6,6 @@ import ru.trett.rss.server.repositories.FeedRepository
 
 class FeedService(feedRepository: FeedRepository):
 
-    private val ZoneId = java.time.ZoneId.systemDefault()
-
     def markAsRead(links: List[String], user: User): IO[Int] =
         feedRepository.markFeedAsRead(links, user)
 

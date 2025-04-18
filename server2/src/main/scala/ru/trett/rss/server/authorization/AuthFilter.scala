@@ -10,18 +10,18 @@ import ru.trett.rss.server.services.UserService
 
 object AuthFilter:
 
-    def authUser(
+    // TODO: add cache for user
+    private def authUser(
         sessionManager: SessionManager[IO],
         userService: UserService
     ): Kleisli[[A] =>> OptionT[IO, A], Request[IO], User] =
         Kleisli(req => {
             req.cookies.find(_.name == "sessionId") match {
-                case Some(sessionId) => {
+                case Some(sessionId) =>
                     OptionT
                         .some(sessionId.content)
-                        .flatMapF(sessionManager.getSession(_))
+                        .flatMapF(sessionManager.getSession)
                         .flatMapF(sessionData => userService.getUserByEmail(sessionData.userEmail))
-                }
                 case None => OptionT.none[IO, User]
             }
         })

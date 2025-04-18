@@ -14,12 +14,14 @@ import scala.util.Try
 
 object NetworkUtils {
 
-    def HOST = AppConfig.BASE_URI
+    def HOST: String = AppConfig.BASE_URI
 
-    val JSON_ACCEPT: (String, String) = ("Accept" -> "application/json")
-    val JSON_CONTENT_TYPE: (String, String) = ("Content-Type" -> "application/json")
+    val JSON_ACCEPT: (String, String) = "Accept" -> "application/json"
+    val JSON_CONTENT_TYPE: (String, String) = "Content-Type" -> "application/json"
 
-    val errorObserver = Observer[Throwable] { handleError(_) }
+    val errorObserver: Observer[Throwable] = Observer[Throwable] {
+        handleError
+    }
 
     def responseDecoder[A](using decoder: Decoder[A]): Response => EventStream[Try[Option[A]]] =
         resp =>
@@ -36,7 +38,7 @@ object NetworkUtils {
                             })
                     )
 
-    def handleError(ex: Throwable): Unit = ex.getMessage() match
+    def handleError(ex: Throwable): Unit = ex.getMessage match
         case "Unauthorized" | "Session expired" => Router.currentPageVar.set(LoginRoute)
         case _                                  => errorMessage(ex)
 
