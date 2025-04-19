@@ -23,6 +23,6 @@ class SessionManager[F[_]: Sync] private (sessions: MapRef[F, String, Option[Ses
         sessions(sessionId).update(_ => None)
 
 object SessionManager:
-    def create[F[_]: Sync]: F[SessionManager[F]] =
+    def apply[F[_]: Sync]: F[SessionManager[F]] =
         new SessionManager(MapRef.fromConcurrentHashMap(new ConcurrentHashMap[String, SessionData]))
             .pure[F]

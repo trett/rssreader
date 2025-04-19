@@ -81,9 +81,9 @@ object SettingsPage {
                     Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
                     CheckBox(
                         _.id := "hide-read-cb",
-                        _.checked <-- settingsSignal.map(x => x.forall(_.read)),
+                        _.checked <-- settingsSignal.map(x => x.forall(_.hideRead)),
                         _.events.onChange.mapToChecked --> settingsVar.updater[Boolean]((a, b) =>
-                            a.map(x => x.copy(read = b))
+                            a.map(x => x.copy(hideRead = b))
                         )
                     )
                 ),

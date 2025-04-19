@@ -1,43 +1,41 @@
 package ru.trett.rss.server.services
 
-import cats.effect.{Async, IO, Temporal}
+import cats.effect.kernel.Concurrent
+import cats.effect.{IO, Temporal}
 import cats.syntax.all.*
-import cats.syntax.apply.*
-import cats.syntax.flatMap.*
-import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 
 import scala.concurrent.duration.*
 
-class UpdateTask[F[_]: Async: LoggerFactory](
+class UpdateTask[F[_]: Concurrent](
     private val channelService: ChannelService,
     private val userService: UserService
-):
-    private def repeat: F[Unit] =
+)(using LoggerFactory[IO]):
+
+    val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
+
+    private def repeat: IO[Int] =
         schedule >> repeat
 
-    private def schedule: F[Unit] =
-        Temporal[F].sleep(10.second) *> {
-            Async[F].delay(task())
-        }
+    private def schedule: IO[Int] =
+        Temporal[IO].sleep(10.minutes) *> task
 
-    private def task(): Unit = {
-        val logger = LoggerFactory[F].getLogger
-        println("Starting update task...")
-        
-//        for {
-//            users <- userService.getUsers
-//            _ <- users.traverse { user =>
-//                for {
-//                    channels <- channelService.updateFeeds(user)
-//                } yield println(s"Updated ${channels.size} channels for user ${user.email}").pure[F]
-//            }
-//        } yield ()
-        println("Update task completed.")
+    private def task: IO[Int] = {
+        for {
+            _ <- logger.info("Starting update task...")
+            users <- userService.getUsers
+            _ <- logger.info(s"Found ${users.size} users")
+            _ <- users.traverse { user =>
+                for {
+                    channels <- channelService.updateFeeds(user)
+                    _ <- logger.info(s"Updated ${channels.size} channels for user ${user.email}")
+                } yield channels.size
+            }
+        } yield users.size
     }
 
 object UpdateTask:
-    def create[F[_]: Async: LoggerFactory](
-        channelService: ChannelService,
-        userService: UserService
-    ): F[Unit] =
+    def apply[F[_]: Concurrent](channelService: ChannelService, userService: UserService)(using
+        LoggerFactory[IO]
+    ): IO[Int] =
         new UpdateTask(channelService, userService).repeat

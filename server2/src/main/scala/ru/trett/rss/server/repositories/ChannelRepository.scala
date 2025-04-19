@@ -43,7 +43,7 @@ class ChannelRepository(xa: Transactor[IO]):
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (link)
             DO UPDATE SET description = EXCLUDED.description,
-            pub_date = EXCLUDED.pub_date, read = EXCLUDED.read
+            pub_date = EXCLUDED.pub_date, title = EXCLUDED.title
             """
         type FeedInfo =
             (Long, String, String, String, Option[OffsetDateTime], Boolean)
@@ -64,7 +64,7 @@ class ChannelRepository(xa: Transactor[IO]):
             .transact(xa)
 
     def getChannelsWithFeedsByUser(user: User): IO[List[(Channel, Feed)]] = {
-        val query = s"""
+        val query = fr"""
           SELECT c.id, c.title, c.link,
           f.link, f.channel_id, f.title, f.description, f.pub_date, f.read
           FROM channels c
@@ -72,12 +72,13 @@ class ChannelRepository(xa: Transactor[IO]):
           JOIN feeds f ON c.id = f.channel_id
           WHERE uc.user_id = ${user.id}
         """
-        val transaction =
-            if (user.settings.read)
-                sql"$query AND f.read = ${!user.settings.read} ORDER by f.pub_date DESC"
+        val condition =
+            if (user.settings.hideRead)
+                fr"AND f.read = false ORDER by f.pub_date DESC"
             else
-                sql"$query ORDER by f.pub_date DESC"
-        transaction
+                fr"ORDER by f.pub_date DESC"
+        val finalQuery = query ++ condition
+        finalQuery
             .query[(Channel, Feed)]
             .to[List]
             .transact(xa)

@@ -17,7 +17,7 @@ class UserService(userRepository: UserRepository):
     def getUserSettings(id: String): IO[Option[UserSettings]] =
         userRepository.findUserById(id).map {
             case Some(user) =>
-                Some(UserSettings(user.name, user.settings.retentionDays, user.settings.read))
+                Some(UserSettings(user.name, user.settings.retentionDays, user.settings.hideRead))
             case None => None
         }
 
@@ -29,5 +29,5 @@ class UserService(userRepository: UserRepository):
 
     def updateUserSettings(user: User, settings: UserSettings): IO[Int] =
         userRepository.updateUserSettings(
-            user.copy(settings = User.Settings(settings.retentionDays, settings.read))
+            user.copy(settings = User.Settings(settings.retentionDays, settings.hideRead))
         )

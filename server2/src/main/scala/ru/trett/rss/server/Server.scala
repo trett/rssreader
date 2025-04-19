@@ -48,7 +48,7 @@ object Server extends IOApp:
     private def loadConfig: Option[AppConfig] =
         ConfigSource.default.load[AppConfig] match {
             case Right(config) => Some(config)
-            case Left(err)   =>
+            case Left(err) =>
                 println(s"Failed to load configuration: $err")
                 None
         }
@@ -116,9 +116,10 @@ object Server extends IOApp:
             )
         )
 
-    private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) => IO {
-        println(logEvent.sql)
-    }
+    private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) =>
+        IO {
+            println(logEvent.sql)
+        }
 
     override def run(args: List[String]): IO[ExitCode] =
         val appConfig = loadConfig match {
@@ -131,7 +132,7 @@ object Server extends IOApp:
             for {
                 _ <- FlywayMigration.migrate(appConfig.db)
                 corsPolicy = createCorsPolicy(appConfig.cors)
-                sessionManager <- SessionManager.create[IO]
+                sessionManager <- SessionManager[IO]
                 channelRepository = ChannelRepository(xa)
                 feedRepository = FeedRepository(xa)
                 feedService = FeedService(feedRepository)
@@ -139,7 +140,7 @@ object Server extends IOApp:
                 userService = UserService(userRepository)
                 channelService = ChannelService(channelRepository)
                 _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                _ <- UpdateTask.create[IO](channelService, userService)
+                _ <- UpdateTask[IO](channelService, userService).start
                 exitCode <- EmberServerBuilder
                     .default[IO]
                     .withHost(ipv4"0.0.0.0")

@@ -16,7 +16,7 @@ class UserRepository(xa: HikariTransactor[IO]):
         case (id, name, email, settings) =>
             decode[User.Settings](settings.noSpaces) match {
                 case Right(decodedSettings) => Some(User(id, name, email, decodedSettings))
-                case Left(_)            => None
+                case Left(_)                => None
             }
     }
 
