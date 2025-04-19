@@ -36,9 +36,7 @@ import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
 import ru.trett.rss.server.repositories.FeedRepository
 import ru.trett.rss.server.repositories.UserRepository
-import ru.trett.rss.server.services.ChannelService
-import ru.trett.rss.server.services.FeedService
-import ru.trett.rss.server.services.UserService
+import ru.trett.rss.server.services.{ChannelService, FeedService, UpdateTask, UserService}
 
 object Server extends IOApp:
 
@@ -50,10 +48,9 @@ object Server extends IOApp:
     private def loadConfig: Option[AppConfig] =
         ConfigSource.default.load[AppConfig] match {
             case Right(config) => Some(config)
-            case Left(err)   => {
+            case Left(err)   =>
                 println(s"Failed to load configuration: $err")
                 None
-            }
         }
 
     private def transactor(config: DbConfig): Resource[IO, HikariTransactor[IO]] =
@@ -142,6 +139,7 @@ object Server extends IOApp:
                 userService = UserService(userRepository)
                 channelService = ChannelService(channelRepository)
                 _ <- logger.info("Starting server on port: " + appConfig.server.port)
+                _ <- UpdateTask.create[IO](channelService, userService)
                 exitCode <- EmberServerBuilder
                     .default[IO]
                     .withHost(ipv4"0.0.0.0")

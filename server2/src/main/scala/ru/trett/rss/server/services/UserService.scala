@@ -11,8 +11,8 @@ class UserService(userRepository: UserRepository):
         val user = User(id, name, email, User.Settings(7, false))
         userRepository.insertUser(user)
 
-    def getUserById(id: String): IO[Option[User]] =
-        userRepository.findUserById(id)
+    def getUsers: IO[List[User]] =
+        userRepository.findUsers()
 
     def getUserSettings(id: String): IO[Option[UserSettings]] =
         userRepository.findUserById(id).map {

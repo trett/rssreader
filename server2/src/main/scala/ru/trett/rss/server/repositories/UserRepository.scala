@@ -31,6 +31,13 @@ class UserRepository(xa: HikariTransactor[IO]):
             .unique
             .transact(xa)
 
+    def findUsers(): IO[List[User]] =
+        sql"SELECT id, name, email, settings::json FROM users"
+            .query[Option[User]]
+            .to[List]
+            .transact(xa)
+            .map(_.flatten)
+
     def deleteUser(id: String): IO[Int] =
         sql"DELETE FROM users WHERE id = $id".update.run
             .transact(xa)
