@@ -17,11 +17,11 @@ import ru.trett.rss.server.services.UserService
 object LoginController:
 
     private case class OAuthResponse(access_token: String)
-    private case class UserInfo(id: String, name: String, email: String)
+    private case class OAuthUserInfo(id: String, name: String, email: String)
 
     private given oauthResponseEntityDecoder: EntityDecoder[IO, OAuthResponse] =
         jsonOf
-    private given userInfoResponseEntityDecoder: EntityDecoder[IO, UserInfo] =
+    private given userInfoResponseEntityDecoder: EntityDecoder[IO, OAuthUserInfo] =
         jsonOf
 
     private val OAuthBaseUrl =
@@ -70,10 +70,7 @@ object LoginController:
                             oauthConfig.redirectUri + "/signin_callback"
                         )
                         userInfo <- getUserInfo(c, token.access_token)
-                        sessionData = SessionData(
-                            userEmail = userInfo.email,
-                            token = "remove later"
-                        )
+                        sessionData = SessionData(userInfo.email)
                         sessionId <- sessionManager.createSession(sessionData)
                         response <- SeeOther(Location(uri"/"))
                             .map(
@@ -132,9 +129,9 @@ object LoginController:
         )
         client.expect[OAuthResponse](request)
 
-    private def getUserInfo(client: Client[IO], token: String): IO[UserInfo] =
+    private def getUserInfo(client: Client[IO], token: String): IO[OAuthUserInfo] =
         val userInfoUri =
             Uri.unsafeFromString("https://www.googleapis.com/oauth2/v1/userinfo?alt=json")
         val request = Request[IO](Method.GET, userInfoUri)
             .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
-        client.expect[UserInfo](request)
+        client.expect[OAuthUserInfo](request)

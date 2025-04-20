@@ -13,4 +13,4 @@ object User:
     given Decoder[User.Settings] = deriveDecoder
     given Encoder[User.Settings] = deriveEncoder
 
-    case class Settings(retentionDays: Int, hideRead: Boolean)
+    case class Settings(retentionDays: Int = 7, hideRead: Boolean = false)

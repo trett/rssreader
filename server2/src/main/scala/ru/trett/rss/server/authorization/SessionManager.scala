@@ -6,7 +6,7 @@ import cats.effect.std.UUIDGen
 import cats.effect.std.MapRef
 import java.util.concurrent.ConcurrentHashMap
 
-case class SessionData(userEmail: String, token: String)
+case class SessionData(userEmail: String)
 
 class SessionManager[F[_]: Sync] private (sessions: MapRef[F, String, Option[SessionData]]):
 

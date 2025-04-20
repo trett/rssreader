@@ -1,13 +1,12 @@
 package ru.trett.rss.server.services
 
-import cats.effect.kernel.Concurrent
 import cats.effect.{IO, Temporal}
 import cats.syntax.all.*
 import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 
 import scala.concurrent.duration.*
 
-class UpdateTask[F[_]: Concurrent](
+class UpdateTask(
     private val channelService: ChannelService,
     private val userService: UserService
 )(using LoggerFactory[IO]):
@@ -35,7 +34,7 @@ class UpdateTask[F[_]: Concurrent](
     }
 
 object UpdateTask:
-    def apply[F[_]: Concurrent](channelService: ChannelService, userService: UserService)(using
+    def apply(channelService: ChannelService, userService: UserService)(using
         LoggerFactory[IO]
     ): IO[Int] =
         new UpdateTask(channelService, userService).repeat

@@ -6,44 +6,81 @@ import cats.implicits.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
-import doobie.util.log.LogEvent
-import doobie.util.log.LogHandler
-import org.http4s.AuthedRoutes
-import org.http4s.HttpRoutes
-import org.http4s.Uri
+import doobie.util.log.{LogEvent, LogHandler}
+import org.http4s.{AuthedRoutes, HttpRoutes, Uri}
 import org.http4s.ember.server.*
 import org.http4s.implicits.*
-import org.http4s.server.middleware.CORS
-import org.http4s.server.middleware.CORSPolicy
-import org.http4s.server.middleware.ErrorAction
-import org.http4s.server.middleware.ErrorHandling
+import org.http4s.server.middleware.{CORS, CORSPolicy, ErrorAction, ErrorHandling}
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
-import org.typelevel.log4cats.slf4j.Slf4jFactory
 import pureconfig.ConfigSource
-import ru.trett.rss.server.authorization.AuthFilter
-import ru.trett.rss.server.authorization.SessionManager
-import ru.trett.rss.server.config.AppConfig
-import ru.trett.rss.server.config.CorsConfig
-import ru.trett.rss.server.config.DbConfig
-import ru.trett.rss.server.config.OAuthConfig
-import ru.trett.rss.server.controllers.ChannelController
-import ru.trett.rss.server.controllers.FeedController
-import ru.trett.rss.server.controllers.LoginController
-import ru.trett.rss.server.controllers.UserController
+import ru.trett.rss.server.authorization.{AuthFilter, SessionManager}
+import ru.trett.rss.server.config.{AppConfig, CorsConfig, DbConfig, OAuthConfig}
+import ru.trett.rss.server.controllers.{
+    ChannelController,
+    FeedController,
+    LoginController,
+    UserController
+}
 import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
-import ru.trett.rss.server.repositories.ChannelRepository
-import ru.trett.rss.server.repositories.FeedRepository
-import ru.trett.rss.server.repositories.UserRepository
+import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}
 import ru.trett.rss.server.services.{ChannelService, FeedService, UpdateTask, UserService}
 
 object Server extends IOApp:
 
-    given LoggerFactory[IO] = Slf4jFactory[IO]
-
     private val logger: SelfAwareStructuredLogger[IO] =
         LoggerFactory[IO].getLogger
+    private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) =>
+        IO {
+            println(logEvent.sql)
+        }
+
+    given LoggerFactory[IO] = Slf4jFactory[IO]
+
+    override def run(args: List[String]): IO[ExitCode] =
+        val appConfig = loadConfig match {
+            case Some(config) => config
+            case None =>
+                println("Failed to load configuration")
+                return IO.pure(ExitCode.Error)
+        }
+        transactor(appConfig.db).use { xa =>
+            for {
+                _ <- FlywayMigration.migrate(appConfig.db)
+                corsPolicy = createCorsPolicy(appConfig.cors)
+                sessionManager <- SessionManager[IO]
+                channelRepository = ChannelRepository(xa)
+                feedRepository = FeedRepository(xa)
+                feedService = FeedService(feedRepository)
+                userRepository = UserRepository(xa)
+                userService = UserService(userRepository)
+                channelService = ChannelService(channelRepository)
+                _ <- logger.info("Starting server on port: " + appConfig.server.port)
+                _ <- UpdateTask(channelService, userService).start
+                authFilter <- AuthFilter[IO]
+                exitCode <- EmberServerBuilder
+                    .default[IO]
+                    .withHost(ipv4"0.0.0.0")
+                    .withPort(Port.fromInt(appConfig.server.port).get)
+                    .withHttpApp(
+                        withErrorLogging(
+                            corsPolicy(
+                                routes(
+                                    sessionManager,
+                                    channelService,
+                                    userService,
+                                    feedService,
+                                    appConfig.oauth,
+                                    authFilter
+                                )
+                            )
+                        ).orNotFound
+                    )
+                    .build
+                    .use(_ => IO.never)
+            } yield exitCode
+        }
 
     private def loadConfig: Option[AppConfig] =
         ConfigSource.default.load[AppConfig] match {
@@ -73,6 +110,19 @@ object Server extends IOApp:
             .withAllowCredentials(config.allowCredentials)
             .withMaxAge(config.maxAge)
 
+    private def routes(
+        sessionManager: SessionManager[IO],
+        channelService: ChannelService,
+        userService: UserService,
+        feedService: FeedService,
+        oauthConfig: OAuthConfig,
+        authFilter: AuthFilter[IO]
+    ): HttpRoutes[IO] =
+        unprotectedRoutes(sessionManager, oauthConfig, userService) <+>
+            authFilter.middleware(sessionManager, userService)(
+                authedRoutes(channelService, userService, feedService)
+            )
+
     private def unprotectedRoutes(
         sessionManager: SessionManager[IO],
         oauthConfig: OAuthConfig,
@@ -89,24 +139,6 @@ object Server extends IOApp:
             <+> UserController.routes(userService)
             <+> FeedController.routes(feedService)
 
-    private def routes(
-        sessionManager: SessionManager[IO],
-        channelService: ChannelService,
-        userService: UserService,
-        feedService: FeedService,
-        oauthConfig: OAuthConfig
-    ): HttpRoutes[IO] =
-        unprotectedRoutes(sessionManager, oauthConfig, userService) <+>
-            AuthFilter.middleware(sessionManager, userService)(
-                authedRoutes(channelService, userService, feedService)
-            )
-
-    private def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
-        OptionT.liftF(
-            IO.println(msg) >>
-                IO(t.printStackTrace())
-        )
-
     private def withErrorLogging(routes: HttpRoutes[IO]) =
         ErrorHandling.Recover.total(
             ErrorAction.log(
@@ -116,49 +148,8 @@ object Server extends IOApp:
             )
         )
 
-    private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) =>
-        IO {
-            println(logEvent.sql)
-        }
-
-    override def run(args: List[String]): IO[ExitCode] =
-        val appConfig = loadConfig match {
-            case Some(config) => config
-            case None =>
-                println("Failed to load configuration")
-                return IO.pure(ExitCode.Error)
-        }
-        transactor(appConfig.db).use { xa =>
-            for {
-                _ <- FlywayMigration.migrate(appConfig.db)
-                corsPolicy = createCorsPolicy(appConfig.cors)
-                sessionManager <- SessionManager[IO]
-                channelRepository = ChannelRepository(xa)
-                feedRepository = FeedRepository(xa)
-                feedService = FeedService(feedRepository)
-                userRepository = UserRepository(xa)
-                userService = UserService(userRepository)
-                channelService = ChannelService(channelRepository)
-                _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                _ <- UpdateTask[IO](channelService, userService).start
-                exitCode <- EmberServerBuilder
-                    .default[IO]
-                    .withHost(ipv4"0.0.0.0")
-                    .withPort(Port.fromInt(appConfig.server.port).get)
-                    .withHttpApp(
-                        withErrorLogging(
-                            corsPolicy(
-                                routes(
-                                    sessionManager,
-                                    channelService,
-                                    userService,
-                                    feedService,
-                                    appConfig.oauth
-                                )
-                            )
-                        ).orNotFound
-                    )
-                    .build
-                    .use(_ => IO.never)
-            } yield exitCode
-        }
+    private def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
+        OptionT.liftF(
+            IO.println(msg) >>
+                IO(t.printStackTrace())
+        )
