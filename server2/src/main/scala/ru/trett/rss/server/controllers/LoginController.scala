@@ -7,8 +7,7 @@ import org.http4s.circe.*
 import org.http4s.client.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.*
-import org.http4s.headers.Authorization
-import org.http4s.headers.Location
+import org.http4s.headers.{Authorization, Location}
 import org.http4s.implicits.*
 import ru.trett.rss.server.authorization.*
 import ru.trett.rss.server.config.OAuthConfig
@@ -16,18 +15,8 @@ import ru.trett.rss.server.services.UserService
 
 object LoginController:
 
-    private case class OAuthResponse(access_token: String)
-    private case class OAuthUserInfo(id: String, name: String, email: String)
-
-    private given oauthResponseEntityDecoder: EntityDecoder[IO, OAuthResponse] =
-        jsonOf
-    private given userInfoResponseEntityDecoder: EntityDecoder[IO, OAuthUserInfo] =
-        jsonOf
-
     private val OAuthBaseUrl =
         Uri.unsafeFromString("https://accounts.google.com/o/oauth2/v2/auth")
-
-    private object CodeQueryParamMatcher extends QueryParamDecoderMatcher[String]("code")
 
     def routes(
         sessionManager: SessionManager[IO],
@@ -135,3 +124,15 @@ object LoginController:
         val request = Request[IO](Method.GET, userInfoUri)
             .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
         client.expect[OAuthUserInfo](request)
+
+    private given oauthResponseEntityDecoder: EntityDecoder[IO, OAuthResponse] =
+        jsonOf
+
+    private given userInfoResponseEntityDecoder: EntityDecoder[IO, OAuthUserInfo] =
+        jsonOf
+
+    private case class OAuthResponse(access_token: String)
+
+    private case class OAuthUserInfo(id: String, name: String, email: String)
+
+    private object CodeQueryParamMatcher extends QueryParamDecoderMatcher[String]("code")

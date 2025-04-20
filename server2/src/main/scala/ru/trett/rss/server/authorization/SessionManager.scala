@@ -1,9 +1,9 @@
 package ru.trett.rss.server.authorization
 
-import cats.effect._
-import cats.syntax.all._
-import cats.effect.std.UUIDGen
-import cats.effect.std.MapRef
+import cats.effect.*
+import cats.effect.std.{MapRef, UUIDGen}
+import cats.syntax.all.*
+
 import java.util.concurrent.ConcurrentHashMap
 
 case class SessionData(userEmail: String)

@@ -101,7 +101,7 @@ lazy val server2 = project
         libraryDependencies ++= Seq(
             "org.typelevel" %% "log4cats-core",
             "org.typelevel" %% "log4cats-slf4j"
-        ).map(_ % catsEffectVersion),
+        ).map(_ % logs4catVersion),
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
             "io.circe" %%% "circe-generic",
@@ -139,4 +139,4 @@ pushImages := {
 }
 val projectVersion = "1.0.7-2"
 val htt4sVersion = "1.0.0-M39"
-val catsEffectVersion = "2.7.0"
+val logs4catVersion = "2.7.0"

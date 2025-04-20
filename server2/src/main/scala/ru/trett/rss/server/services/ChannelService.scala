@@ -27,6 +27,19 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
             result <- channelRepository.insertChannel(channel, user)
         } yield result
 
+    def updateFeeds(user: User): IO[List[Int]] =
+        for {
+            channels <- channelRepository.findUserChannels(user)
+            result <- channels.traverse { channel =>
+                for {
+                    _ <- logger.info(s"Updating channel: ${channel.title}")
+                    updatedChannel <- getChannel(channel.link)
+                    rows <- channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
+                    _ <- logger.info(s"Inserted $rows feeds for channel: ${channel.title}")
+                } yield rows
+            }
+        } yield result
+
     private def getChannel(link: String): IO[Channel] =
         val client = EmberClientBuilder.default[IO].build
         for {
@@ -82,19 +95,6 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
         Option(entry.getPublishedDate)
             .orElse(Option(entry.getUpdatedDate))
             .map(t => OffsetDateTime.ofInstant(t.toInstant, ZoneId))
-
-    def updateFeeds(user: User): IO[List[Int]] =
-        for {
-            channels <- channelRepository.findUserChannels(user)
-            result <- channels.traverse { channel =>
-                for {
-                    _ <- logger.info(s"Updating channel: ${channel.title}")
-                    updatedChannel <- getChannel(channel.link)
-                    rows <- channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
-                    _ <- logger.info(s"Inserted $rows feeds for channel: ${channel.title}")
-                } yield rows
-            }
-        } yield result
 
     def getChannels(user: User): IO[List[ChannelData]] =
         channelRepository.findUserChannels(user).flatMap {

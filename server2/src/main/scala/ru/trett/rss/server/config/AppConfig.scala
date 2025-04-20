@@ -1,7 +1,6 @@
 package ru.trett.rss.server.config
 
 import pureconfig.*
-//import pureconfig.generic.derivation.given
 
 import scala.concurrent.duration.FiniteDuration
 

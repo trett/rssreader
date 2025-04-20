@@ -1,6 +1,5 @@
 package ru.trett.rss.server.authorization
 
-import cats.*
 import cats.data.*
 import cats.effect.*
 import cats.effect.std.MapRef
@@ -27,28 +26,31 @@ class AuthFilter[F[_]: Sync: LiftIO]:
         sessionManager: SessionManager[F],
         userService: UserService
     ): Kleisli[[A] =>> OptionT[F, A], Request[F], User] =
-        Kleisli(req => {
+        Kleisli { req =>
             req.cookies.find(_.name == "sessionId") match {
                 case Some(sessionId) =>
                     OptionT
                         .some(sessionId.content)
                         .flatMapF(sessionManager.getSession)
-                        .flatMap(sessionData => {
-                            val maybeUser = cache(sessionData.userEmail).get
-                            val user = maybeUser.flatMap {
-                                case Some(u) => Some(u).pure[F]
-                                case None =>
-                                    LiftIO[F]
-                                        .liftIO(userService.getUserByEmail(sessionData.userEmail))
-                                        .flatMap(u =>
-                                            cache(sessionData.userEmail).updateAndGet(_ => u)
-                                        )
-                            }
-                            OptionT(user)
-                        })
+                        .flatMap(sessionData =>
+                            OptionT(getUser(sessionData.userEmail, userService))
+                        )
                 case None => OptionT.none[F, User]
             }
-        })
+        }
+
+    private def getUser(email: String, userService: UserService): F[Option[User]] =
+        cache(email).get.flatMap {
+            case Some(user) => user.some.pure[F]
+            case None =>
+                LiftIO[F]
+                    .liftIO(userService.getUserByEmail(email))
+                    .flatMap {
+                        case Some(user) =>
+                            cache(email).updateAndGet(_ => Some(user))
+                        case None => none[User].pure[F]
+                    }
+        }
 
 object AuthFilter:
     def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] = new AuthFilter().pure[F]

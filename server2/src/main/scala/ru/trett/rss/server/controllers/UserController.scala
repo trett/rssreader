@@ -1,8 +1,8 @@
 package ru.trett.rss.server.controllers
 
 import cats.effect.IO
-import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.{Decoder, Encoder}
 import org.http4s.AuthedRoutes
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*

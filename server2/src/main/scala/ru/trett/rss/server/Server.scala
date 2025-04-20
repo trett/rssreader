@@ -7,10 +7,10 @@ import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
 import doobie.util.log.{LogEvent, LogHandler}
-import org.http4s.{AuthedRoutes, HttpRoutes, Uri}
 import org.http4s.ember.server.*
 import org.http4s.implicits.*
 import org.http4s.server.middleware.{CORS, CORSPolicy, ErrorAction, ErrorHandling}
+import org.http4s.{AuthedRoutes, HttpRoutes, Uri}
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
 import pureconfig.ConfigSource
