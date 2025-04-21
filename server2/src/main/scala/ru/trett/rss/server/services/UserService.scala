@@ -24,6 +24,7 @@ class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
             case None => None
         }
 
+    // TODO
     def removeUser(id: String): IO[Int] =
         userRepository.deleteUser(id)
 
