@@ -22,11 +22,11 @@ MIT
 
 `CLIENT_SECRET` - Google app secret
 
-`POSTGRES_USER` - DB user
+`DATASOURCE_USER` - DB user
 
-`POSTGRES_PASSWORD` - DB password
+`DATASOURCE_PASS` - DB password
 
-`POSTGRES_DB` - DB name
+`DATASOURCE_URL` - DB url
 
 ### Local development
 

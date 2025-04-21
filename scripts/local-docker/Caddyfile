@@ -1,0 +1,22 @@
+localhost {
+	@apipath {
+		path /api/*
+		path /error
+		path /signin
+		path /signup
+		path /signin_callback
+		path /signup_callback
+	}
+
+	handle @apipath {
+	    reverse_proxy {
+	    	to rss_server:8080
+	    }
+	}
+
+    handle {
+        reverse_proxy {
+             to rss_client
+         }
+    }
+}
