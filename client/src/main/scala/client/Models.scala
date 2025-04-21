@@ -1,4 +1,4 @@
-package client2
+package client
 
 import com.raquo.airstream.state.{StrictSignal, Var}
 import ru.trett.rss.models.*

@@ -1,4 +1,4 @@
-package client2
+package client
 
 import be.doeraene.webcomponents.ui5.Avatar
 import be.doeraene.webcomponents.ui5.Icon
@@ -8,8 +8,8 @@ import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
-import client2.AppConfig.BASE_URI
-import client2.NetworkUtils.responseDecoder
+import client.AppConfig.BASE_URI
+import client.NetworkUtils.responseDecoder
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows

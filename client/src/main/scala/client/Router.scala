@@ -1,4 +1,4 @@
-package client2
+package client
 
 import be.doeraene.webcomponents.ui5.Text
 import com.raquo

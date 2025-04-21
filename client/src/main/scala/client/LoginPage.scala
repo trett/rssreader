@@ -1,22 +1,11 @@
-package client2
+package client
 
 import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.configkeys.IconName
-import client2.NetworkUtils.HOST
+import client.NetworkUtils.HOST
 import com.raquo.laminar.api.L.*
 
 object LoginPage {
-
-    // private val googleButtonStyle = Seq(
-    //     backgroundColor := "#4285F4",
-    //     color.white,
-    //     padding := "10px 20px",
-    //     borderRadius.px := 5,
-    //     textDecoration.none,
-    //     fontSize.rem := 1,
-    //     fontWeight.lighter,
-    //     textShadow := "0 0px !important",
-    // )
 
     def render: Element = div(
         div(

@@ -1,9 +1,9 @@
-package client2
+package client
 
 import be.doeraene.webcomponents.ui5.{Button, Input, Label, *}
 import be.doeraene.webcomponents.ui5.configkeys.*
-import client2.NetworkUtils.*
-import client2.NotifyComponent.infoMessage
+import client.NetworkUtils.*
+import client.NotifyComponent.infoMessage
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.{Decoder, Encoder}

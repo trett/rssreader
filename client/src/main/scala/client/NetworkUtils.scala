@@ -1,6 +1,6 @@
-package client2
+package client
 
-import client2.NotifyComponent.errorMessage
+import client.NotifyComponent.errorMessage
 import com.raquo.airstream.core.AirstreamError
 import com.raquo.airstream.core.EventStream
 import com.raquo.airstream.core.Observer

@@ -25,6 +25,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 
+  # Uncomment the following lines to enable the server and client services
   # server:
   #   image: server2:1.0.7-2
   #   container_name: rss_server

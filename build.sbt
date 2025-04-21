@@ -31,15 +31,15 @@ lazy val client = project
         scalaJSUseMainModuleInitializer := true,
         scalaJSLinkerConfig ~= {
             _.withModuleKind(ModuleKind.ESModule)
-                .withModuleSplitStyle(ModuleSplitStyle.SmallModulesFor(List("client2")))
+                .withModuleSplitStyle(ModuleSplitStyle.SmallModulesFor(List("client")))
         },
         Compile / sourceGenerators += Def.task {
             val out =
-                (Compile / sourceManaged).value / "scala/client2/AppConfig.scala"
+                (Compile / sourceManaged).value / "scala/client/AppConfig.scala"
             IO.write(
                 out,
                 s"""
-        package client2
+        package client
         object AppConfig {
           val BASE_URI="${sys.env.getOrElse("SERVER_URL", "https://localhost")}"
         }

@@ -1,4 +1,4 @@
-package client2
+package client
 
 import be.doeraene.webcomponents.ui5.Card
 import be.doeraene.webcomponents.ui5.CardHeader
@@ -8,12 +8,12 @@ import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.Text
 import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.*
-import client2.NetworkUtils.HOST
-import client2.NetworkUtils.JSON_ACCEPT
-import client2.NetworkUtils.JSON_CONTENT_TYPE
-import client2.NetworkUtils.errorObserver
-import client2.NetworkUtils.handleError
-import client2.NetworkUtils.responseDecoder
+import client.NetworkUtils.HOST
+import client.NetworkUtils.JSON_ACCEPT
+import client.NetworkUtils.JSON_CONTENT_TYPE
+import client.NetworkUtils.errorObserver
+import client.NetworkUtils.handleError
+import client.NetworkUtils.responseDecoder
 import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
@@ -41,7 +41,6 @@ object Home:
     private val model = new Model
     import model.*
 
-    // given Decoder[FeedItemData] = deriveDecoder
     given Decoder[FeedItemData] = deriveDecoder
     given Decoder[ChannelData] = deriveDecoder
     given Conversion[OffsetDateTime, String] with {
@@ -79,20 +78,6 @@ object Home:
         ),
         feeds()
     )
-
-    // private def mapChannelTitle(s: ChannelList): FeedItemList =
-    //     s.flatMap { case Channel(id, title, link, feedItems) =>
-    //         feedItems.map(item =>
-    //             FeedItemData(
-    //                 item.link,
-    //                 title,
-    //                 item.title,
-    //                 item.description,
-    //                 item.pubDate.get,
-    //                 item.isRead
-    //             )
-    //         )
-    //     }
 
     private def feeds(): Element =
         val response = getChannelsAndFeedsRequest
