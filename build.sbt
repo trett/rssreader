@@ -137,6 +137,6 @@ pushImages := {
     (client / Docker / publish).value
     (server2 / Docker / publish).value
 }
-val projectVersion = "1.0.7-2"
+val projectVersion = "2.0.0"
 val htt4sVersion = "1.0.0-M39"
 val logs4catVersion = "2.7.0"

@@ -6,8 +6,6 @@ import ru.trett.rss.models.UserSettings
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.UserRepository
 
-import scala.util.{Failure, Success, Try}
-
 class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
 
     def createUser(id: String, name: String, email: String): IO[Int] =
@@ -29,12 +27,10 @@ class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
         userRepository.deleteUser(id)
 
     def getUserByEmail(email: String): IO[Option[User]] =
-        Try(userRepository.findUserByEmail(email)) match {
-            case Success(user) => user
-            case Failure(_) =>
-                LoggerFactory[IO].getLogger.error(s"User with email $email not found") *> IO.pure(
-                    None
-                )
+        userRepository.findUserByEmail(email).flatMap {
+            case Right(user) => IO.pure(user)
+            case Left(_) =>
+                LoggerFactory[IO].getLogger.error(s"User with email $email not found") *> IO.none
         }
 
     def updateUserSettings(user: User, settings: UserSettings): IO[Int] =

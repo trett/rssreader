@@ -6,8 +6,8 @@ import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 
 import scala.concurrent.duration.*
 
-class UpdateTask private (channelService: ChannelService, userService: UserService)(
-    using LoggerFactory[IO]
+class UpdateTask private (channelService: ChannelService, userService: UserService)(using
+    LoggerFactory[IO]
 ):
 
     val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger

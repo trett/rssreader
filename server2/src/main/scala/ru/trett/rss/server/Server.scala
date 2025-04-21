@@ -31,7 +31,7 @@ object Server extends IOApp:
 
     private val logger: SelfAwareStructuredLogger[IO] =
         LoggerFactory[IO].getLogger
-        
+
     private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) =>
         IO {
             println(logEvent.sql)
@@ -102,7 +102,10 @@ object Server extends IOApp:
                 hikariConfig
             }
             xa <- HikariTransactor
-                .fromHikariConfig[IO](hikariConfig /**, logHandler = Some(withSqlLogHandler) **/)
+                .fromHikariConfig[IO](
+                    hikariConfig
+                    /** , logHandler = Some(withSqlLogHandler) * */
+                )
         } yield xa
 
     private def createCorsPolicy(config: CorsConfig): CORSPolicy =

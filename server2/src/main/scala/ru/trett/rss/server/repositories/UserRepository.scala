@@ -42,11 +42,12 @@ class UserRepository(xa: HikariTransactor[IO]):
         sql"DELETE FROM users WHERE id = $id".update.run
             .transact(xa)
 
-    def findUserByEmail(email: String): IO[Option[User]] =
+    def findUserByEmail(email: String): IO[Either[Throwable, Option[User]]] =
         sql"SELECT id, name, email, settings::json FROM users WHERE email = $email"
             .query[Option[User]]
             .unique
             .transact(xa)
+            .attempt
 
     def updateUserSettings(user: User): IO[Int] =
         sql"UPDATE users SET settings = ${user.settings.asJson}::jsonb WHERE id = ${user.id}".update.run
