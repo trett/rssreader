@@ -2,7 +2,7 @@
 
 # Simple RSS Reader
 
-Written using Spring Boot 3, ScalaJS/Laminar with UI5 components
+Written using Scala and Laminar with UI5 components
 
 Authorization based on Google OAuth2 API
 
@@ -17,6 +17,8 @@ MIT
 ## Environments
 
 `SERVER_URL` - API location URL
+
+`CORS_URL` - Cors accepted paths
 
 `CLIENT_ID` - ID using for identifying app in Google OAuth service
 
@@ -36,4 +38,4 @@ sbt buildImages
 
 ### Production deploy 
 
-Use the `scripts/docker-compose.yml` as a starting point to prepare your installation.
+Use the `scripts/local-docker/docker-compose.yml` as a starting point to prepare your installation.
