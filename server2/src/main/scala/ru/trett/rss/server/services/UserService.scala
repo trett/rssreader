@@ -8,9 +8,13 @@ import ru.trett.rss.server.repositories.UserRepository
 
 class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
 
-    def createUser(id: String, name: String, email: String): IO[Int] =
+    def createUser(id: String, name: String, email: String): IO[Either[Throwable, Int]] =
         val user = User(id, name, email, User.Settings())
-        userRepository.insertUser(user)
+        userRepository
+            .insertUser(user)
+            .onError(err =>
+                LoggerFactory[IO].getLogger.error(err)("Error occurred while inserting user")
+            )
 
     def getUsers: IO[List[User]] =
         userRepository.findUsers()
@@ -29,8 +33,10 @@ class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
     def getUserByEmail(email: String): IO[Option[User]] =
         userRepository.findUserByEmail(email).flatMap {
             case Right(user) => IO.pure(user)
-            case Left(_) =>
-                LoggerFactory[IO].getLogger.error(s"User with email $email not found") *> IO.none
+            case Left(err) =>
+                LoggerFactory[IO].getLogger.error(err)(
+                    s"User with email $email not found"
+                ) *> IO.none
         }
 
     def updateUserSettings(user: User, settings: UserSettings): IO[Int] =
