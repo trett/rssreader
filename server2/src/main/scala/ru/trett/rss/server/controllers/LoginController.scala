@@ -69,7 +69,7 @@ object LoginController:
                                         sessionId,
                                         httpOnly = true,
                                         secure = true,
-                                        maxAge = Some(360 * 6)
+                                        maxAge = Some(60 * 60 * 24) // 1 day
                                     )
                                 )
                             )
@@ -87,8 +87,12 @@ object LoginController:
                             oauthConfig.redirectUri + "/signup_callback"
                         )
                         userInfo <- getUserInfo(c, token.access_token)
-                        _ <- userService.createUser(userInfo.id, userInfo.name, userInfo.email)
-                        response <- SeeOther(Location(uri"/"))
+                        response <- userService
+                            .createUser(userInfo.id, userInfo.name, userInfo.email)
+                            .flatMap {
+                                case Left(_)  => SeeOther(Location(uri"/"))
+                                case Right(_) => BadRequest("Failed to create user")
+                            }
                     } yield response
                 }
 

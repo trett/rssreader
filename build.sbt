@@ -4,10 +4,17 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
+lazy val projectVersion = "2.0.1"
+lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.3.5"
+lazy val circeVersion = "0.14.9"
+lazy val htt4sVersion = "1.0.0-M39"
+lazy val logs4catVersion = "2.7.0"
+
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 lazy val buildImages = taskKey[Unit]("Build docker images")
 lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
+
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
     .crossType(CrossType.Pure)
     .in(file("shared"))
@@ -20,6 +27,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
     )
     .jsSettings()
     .jvmSettings()
+
 lazy val client = project
     .in(file("client"))
     .dependsOn(shared.js)
@@ -72,6 +80,7 @@ lazy val client = project
             )
         )
     )
+
 lazy val server2 = project
     .in(file("server2"))
     .dependsOn(shared.jvm)
@@ -127,16 +136,11 @@ ThisBuild / buildClientDist := {
     Process("npm run build", client.base).!
     new java.io.File(client.base.getPath + "/dist")
 }
-val organizationName = "ru.trett"
 buildImages := {
     (client / Docker / publishLocal).value
     (server2 / Docker / publishLocal).value
 }
-val circeVersion = "0.14.9"
 pushImages := {
     (client / Docker / publish).value
     (server2 / Docker / publish).value
 }
-val projectVersion = "2.0.0"
-val htt4sVersion = "1.0.0-M39"
-val logs4catVersion = "2.7.0"

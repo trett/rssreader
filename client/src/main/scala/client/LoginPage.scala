@@ -9,13 +9,13 @@ object LoginPage {
 
     def render: Element = div(
         div(
+            background := "linear-gradient(to bottom right, #d6dee6, #549a9d)",
+            height := "100vh",
             justifyContent := "center",
             display := "flex",
             alignItems := "center",
             flexDirection := "column", // Stack all elements vertically
-            marginTop := "10%",
-            transform := "scale(1.5)",
-            h1("Welcome to RSS Reader", fontSize := "2rem", marginBottom := "1rem"),
+            h1("RSS Reader", fontSize := "2rem", marginBottom := "1rem"),
             p(
                 "Please sign up or sign in to continue.",
                 fontSize := "1.2rem",
@@ -27,7 +27,6 @@ object LoginPage {
                 flexDirection := "column", // Stack buttons vertically
                 alignItems := "center", // Center buttons horizontally
                 gap := "1rem", // Add spacing between buttons
-
                 Link(
                     cls("google-button"),
                     "Sign Up",

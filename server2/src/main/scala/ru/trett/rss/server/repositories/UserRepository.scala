@@ -20,10 +20,11 @@ class UserRepository(xa: HikariTransactor[IO]):
             }
     }
 
-    def insertUser(user: User): IO[Int] =
+    def insertUser(user: User): IO[Either[Throwable, Int]] =
         sql"""INSERT INTO users (id, name, email, settings) VALUES
         (${user.id}, ${user.name}, ${user.email}, ${user.settings.asJson})""".update.run
             .transact(xa)
+            .attempt
 
     def findUserById(id: String): IO[Option[User]] =
         sql"SELECT id, name, email, settings::json FROM users WHERE id = $id"
