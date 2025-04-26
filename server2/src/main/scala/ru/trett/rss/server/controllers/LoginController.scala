@@ -7,11 +7,14 @@ import org.http4s.circe.*
 import org.http4s.client.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.*
-import org.http4s.headers.{Authorization, Location}
+import org.http4s.headers.Authorization
+import org.http4s.headers.Location
 import org.http4s.implicits.*
 import ru.trett.rss.server.authorization.*
 import ru.trett.rss.server.config.OAuthConfig
 import ru.trett.rss.server.services.UserService
+
+import scala.concurrent.duration.DurationInt
 
 object LoginController:
 
@@ -49,7 +52,11 @@ object LoginController:
                 SeeOther(Location(authUri))
 
             case GET -> Root / "signin_callback" :? CodeQueryParamMatcher(code) =>
-                val client = EmberClientBuilder.default[IO].build
+                val client = EmberClientBuilder
+                    .default[IO]
+                    .withTimeout(5.seconds)
+                    .withIdleConnectionTime(5.seconds)
+                    .build
                 client.use { c =>
                     for {
                         token <- getToken(

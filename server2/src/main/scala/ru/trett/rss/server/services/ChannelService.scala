@@ -10,6 +10,7 @@ import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 import ru.trett.rss.models.{ChannelData, FeedItemData}
 import ru.trett.rss.server.models.{Channel, Feed, User}
 import ru.trett.rss.server.repositories.ChannelRepository
+import scala.concurrent.duration.DurationInt
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
@@ -41,7 +42,11 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
         } yield result
 
     private def getChannel(link: String): IO[Channel] =
-        val client = EmberClientBuilder.default[IO].build
+        val client = EmberClientBuilder
+            .default[IO]
+            .withTimeout(5.seconds)
+            .withIdleConnectionTime(5.seconds)
+            .build
         for {
             _ <- IO.fromEither(Uri.fromString(link))
             channel <- client.use { client =>
@@ -51,6 +56,12 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
                             val stream = new java.io.ByteArrayInputStream(bytes)
                             parse(stream, link)
                         }
+                    }
+                    .handleErrorWith { error =>
+                        logger.error(error)(s"Failed to fetch or parse the feed: $link") *> IO
+                            .raiseError(
+                                new Exception(s"Failed to fetch or parse the feed: $link", error)
+                            )
                     }
             }
         } yield channel
