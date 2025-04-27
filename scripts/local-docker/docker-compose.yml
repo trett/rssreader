@@ -26,7 +26,7 @@ services:
       - host.docker.internal:host-gateway
 
   server:
-    image: server2:2.0.3
+    image: server2:2.0.4
     container_name: rss_server
     restart: always
     depends_on:
@@ -41,7 +41,7 @@ services:
       CLIENT_SECRET: ${CLIENT_SECRET}
 
   client:
-    image: client:2.0.3
+    image: client:2.0.4
     container_name: rss_client
     restart: always
     depends_on:

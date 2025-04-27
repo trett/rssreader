@@ -14,6 +14,7 @@ import scala.concurrent.duration.DurationInt
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
+import cats.effect.kernel.Resource
 
 class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[IO]):
 
@@ -31,7 +32,7 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
     def updateFeeds(user: User): IO[List[Int]] =
         for {
             channels <- channelRepository.findUserChannels(user)
-            result <- channels.traverse { channel =>
+            result <- channels.parTraverse { channel =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     updatedChannel <- getChannel(channel.link)
@@ -48,13 +49,18 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
             .withIdleConnectionTime(5.seconds)
             .build
         for {
-            _ <- IO.fromEither(Uri.fromString(link))
+            _ <- IO.fromEither(Uri.fromString(link)).handleErrorWith { error =>
+                logger.error(error)(s"Invalid URI: $link") *> IO.raiseError(error)
+            }
             channel <- client.use { client =>
                 client
                     .get(link) { response =>
                         response.body.compile.to(Array).flatMap { bytes =>
-                            val stream = new java.io.ByteArrayInputStream(bytes)
-                            parse(stream, link)
+                            Resource
+                                .fromAutoCloseable(IO(new java.io.ByteArrayInputStream(bytes)))
+                                .use { stream =>
+                                    parse(stream, link)
+                                }
                         }
                     }
                     .handleErrorWith { error =>
