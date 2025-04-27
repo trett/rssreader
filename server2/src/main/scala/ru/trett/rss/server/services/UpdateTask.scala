@@ -1,8 +1,10 @@
 package ru.trett.rss.server.services
 
-import cats.effect.{IO, Temporal}
+import cats.effect.IO
 import cats.syntax.all.*
-import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
+import fs2.Stream
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.SelfAwareStructuredLogger
 
 import scala.concurrent.duration.*
 
@@ -11,12 +13,6 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
 ):
 
     val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
-
-    private def repeat: IO[Int] =
-        schedule >> repeat
-
-    private def schedule: IO[Int] =
-        Temporal[IO].sleep(10.minutes) *> task
 
     private def task: IO[Int] = {
         for {
@@ -32,8 +28,12 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
         } yield users.size
     }
 
+    val backgroundTask: Stream[IO, Int] =
+        Stream.eval(task) ++
+            Stream.awakeEvery[IO](10.minutes).evalMap(_ => task)
+
 object UpdateTask:
     def apply(channelService: ChannelService, userService: UserService)(using
         LoggerFactory[IO]
-    ): IO[Int] =
-        new UpdateTask(channelService, userService).repeat
+    ): IO[List[Int]] =
+        new UpdateTask(channelService, userService).backgroundTask.compile.toList
