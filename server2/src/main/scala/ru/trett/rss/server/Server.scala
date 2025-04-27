@@ -58,28 +58,31 @@ object Server extends IOApp:
                 userService = UserService(userRepository)
                 channelService = ChannelService(channelRepository)
                 _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                _ <- UpdateTask(channelService, userService).start
-                authFilter <- AuthFilter[IO]
-                exitCode <- EmberServerBuilder
-                    .default[IO]
-                    .withHost(ipv4"0.0.0.0")
-                    .withPort(Port.fromInt(appConfig.server.port).get)
-                    .withHttpApp(
-                        withErrorLogging(
-                            corsPolicy(
-                                routes(
-                                    sessionManager,
-                                    channelService,
-                                    userService,
-                                    feedService,
-                                    appConfig.oauth,
-                                    authFilter
-                                )
+                exitCode <- UpdateTask(channelService, userService).background.use { task =>
+                    for {
+                        authFilter <- AuthFilter[IO]
+                        server <- EmberServerBuilder
+                            .default[IO]
+                            .withHost(ipv4"0.0.0.0")
+                            .withPort(Port.fromInt(appConfig.server.port).get)
+                            .withHttpApp(
+                                withErrorLogging(
+                                    corsPolicy(
+                                        routes(
+                                            sessionManager,
+                                            channelService,
+                                            userService,
+                                            feedService,
+                                            appConfig.oauth,
+                                            authFilter
+                                        )
+                                    )
+                                ).orNotFound
                             )
-                        ).orNotFound
-                    )
-                    .build
-                    .use(_ => IO.never)
+                            .build
+                            .use(_ => IO.never)
+                    } yield server
+                }
             } yield exitCode
         }
 
