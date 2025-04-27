@@ -6,26 +6,41 @@ import cats.implicits.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
-import doobie.util.log.{LogEvent, LogHandler}
+import doobie.util.log.LogEvent
+import doobie.util.log.LogHandler
+import org.http4s.AuthedRoutes
+import org.http4s.HttpRoutes
+import org.http4s.Uri
+import org.http4s.client.Client
+import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.*
 import org.http4s.implicits.*
-import org.http4s.server.middleware.{CORS, CORSPolicy, ErrorAction, ErrorHandling}
-import org.http4s.{AuthedRoutes, HttpRoutes, Uri}
+import org.http4s.server.middleware.CORS
+import org.http4s.server.middleware.CORSPolicy
+import org.http4s.server.middleware.ErrorAction
+import org.http4s.server.middleware.ErrorHandling
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
 import pureconfig.ConfigSource
-import ru.trett.rss.server.authorization.{AuthFilter, SessionManager}
-import ru.trett.rss.server.config.{AppConfig, CorsConfig, DbConfig, OAuthConfig}
-import ru.trett.rss.server.controllers.{
-    ChannelController,
-    FeedController,
-    LoginController,
-    UserController
-}
+import ru.trett.rss.server.authorization.AuthFilter
+import ru.trett.rss.server.authorization.SessionManager
+import ru.trett.rss.server.config.AppConfig
+import ru.trett.rss.server.config.CorsConfig
+import ru.trett.rss.server.config.DbConfig
+import ru.trett.rss.server.config.OAuthConfig
+import ru.trett.rss.server.controllers.ChannelController
+import ru.trett.rss.server.controllers.FeedController
+import ru.trett.rss.server.controllers.LoginController
+import ru.trett.rss.server.controllers.UserController
 import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
-import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}
-import ru.trett.rss.server.services.{ChannelService, FeedService, UpdateTask, UserService}
+import ru.trett.rss.server.repositories.ChannelRepository
+import ru.trett.rss.server.repositories.FeedRepository
+import ru.trett.rss.server.repositories.UserRepository
+import ru.trett.rss.server.services.ChannelService
+import ru.trett.rss.server.services.FeedService
+import ru.trett.rss.server.services.UpdateTask
+import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
 
@@ -46,44 +61,51 @@ object Server extends IOApp:
                 println("Failed to load configuration")
                 return IO.pure(ExitCode.Error)
         }
+
+        val client = EmberClientBuilder
+            .default[IO]
+            .build
         transactor(appConfig.db).use { xa =>
-            for {
-                _ <- FlywayMigration.migrate(appConfig.db)
-                corsPolicy = createCorsPolicy(appConfig.cors)
-                sessionManager <- SessionManager[IO]
-                channelRepository = ChannelRepository(xa)
-                feedRepository = FeedRepository(xa)
-                feedService = FeedService(feedRepository)
-                userRepository = UserRepository(xa)
-                userService = UserService(userRepository)
-                channelService = ChannelService(channelRepository)
-                _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                exitCode <- UpdateTask(channelService, userService).background.use { task =>
-                    for {
-                        authFilter <- AuthFilter[IO]
-                        server <- EmberServerBuilder
-                            .default[IO]
-                            .withHost(ipv4"0.0.0.0")
-                            .withPort(Port.fromInt(appConfig.server.port).get)
-                            .withHttpApp(
-                                withErrorLogging(
-                                    corsPolicy(
-                                        routes(
-                                            sessionManager,
-                                            channelService,
-                                            userService,
-                                            feedService,
-                                            appConfig.oauth,
-                                            authFilter
+            client.use { client =>
+                for {
+                    _ <- FlywayMigration.migrate(appConfig.db)
+                    corsPolicy = createCorsPolicy(appConfig.cors)
+                    sessionManager <- SessionManager[IO]
+                    channelRepository = ChannelRepository(xa)
+                    feedRepository = FeedRepository(xa)
+                    feedService = FeedService(feedRepository)
+                    userRepository = UserRepository(xa)
+                    userService = UserService(userRepository)
+                    channelService = ChannelService(channelRepository, client)
+                    _ <- logger.info("Starting server on port: " + appConfig.server.port)
+                    exitCode <- UpdateTask(channelService, userService).background.use { task =>
+                        for {
+                            authFilter <- AuthFilter[IO]
+                            server <- EmberServerBuilder
+                                .default[IO]
+                                .withHost(ipv4"0.0.0.0")
+                                .withPort(Port.fromInt(appConfig.server.port).get)
+                                .withHttpApp(
+                                    withErrorLogging(
+                                        corsPolicy(
+                                            routes(
+                                                sessionManager,
+                                                channelService,
+                                                userService,
+                                                feedService,
+                                                appConfig.oauth,
+                                                authFilter,
+                                                client
+                                            )
                                         )
-                                    )
-                                ).orNotFound
-                            )
-                            .build
-                            .use(_ => IO.never)
-                    } yield server
-                }
-            } yield exitCode
+                                    ).orNotFound
+                                )
+                                .build
+                                .use(_ => IO.never)
+                        } yield server
+                    }
+                } yield exitCode
+            }
         }
 
     private def loadConfig: Option[AppConfig] =
@@ -123,9 +145,10 @@ object Server extends IOApp:
         userService: UserService,
         feedService: FeedService,
         oauthConfig: OAuthConfig,
-        authFilter: AuthFilter[IO]
+        authFilter: AuthFilter[IO],
+        client: Client[IO]
     ): HttpRoutes[IO] =
-        unprotectedRoutes(sessionManager, oauthConfig, userService) <+>
+        unprotectedRoutes(sessionManager, oauthConfig, userService, client) <+>
             authFilter.middleware(sessionManager, userService)(
                 authedRoutes(channelService, userService, feedService)
             )
@@ -133,9 +156,10 @@ object Server extends IOApp:
     private def unprotectedRoutes(
         sessionManager: SessionManager[IO],
         oauthConfig: OAuthConfig,
-        userService: UserService
+        userService: UserService,
+        client: Client[IO]
     ): HttpRoutes[IO] =
-        LoginController.routes(sessionManager, oauthConfig, userService)
+        LoginController.routes(sessionManager, oauthConfig, userService, client)
 
     private def authedRoutes(
         channelService: ChannelService,

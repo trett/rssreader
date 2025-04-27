@@ -14,8 +14,6 @@ import ru.trett.rss.server.authorization.*
 import ru.trett.rss.server.config.OAuthConfig
 import ru.trett.rss.server.services.UserService
 
-import scala.concurrent.duration.DurationInt
-
 object LoginController:
 
     private val OAuthBaseUrl =
@@ -24,7 +22,8 @@ object LoginController:
     def routes(
         sessionManager: SessionManager[IO],
         oauthConfig: OAuthConfig,
-        userService: UserService
+        userService: UserService,
+        client: Client[IO]
     ): HttpRoutes[IO] =
         HttpRoutes.of[IO] {
             case GET -> Root / "signin" =>
@@ -52,36 +51,29 @@ object LoginController:
                 SeeOther(Location(authUri))
 
             case GET -> Root / "signin_callback" :? CodeQueryParamMatcher(code) =>
-                val client = EmberClientBuilder
-                    .default[IO]
-                    .withTimeout(5.seconds)
-                    .withIdleConnectionTime(5.seconds)
-                    .build
-                client.use { c =>
-                    for {
-                        token <- getToken(
-                            c,
-                            code,
-                            oauthConfig,
-                            oauthConfig.redirectUri + "/signin_callback"
-                        )
-                        userInfo <- getUserInfo(c, token.access_token)
-                        sessionData = SessionData(userInfo.email)
-                        sessionId <- sessionManager.createSession(sessionData)
-                        response <- SeeOther(Location(uri"/"))
-                            .map(
-                                _.addCookie(
-                                    ResponseCookie(
-                                        "sessionId",
-                                        sessionId,
-                                        httpOnly = true,
-                                        secure = true,
-                                        maxAge = Some(60 * 60 * 24) // 1 day
-                                    )
+                for {
+                    token <- getToken(
+                        client,
+                        code,
+                        oauthConfig,
+                        oauthConfig.redirectUri + "/signin_callback"
+                    )
+                    userInfo <- getUserInfo(client, token.access_token)
+                    sessionData = SessionData(userInfo.email)
+                    sessionId <- sessionManager.createSession(sessionData)
+                    response <- SeeOther(Location(uri"/"))
+                        .map(
+                            _.addCookie(
+                                ResponseCookie(
+                                    "sessionId",
+                                    sessionId,
+                                    httpOnly = true,
+                                    secure = true,
+                                    maxAge = Some(60 * 60 * 24) // 1 day
                                 )
                             )
-                    } yield response
-                }
+                        )
+                } yield response
 
             case GET -> Root / "signup_callback" :? CodeQueryParamMatcher(code) =>
                 val client = EmberClientBuilder.default[IO].build
