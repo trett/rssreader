@@ -57,9 +57,11 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
                     .get(link) { response =>
                         response.body.compile.to(Array).flatMap { bytes =>
                             Resource
-                                .fromAutoCloseable(IO(new java.io.ByteArrayInputStream(bytes)))
-                                .use { stream =>
-                                    parse(stream, link)
+                                .fromAutoCloseable(
+                                    IO(new XmlReader(new java.io.ByteArrayInputStream(bytes)))
+                                )
+                                .use { reader =>
+                                    parse(reader, link)
                                 }
                         }
                     }
@@ -72,12 +74,11 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
             }
         } yield channel
 
-    private def parse(stream: java.io.InputStream, link: String): IO[Channel] = {
+    private def parse(reader: XmlReader, link: String): IO[Channel] = {
         for {
             _ <- logger.info(s"Starting to parse RSS feed: $link")
             input = new SyndFeedInput()
-            xmlReader = new XmlReader(stream)
-            syndFeed <- IO.blocking(input.build(xmlReader))
+            syndFeed <- IO.blocking(input.build(reader))
             title = syndFeed.getTitle
             _ <- logger.info(s"Parsing the channel: title '$title', type '${syndFeed.getFeedType}'")
 
