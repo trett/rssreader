@@ -14,12 +14,11 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
 
     val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
 
-    private def task: IO[Int] = {
+    private def updateChannels: IO[Int] = {
         for {
-            _ <- logger.info("Starting update task...")
             users <- userService.getUsers
             _ <- logger.info(s"Found ${users.size} users")
-            _ <- users.traverse { user =>
+            _ <- users.parTraverse { user =>
                 for {
                     channels <- channelService.updateFeeds(user)
                     _ <- logger.info(s"Updated ${channels.size} channels for user ${user.email}")
@@ -28,12 +27,17 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
         } yield users.size
     }
 
-    val backgroundTask: Stream[IO, Int] =
-        Stream.eval(task) ++
-            Stream.awakeEvery[IO](10.minutes).evalMap(_ => task)
+    val task: Stream[IO, Int] =
+        Stream.eval(updateChannels) ++
+            Stream.awakeEvery[IO](10.minutes).evalMap(_ => updateChannels)
+
+    def job: Stream[IO, Int] =
+        Stream.bracket(IO(logger.info("Starting background job")))(_ =>
+            IO(logger.info("Stopping background job"))
+        ) >> task
 
 object UpdateTask:
     def apply(channelService: ChannelService, userService: UserService)(using
         LoggerFactory[IO]
     ): IO[List[Int]] =
-        new UpdateTask(channelService, userService).backgroundTask.compile.toList
+        new UpdateTask(channelService, userService).job.compile.toList
