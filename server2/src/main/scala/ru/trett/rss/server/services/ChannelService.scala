@@ -1,22 +1,28 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
+import cats.effect.kernel.Resource
 import cats.syntax.all.*
 import com.rometools.rome.feed.synd.SyndEntry
-import com.rometools.rome.io.{SyndFeedInput, XmlReader}
+import com.rometools.rome.io.SyndFeedInput
+import com.rometools.rome.io.XmlReader
 import org.http4s.Uri
-import org.http4s.ember.client.EmberClientBuilder
-import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
-import ru.trett.rss.models.{ChannelData, FeedItemData}
-import ru.trett.rss.server.models.{Channel, Feed, User}
+import org.http4s.client.Client
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.SelfAwareStructuredLogger
+import ru.trett.rss.models.ChannelData
+import ru.trett.rss.models.FeedItemData
+import ru.trett.rss.server.models.Channel
+import ru.trett.rss.server.models.Feed
+import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
-import scala.concurrent.duration.DurationInt
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
-import cats.effect.kernel.Resource
 
-class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[IO]):
+class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
+    LoggerFactory[IO]
+):
 
     private val ZoneId = java.time.ZoneId.systemDefault()
 
@@ -43,16 +49,11 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
         } yield result
 
     private def getChannel(link: String): IO[Channel] =
-        val client = EmberClientBuilder
-            .default[IO]
-            .withTimeout(5.seconds)
-            .withIdleConnectionTime(5.seconds)
-            .build
         for {
             _ <- IO.fromEither(Uri.fromString(link)).handleErrorWith { error =>
                 logger.error(error)(s"Invalid URI: $link") *> IO.raiseError(error)
             }
-            channel <- client.use { client =>
+            channel <-
                 client
                     .get(link) { response =>
                         response.body.compile.to(Array).flatMap { bytes =>
@@ -71,7 +72,6 @@ class ChannelService(channelRepository: ChannelRepository)(using LoggerFactory[I
                                 new Exception(s"Failed to fetch or parse the feed: $link", error)
                             )
                     }
-            }
         } yield channel
 
     private def parse(reader: XmlReader, link: String): IO[Channel] = {
