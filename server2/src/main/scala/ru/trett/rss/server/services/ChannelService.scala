@@ -32,7 +32,10 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
     def createChannel(link: String, user: User): IO[Long] =
         for {
             channel <- getChannel(link)
-            result <- channelRepository.insertChannel(channel, user)
+            result <- channel match {
+                case Some(value) => channelRepository.insertChannel(value, user)
+                case None        => IO(0L)
+            }
         } yield result
 
     def updateFeeds(user: User): IO[List[Int]] =
@@ -41,14 +44,21 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             result <- channels.parTraverse { channel =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
-                    updatedChannel <- getChannel(channel.link)
-                    rows <- channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
+                    maybeUpdatedChannel <- getChannel(channel.link)
+                    rows <- maybeUpdatedChannel
+                        .map(updatedChannel =>
+                            channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
+                        )
+                        .getOrElse {
+                            logger.error(s"Failed to update channel: ${channel.title}")
+                                *> IO.pure(0)
+                        }
                     _ <- logger.info(s"Inserted $rows feeds for channel: ${channel.title}")
                 } yield rows
             }
         } yield result
 
-    private def getChannel(link: String): IO[Channel] =
+    private def getChannel(link: String): IO[Option[Channel]] =
         for {
             _ <- IO.fromEither(Uri.fromString(link)).handleErrorWith { error =>
                 logger.error(error)(s"Invalid URI: $link") *> IO.raiseError(error)
@@ -62,23 +72,21 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                                     IO(new XmlReader(new java.io.ByteArrayInputStream(bytes)))
                                 )
                                 .use { reader =>
-                                    parse(reader, link)
+                                    parse(reader, link).handleErrorWith { error =>
+                                        logger.error(error)(
+                                            s"Failed to parse the feed: $link"
+                                        ) *> IO.none
+                                    }
                                 }
                         }
                     }
-                    .handleErrorWith { error =>
-                        logger.error(error)(s"Failed to fetch or parse the feed: $link") *> IO
-                            .raiseError(
-                                new Exception(s"Failed to fetch or parse the feed: $link", error)
-                            )
-                    }
         } yield channel
 
-    private def parse(reader: XmlReader, link: String): IO[Channel] = {
+    private def parse(reader: XmlReader, link: String): IO[Option[Channel]] = {
         for {
             _ <- logger.info(s"Starting to parse RSS feed: $link")
             input = new SyndFeedInput()
-            syndFeed <- IO.blocking(input.build(reader))
+            syndFeed <- IO.interruptible(input.build(reader))
             title = syndFeed.getTitle
             _ <- logger.info(s"Parsing the channel: title '$title', type '${syndFeed.getFeedType}'")
 
@@ -96,7 +104,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
 
             _ <- logger.info(s"Parsed ${feedItems.size} items")
             _ <- logger.info("End of parsing the channel")
-        } yield channel
+        } yield Some(channel)
     }
 
     private def extractDescription(entry: SyndEntry): String =
