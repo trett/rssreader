@@ -44,15 +44,13 @@ import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
 
-    private val logger: SelfAwareStructuredLogger[IO] =
+    given logger: SelfAwareStructuredLogger[IO] =
         LoggerFactory[IO].getLogger
 
     private val withSqlLogHandler: LogHandler[IO] = (logEvent: LogEvent) =>
         IO {
             println(logEvent.sql)
         }
-
-    given LoggerFactory[IO] = Slf4jFactory[IO]
 
     override def run(args: List[String]): IO[ExitCode] =
         val appConfig = loadConfig match {

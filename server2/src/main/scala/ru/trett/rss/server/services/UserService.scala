@@ -1,20 +1,18 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
-import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.models.UserSettings
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.UserRepository
+import org.typelevel.log4cats.Logger
 
-class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
+class UserService(userRepository: UserRepository)(using logger: Logger[IO]):
 
     def createUser(id: String, name: String, email: String): IO[Either[Throwable, Int]] =
         val user = User(id, name, email, User.Settings())
         userRepository
             .insertUser(user)
-            .onError(err =>
-                LoggerFactory[IO].getLogger.error(err)("Error occurred while inserting user")
-            )
+            .onError(err => logger.error(err)("Error occurred while inserting user"))
 
     def getUsers: IO[List[User]] =
         userRepository.findUsers()
@@ -34,9 +32,7 @@ class UserService(userRepository: UserRepository)(using LoggerFactory[IO]):
         userRepository.findUserByEmail(email).flatMap {
             case Right(user) => IO.pure(user)
             case Left(err) =>
-                LoggerFactory[IO].getLogger.error(err)(
-                    s"User with email $email not found"
-                ) *> IO.none
+                logger.error(err)(s"User with email $email not found") *> IO.none
         }
 
     def updateUserSettings(user: User, settings: UserSettings): IO[Int] =

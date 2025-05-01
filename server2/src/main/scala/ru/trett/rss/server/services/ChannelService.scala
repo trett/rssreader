@@ -8,26 +8,23 @@ import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import org.http4s.Uri
 import org.http4s.client.Client
-import org.typelevel.log4cats.LoggerFactory
-import org.typelevel.log4cats.SelfAwareStructuredLogger
 import ru.trett.rss.models.ChannelData
 import ru.trett.rss.models.FeedItemData
 import ru.trett.rss.server.models.Channel
 import ru.trett.rss.server.models.Feed
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
+import scala.concurrent.duration.DurationInt
 
 import java.time.OffsetDateTime
 import scala.jdk.CollectionConverters.*
+import org.typelevel.log4cats.Logger
 
 class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
-    LoggerFactory[IO]
+    logger: Logger[IO]
 ):
 
     private val ZoneId = java.time.ZoneId.systemDefault()
-
-    private val logger: SelfAwareStructuredLogger[IO] =
-        LoggerFactory[IO].getLogger
 
     def createChannel(link: String, user: User): IO[Long] =
         for {
@@ -44,7 +41,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             result <- channels.parTraverse { channel =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
-                    maybeUpdatedChannel <- getChannel(channel.link)
+                    maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds)
                     rows <- maybeUpdatedChannel
                         .map(updatedChannel =>
                             channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
@@ -53,19 +50,18 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                             logger.error(s"Failed to update channel: ${channel.title}")
                                 *> IO.pure(0)
                         }
-                    _ <- logger.info(s"Inserted $rows feeds for channel: ${channel.title}")
                 } yield rows
             }
         } yield result
 
     private def getChannel(link: String): IO[Option[Channel]] =
         for {
-            _ <- IO.fromEither(Uri.fromString(link)).handleErrorWith { error =>
+            url <- IO.fromEither(Uri.fromString(link)).handleErrorWith { error =>
                 logger.error(error)(s"Invalid URI: $link") *> IO.raiseError(error)
             }
             channel <-
                 client
-                    .get(link) { response =>
+                    .get(url) { response =>
                         response.body.compile.to(Array).flatMap { bytes =>
                             Resource
                                 .fromAutoCloseable(
