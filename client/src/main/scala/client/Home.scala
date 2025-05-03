@@ -60,6 +60,7 @@ object Home:
     private val feedsObserver = Observer[FeedItemList](feedVar.set)
 
     def render: Element = div(
+        cls := "cards",
         onMountBind(ctx =>
             refreshFeedsBus --> { _ =>
                 val response = getChannelsAndFeedsRequest

@@ -17,3 +17,21 @@
     justify-content: center;
     align-items: center;
 }
+
+.sticky-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    margin-bottom: 5px;
+    --sapShellColor: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    --sapShell_Hover_Background: transparent;
+    --_ui5-v2-1-0_shellbar_button_focused_border: 0px transparent none;
+}
+
+.cards {
+    --_ui5-v2-1-0_card_border-radius: 0px 0px 2px 2px;
+    --_ui5-v2-1-0_card_header_focus_border: 0px;
+    --sapContent_FocusWidth: 0px;
+    --sapContent_FocusStyle: none;
+}
+
