@@ -31,11 +31,7 @@ object NetworkUtils {
                 case _ =>
                     EventStream.fromJsPromise(
                         resp.text()
-                            .`then`(x => {
-                                val decoded = decode[A](x)
-                                println(decoded)
-                                Success(decoded.toOption)
-                            })
+                            .`then`(data => Success(decode[A](data).toOption))
                     )
 
     def handleError(ex: Throwable): Unit = ex.getMessage match

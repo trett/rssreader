@@ -142,8 +142,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             }
         }
 
-    def removeChannel(id: Long, user: User): IO[String] =
+    def removeChannel(id: Long, user: User): IO[Long] =
         channelRepository.deleteChannel(id, user).flatMap {
             case 0 => IO.raiseError(Exception("Channel does not belong to the user"))
-            case _ => "Channel deleted".pure[IO]
+            case _ => IO.pure(id)
         }

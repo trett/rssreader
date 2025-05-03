@@ -22,6 +22,7 @@ object NavBar {
     private val profileId = "shellbar-profile-id"
 
     def render: Element = div(
+        cls := "sticky-navbar",
         ShellBar(
             _.primaryTitle := "RSS Reader",
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
