@@ -122,6 +122,7 @@ object Server extends IOApp:
                 hikariConfig.setJdbcUrl(config.url)
                 hikariConfig.setUsername(config.user)
                 hikariConfig.setPassword(config.password)
+                hikariConfig.setMaximumPoolSize(32)
                 hikariConfig
             }
             xa <- HikariTransactor
