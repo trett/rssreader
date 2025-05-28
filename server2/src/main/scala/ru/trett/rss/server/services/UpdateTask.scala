@@ -3,15 +3,18 @@ package ru.trett.rss.server.services
 import cats.effect.IO
 import cats.syntax.all.*
 import fs2.Stream
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.LoggerFactory
 
 import scala.concurrent.duration.*
-import org.typelevel.log4cats.Logger
 
 class UpdateTask private (channelService: ChannelService, userService: UserService)(using
-    logger: Logger[IO]
+    loggerFactory: LoggerFactory[IO]
 ):
 
-    private def updateChannels: IO[Int] = {
+    private val logger: Logger[IO] = loggerFactory.getLogger
+
+    private def updateChannels(): IO[Int] = {
         for {
             users <- userService.getUsers
             _ <- logger.info(s"Found ${users.size} users")
@@ -25,23 +28,23 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
     }
 
     val task: Stream[IO, Int] =
-        Stream.eval(updateChannels) ++
+        Stream.eval(updateChannels()) ++
             Stream
                 .awakeEvery[IO](10.minutes)
-                .evalMap(_ => updateChannels)
+                .evalMap(_ => updateChannels())
                 .handleErrorWith { error =>
                     Stream.eval(
                         logger.error(error)("Stream failed, restarting") *> IO.pure(0)
                     ) ++ task
                 }
 
-    def job: Stream[IO, Int] =
+    private def job: Stream[IO, Int] =
         Stream.bracket(IO(logger.info("Starting background job")))(_ =>
             IO(logger.info("Stopping background job"))
         ) >> task
 
 object UpdateTask:
     def apply(channelService: ChannelService, userService: UserService)(using
-        logger: Logger[IO]
+        loggerFactory: LoggerFactory[IO]
     ): IO[List[Int]] =
         new UpdateTask(channelService, userService).job.compile.toList

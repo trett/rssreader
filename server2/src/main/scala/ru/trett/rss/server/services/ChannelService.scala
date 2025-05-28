@@ -8,22 +8,24 @@ import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import org.http4s.Uri
 import org.http4s.client.Client
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.models.ChannelData
 import ru.trett.rss.models.FeedItemData
 import ru.trett.rss.server.models.Channel
 import ru.trett.rss.server.models.Feed
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
-import scala.concurrent.duration.DurationInt
 
 import java.time.OffsetDateTime
+import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.*
-import org.typelevel.log4cats.Logger
 
 class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
-    logger: Logger[IO]
+    loggerFactory: LoggerFactory[IO]
 ):
 
+    private val logger: Logger[IO] = loggerFactory.getLogger
     private val ZoneId = java.time.ZoneId.systemDefault()
 
     def createChannel(link: String, user: User): IO[Long] =

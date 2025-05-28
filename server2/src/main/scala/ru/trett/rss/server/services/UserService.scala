@@ -1,12 +1,15 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.models.UserSettings
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.UserRepository
-import org.typelevel.log4cats.Logger
 
-class UserService(userRepository: UserRepository)(using logger: Logger[IO]):
+class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFactory[IO]):
+
+    private val logger: Logger[IO] = loggerFactory.getLogger
 
     def createUser(id: String, name: String, email: String): IO[Either[Throwable, Int]] =
         val user = User(id, name, email, User.Settings())
