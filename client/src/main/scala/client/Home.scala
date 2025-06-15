@@ -21,9 +21,12 @@ import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
 import org.scalajs.dom
-import ru.trett.rss.models.{FeedItemData, ChannelData}
+import ru.trett.rss.models.ChannelData
+import ru.trett.rss.models.FeedItemData
 
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import scala.language.implicitConversions
 import scala.scalajs.js
@@ -43,8 +46,8 @@ object Home:
 
     given Decoder[FeedItemData] = deriveDecoder
     given Decoder[ChannelData] = deriveDecoder
-    given Conversion[OffsetDateTime, String] with {
-        def apply(date: OffsetDateTime): String = dateTimeFormatter.format(date)
+    given Conversion[LocalDateTime, String] with {
+        def apply(date: LocalDateTime): String = dateTimeFormatter.format(date)
     }
 
     private val itemClickObserver = Observer[Try[List[String]]] {
@@ -133,7 +136,12 @@ object Home:
                                     _.design := LinkDesign.Emphasized,
                                     _.endIcon := IconName.inspect
                                 ),
-                                Text(x.pubDate.convert)
+                                Text(
+                                    x.pubDate
+                                        .atZoneSameInstant(ZoneOffset.UTC)
+                                        .toLocalDateTime()
+                                        .convert
+                                )
                             )
                         ),
                         dataAttr("feed-link") := x.link,
