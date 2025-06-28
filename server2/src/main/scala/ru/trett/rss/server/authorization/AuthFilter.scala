@@ -22,6 +22,8 @@ class AuthFilter[F[_]: Sync: LiftIO]:
     ): AuthMiddleware[F, User] =
         AuthMiddleware(authUser(sessionManager, userService))
 
+    def updateCache(user: User): F[Unit] = cache.updateKeyValueIfSet(user.email, _ => user)
+
     private def authUser(
         sessionManager: SessionManager[F],
         userService: UserService

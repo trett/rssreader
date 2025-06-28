@@ -17,10 +17,19 @@ object ChannelController:
     def routes(channelService: ChannelService)(using LoggerFactory[IO]): AuthedRoutes[User, IO] =
         val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
         AuthedRoutes.of {
-            case GET -> Root / "api" / "channels" / "feeds" as user =>
+            case GET -> Root / "api" / "channels" / "feeds" :? PageQueryParamMatcher(
+                    page
+                ) +& LimitQueryParamMatcher(limit) as user =>
+                val validatedPage = page.filter(_ > 0).getOrElse(1)
                 for {
-                    _ <- logger.info("Fetching all channels for user: " + user.email)
-                    channels <- channelService.getChannelsAndFeeds(user)
+                    _ <- logger.info(
+                        s"Fetching feeds for user: ${user.email}, settings: ${user.settings}, page: $validatedPage, limit: $limit"
+                    )
+                    channels <- channelService.getChannelsAndFeeds(
+                        user,
+                        validatedPage,
+                        limit.getOrElse(20)
+                    )
                     response <- Ok(channels)
                 } yield response
 
@@ -53,3 +62,6 @@ object ChannelController:
                     case Success(result) => Ok(result)
                 }
         }
+
+    private object PageQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("page")
+    private object LimitQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("limit")
