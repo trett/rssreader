@@ -44,7 +44,7 @@ object Home:
         case Failure(err) => handleError(err)
     }
 
-    private val feedsObserver = feedVar.updater[FeedItemList]((xs1, xs2) => xs1 ::: xs2)
+    private val feedsObserver = feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
 
     def render: Element = div(
         cls := "cards",
