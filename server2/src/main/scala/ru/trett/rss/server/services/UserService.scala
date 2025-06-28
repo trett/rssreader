@@ -38,7 +38,5 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
                 logger.error(err)(s"User with email $email not found") *> IO.none
         }
 
-    def updateUserSettings(user: User, settings: UserSettings): IO[Int] =
-        userRepository.updateUserSettings(
-            user.copy(settings = User.Settings(settings.retentionDays, settings.hideRead))
-        )
+    def updateUserSettings(user: User): IO[Int] =
+        userRepository.updateUserSettings(user)

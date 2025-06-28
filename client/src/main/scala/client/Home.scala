@@ -1,19 +1,8 @@
 package client
 
-import be.doeraene.webcomponents.ui5.Card
-import be.doeraene.webcomponents.ui5.CardHeader
-import be.doeraene.webcomponents.ui5.CustomListItem
-import be.doeraene.webcomponents.ui5.Icon
-import be.doeraene.webcomponents.ui5.Link
-import be.doeraene.webcomponents.ui5.Text
-import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.*
-import client.NetworkUtils.HOST
-import client.NetworkUtils.JSON_ACCEPT
-import client.NetworkUtils.JSON_CONTENT_TYPE
-import client.NetworkUtils.errorObserver
-import client.NetworkUtils.handleError
-import client.NetworkUtils.responseDecoder
+import be.doeraene.webcomponents.ui5.{Button, *}
+import client.NetworkUtils.*
 import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
@@ -21,24 +10,19 @@ import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
 import org.scalajs.dom
-import ru.trett.rss.models.ChannelData
-import ru.trett.rss.models.FeedItemData
+import ru.trett.rss.models.{ChannelData, FeedItemData}
 
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, OffsetDateTime, ZoneOffset}
 import scala.language.implicitConversions
 import scala.scalajs.js
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 object Home:
 
-    val refreshFeedsBus: EventBus[Unit] = new EventBus
+    val refreshFeedsBus: EventBus[Int] = new EventBus
     val markAllAsReadBus: EventBus[Unit] = new EventBus
-
+    private val pageLimit = 20
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
     private val model = new Model
@@ -60,31 +44,48 @@ object Home:
         case Failure(err) => handleError(err)
     }
 
-    private val feedsObserver = Observer[FeedItemList](feedVar.set)
+    private val feedsObserver = feedVar.updater[FeedItemList]((xs1, xs2) => xs1 ::: xs2)
 
     def render: Element = div(
         cls := "cards",
-        onMountBind(ctx =>
-            refreshFeedsBus --> { _ =>
-                val response = getChannelsAndFeedsRequest
-                val data = response.collectSuccess
-                val errors = response.collectFailure
-                data.addObserver(feedsObserver)(ctx.owner)
-                errors.addObserver(errorObserver)(ctx.owner)
-            }
-            markAllAsReadBus --> { _ =>
-                val link = feedVar.now().map(_.link)
-                if (link.nonEmpty) {
-                    val response = updateFeedRequest(link)
-                    response.addObserver(itemClickObserver)(ctx.owner)
+        div(
+            onMountBind(ctx =>
+                refreshFeedsBus --> { page =>
+                    val response = getChannelsAndFeedsRequest(page)
+                    val data = response.collectSuccess
+                    val errors = response.collectFailure
+                    data.addObserver(feedsObserver)(ctx.owner)
+                    errors.addObserver(errorObserver)(ctx.owner)
                 }
-            }
+            ),
+            div(
+                onMountBind(ctx =>
+                    markAllAsReadBus --> { _ =>
+                        val link = feedVar.now().map(_.link)
+                        if (link.nonEmpty) {
+                            val response = updateFeedRequest(link)
+                            response.addObserver(itemClickObserver)(ctx.owner)
+                        }
+                    }
+                )
+            )
         ),
-        feeds()
+        feeds(),
+        div(
+            display.flex,
+            justifyContent.center,
+            marginTop.px := 20,
+            marginBottom.px := 20,
+            Button(
+            _.design := ButtonDesign.Transparent,
+            _.icon   := IconName.download, "More News",
+            onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
+            hidden <-- feedVar.signal.map(xs => xs.isEmpty)
+        ))
     )
 
     private def feeds(): Element =
-        val response = getChannelsAndFeedsRequest
+        val response = getChannelsAndFeedsRequest(1)
         val data = response.collectSuccess
         val errors = response.collectFailure
         UList(
@@ -139,7 +140,7 @@ object Home:
                                 Text(
                                     x.pubDate
                                         .atZoneSameInstant(ZoneOffset.UTC)
-                                        .toLocalDateTime()
+                                        .toLocalDateTime
                                         .convert
                                 )
                             )
@@ -163,10 +164,10 @@ object Home:
             .map(foreignHtmlElement)
     )
 
-    private def getChannelsAndFeedsRequest: EventStream[Try[FeedItemList]] =
+    private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
-            .get(s"$HOST/api/channels/feeds")
+            .get(s"$HOST/api/channels/feeds?page=${page}&limit=${pageLimit}")
             .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =

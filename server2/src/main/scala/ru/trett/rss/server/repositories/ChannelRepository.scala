@@ -63,7 +63,11 @@ class ChannelRepository(xa: Transactor[IO]):
             .to[List]
             .transact(xa)
 
-    def getChannelsWithFeedsByUser(user: User): IO[List[(Channel, Feed)]] = {
+    def getChannelsWithFeedsByUser(
+        user: User,
+        limit: Int,
+        offset: Int
+    ): IO[List[(Channel, Feed)]] = {
         val query = fr"""
           SELECT c.id, c.title, c.link,
           f.link, f.channel_id, f.title, f.description, f.pub_date, f.read
@@ -74,9 +78,9 @@ class ChannelRepository(xa: Transactor[IO]):
         """
         val condition =
             if (user.settings.hideRead)
-                fr"AND f.read = false ORDER by f.pub_date DESC"
+                fr"AND f.read = false ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset"
             else
-                fr"ORDER by f.pub_date DESC"
+                fr"ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset"
         val finalQuery = query ++ condition
         finalQuery
             .query[(Channel, Feed)]

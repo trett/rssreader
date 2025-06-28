@@ -25,7 +25,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
     loggerFactory: LoggerFactory[IO]
 ):
 
-    private val logger: Logger[IO] = loggerFactory.getLogger
+    private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     private val ZoneId = java.time.ZoneId.systemDefault()
 
     def createChannel(link: String, user: User): IO[Long] =
@@ -127,8 +127,9 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             }
         }
 
-    def getChannelsAndFeeds(user: User): IO[List[FeedItemData]] =
-        val channels = channelRepository.getChannelsWithFeedsByUser(user)
+    def getChannelsAndFeeds(user: User, page: Int, limit: Int): IO[List[FeedItemData]] =
+        val offset = (page - 1) * limit
+        val channels = channelRepository.getChannelsWithFeedsByUser(user, limit, offset)
         channels.flatMap {
             _.traverse { case (channel, feed) =>
                 IO.pure(
