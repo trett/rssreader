@@ -18,7 +18,12 @@ import org.typelevel.log4cats.slf4j.*
 import pureconfig.ConfigSource
 import ru.trett.rss.server.authorization.{AuthFilter, SessionManager}
 import ru.trett.rss.server.config.{AppConfig, CorsConfig, DbConfig, OAuthConfig}
-import ru.trett.rss.server.controllers.{ChannelController, FeedController, LoginController, UserController}
+import ru.trett.rss.server.controllers.{
+    ChannelController,
+    FeedController,
+    LoginController,
+    UserController
+}
 import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}

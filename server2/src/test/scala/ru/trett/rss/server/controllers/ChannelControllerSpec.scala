@@ -47,7 +47,7 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val request =
             AuthedRequest(user, Request[IO](Method.GET, uri"/api/channels/feeds?page=1&limit=2"))
         val response = authedRoutes.run(request).value.unsafeRunSync().get
-        
+
         response.status shouldBe Status.Ok
         response.as[Json].unsafeRunSync().asArray.get.size shouldBe 2
     }
