@@ -10,6 +10,7 @@ lazy val scala3Version = "3.4.2"
 lazy val circeVersion = "0.14.14"
 lazy val htt4sVersion = "1.0.0-M39"
 lazy val logs4catVersion = "2.7.1"
+lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 lazy val buildImages = taskKey[Unit]("Build docker images")
@@ -23,7 +24,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
         version := projectVersion,
         organization := organizationName,
         scalaVersion := scala3Version,
-        scalacOptions += "-Wunused:imports"
+        scalacOptions ++= customScalaOptions,
     )
     .jsSettings()
     .jvmSettings()
@@ -71,10 +72,10 @@ lazy val client = project
             "io.circe" %%% "circe-generic",
             "io.circe" %%% "circe-parser"
         ).map(_ % circeVersion),
-        scalacOptions += "-Wunused:imports",
+        scalacOptions ++= customScalaOptions,
         inThisBuild(
             List(
-                scalaVersion := "3.3.5",
+                scalaVersion := scala3Version,
                 semanticdbEnabled := true,
                 semanticdbVersion := scalafixSemanticdb.revision
             )
@@ -124,10 +125,10 @@ lazy val server2 = project
         ).map(_ % "1.0.0-RC5"),
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
         libraryDependencies += "org.scalamock" %% "scalamock" % "7.4.0" % Test,
-        scalacOptions += "-Wunused:imports",
+        scalacOptions ++= customScalaOptions,
         inThisBuild(
             List(
-                scalaVersion := "3.3.5",
+                scalaVersion := scala3Version,
                 semanticdbEnabled := true,
                 semanticdbVersion := scalafixSemanticdb.revision
             )

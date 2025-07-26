@@ -117,7 +117,7 @@ object Home:
                 _.events.onItemClick
                     .map(_.detail.item.dataset.get("feedLink"))
                     .map(link => List(link.get))
-                    .flatMapStream(updateFeedRequest _) --> itemClickObserver,
+                    .flatMapStream(updateFeedRequest) --> itemClickObserver,
                 child <-- itemSignal.map(x =>
                     CustomListItem(
                         div(
