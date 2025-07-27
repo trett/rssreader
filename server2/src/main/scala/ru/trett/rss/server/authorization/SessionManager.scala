@@ -12,7 +12,7 @@ class SessionManager[F[_]: Sync] private (sessions: MapRef[F, String, Option[Ses
 
     def createSession(data: SessionData): F[String] =
         for {
-            sessionId <- UUIDGen.randomString
+            sessionId <- UUIDGen.randomString[F]
             _ <- sessions(sessionId).update(_ => Some(data))
         } yield sessionId
 
