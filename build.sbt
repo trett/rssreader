@@ -123,6 +123,7 @@ lazy val server2 = project
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
         ).map(_ % "1.0.0-RC5"),
+        libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.10.4" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
         libraryDependencies += "org.scalamock" %% "scalamock" % "7.4.0" % Test,
         scalacOptions ++= customScalaOptions,
