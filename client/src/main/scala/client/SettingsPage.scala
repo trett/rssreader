@@ -68,7 +68,7 @@ object SettingsPage {
                 "Return to feeds",
                 _.icon := IconName.`nav-back`,
                 _.events.onClick.mapTo(HomeRoute) --> {
-                    Router.currentPageVar.set _
+                    Router.currentPageVar.set
                 },
                 marginBottom.px := 10
             ),
@@ -166,7 +166,7 @@ object SettingsPage {
                 _.id := "channels-list",
                 _.events.onItemDelete
                     .map(_.detail.item.dataset.get("channelId").get)
-                    .flatMap(deleteChannelRequest _) --> deleteChannelObserver,
+                    .flatMap(deleteChannelRequest) --> deleteChannelObserver,
                 _.selectionMode := ListMode.Delete,
                 children <-- channelSignal.split(_.id)(renderChannel),
                 channels --> channelObserver,
@@ -206,7 +206,7 @@ object SettingsPage {
             _.closeFromEvents(openDialogBus.events.map(!_).filter(identity).mapTo(())),
             _.events.onClose
                 .mapTo(addChannelVar.now())
-                .flatMapStream(updateChannelRequest _) --> updateChannelObserver,
+                .flatMapStream(updateChannelRequest) --> updateChannelObserver,
             _.headerText := "New channel",
             sectionTag(
                 div(

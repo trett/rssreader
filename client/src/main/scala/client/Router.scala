@@ -4,7 +4,6 @@ import be.doeraene.webcomponents.ui5.Text
 import com.raquo
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
-import io.circe.generic.semiauto.*
 import org.scalajs.dom
 
 @main

@@ -44,7 +44,8 @@ object Home:
         case Failure(err) => handleError(err)
     }
 
-    private val feedsObserver = feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
+    private val feedsObserver =
+        feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
 
     def render: Element = div(
         cls := "cards",
@@ -117,7 +118,7 @@ object Home:
                 _.events.onItemClick
                     .map(_.detail.item.dataset.get("feedLink"))
                     .map(link => List(link.get))
-                    .flatMapStream(updateFeedRequest _) --> itemClickObserver,
+                    .flatMapStream(updateFeedRequest) --> itemClickObserver,
                 child <-- itemSignal.map(x =>
                     CustomListItem(
                         div(

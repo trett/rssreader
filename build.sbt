@@ -4,12 +4,13 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.0.13"
+lazy val projectVersion = "2.0.14"
 lazy val organizationName = "ru.trett"
-lazy val scala3Version = "3.3.5"
-lazy val circeVersion = "0.14.9"
+lazy val scala3Version = "3.4.2"
+lazy val circeVersion = "0.14.14"
 lazy val htt4sVersion = "1.0.0-M39"
-lazy val logs4catVersion = "2.7.0"
+lazy val logs4catVersion = "2.7.1"
+lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
 lazy val buildImages = taskKey[Unit]("Build docker images")
@@ -23,7 +24,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
         version := projectVersion,
         organization := organizationName,
         scalaVersion := scala3Version,
-        scalacOptions += "-Wunused:imports"
+        scalacOptions ++= customScalaOptions,
     )
     .jsSettings()
     .jvmSettings()
@@ -62,19 +63,19 @@ lazy val client = project
             Cmd("COPY", "opt/docker/dist/", "/usr/share/nginx/html/")
         ),
         dockerExposedPorts := Seq(80),
-        libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0",
-        libraryDependencies += "com.raquo" %%% "laminar" % "17.2.0",
-        libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.0.0",
+        libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.1",
+        libraryDependencies += "com.raquo" %%% "laminar" % "17.2.1",
+        libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.1.0",
         libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0",
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
             "io.circe" %%% "circe-generic",
             "io.circe" %%% "circe-parser"
         ).map(_ % circeVersion),
-        scalacOptions += "-Wunused:imports",
+        scalacOptions ++= customScalaOptions,
         inThisBuild(
             List(
-                scalaVersion := "3.3.5",
+                scalaVersion := scala3Version,
                 semanticdbEnabled := true,
                 semanticdbVersion := scalafixSemanticdb.revision
             )
@@ -94,11 +95,11 @@ lazy val server2 = project
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         libraryDependencies ++= Seq(
-            "org.typelevel" %% "cats-effect" % "3.5.0",
-            "org.slf4j" % "slf4j-api" % "2.0.9",
-            "ch.qos.logback" % "logback-classic" % "1.4.11",
-            "org.flywaydb" % "flyway-core" % "9.22.3",
-            "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
+            "org.typelevel" %% "cats-effect" % "3.5.4",
+            "org.slf4j" % "slf4j-api" % "2.0.13",
+            "ch.qos.logback" % "logback-classic" % "1.5.6",
+            "org.flywaydb" % "flyway-core" % "10.15.2",
+            "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
             "com.rometools" % "rome" % "2.1.0"
         ),
         libraryDependencies ++= Seq(
@@ -122,12 +123,13 @@ lazy val server2 = project
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
         ).map(_ % "1.0.0-RC5"),
+        libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.10.4" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-        libraryDependencies += "org.scalamock" %% "scalamock" % "7.3.3" % Test,
-        scalacOptions += "-Wunused:imports",
+        libraryDependencies += "org.scalamock" %% "scalamock" % "7.4.0" % Test,
+        scalacOptions ++= customScalaOptions,
         inThisBuild(
             List(
-                scalaVersion := "3.3.5",
+                scalaVersion := scala3Version,
                 semanticdbEnabled := true,
                 semanticdbVersion := scalafixSemanticdb.revision
             )
