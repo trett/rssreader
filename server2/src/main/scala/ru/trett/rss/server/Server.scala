@@ -32,7 +32,6 @@ import ru.trett.rss.server.services.{
     ChannelService,
     FeedService,
     SummarizeService,
-    Summarizer,
     UpdateTask,
     UserService
 }
@@ -69,8 +68,11 @@ object Server extends IOApp:
                     feedService = FeedService(feedRepository)
                     userRepository = UserRepository(xa)
                     userService = UserService(userRepository)
-                    summarizer = new Summarizer(appConfig.google.apiKey, client)
-                    summarizeService = new SummarizeService(summarizer, client)
+                    summarizeService = new SummarizeService(
+                        feedRepository,
+                        client,
+                        appConfig.google.apiKey
+                    )
                     channelService = ChannelService(channelRepository, client)
                     _ <- logger.info("Starting server on port: " + appConfig.server.port)
                     exitCode <- UpdateTask(channelService, userService).background.use { task =>

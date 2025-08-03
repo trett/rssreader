@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.0.14"
+lazy val projectVersion = "2.1.0"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.4.2"
 lazy val circeVersion = "0.14.14"
@@ -123,10 +123,12 @@ lazy val server2 = project
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
         ).map(_ % "1.0.0-RC5"),
+        libraryDependencies += "org.jsoup" % "jsoup" % "1.21.1", 
         libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.10.4" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
         libraryDependencies += "org.scalamock" %% "scalamock" % "7.4.0" % Test,
         scalacOptions ++= customScalaOptions,
+        Compile / run / fork := true,
         inThisBuild(
             List(
                 scalaVersion := scala3Version,

@@ -6,7 +6,6 @@ import org.http4s.*
 import org.http4s.circe.*
 import org.http4s.client.*
 import org.http4s.dsl.io.*
-import org.http4s.ember.client.*
 import org.http4s.headers.Authorization
 import org.http4s.headers.Location
 import org.http4s.implicits.*
@@ -76,24 +75,21 @@ object LoginController:
                 } yield response
 
             case GET -> Root / "signup_callback" :? CodeQueryParamMatcher(code) =>
-                val client = EmberClientBuilder.default[IO].build
-                client.use { c =>
-                    for {
-                        token <- getToken(
-                            c,
-                            code,
-                            oauthConfig,
-                            oauthConfig.redirectUri + "/signup_callback"
-                        )
-                        userInfo <- getUserInfo(c, token.access_token)
-                        response <- userService
-                            .createUser(userInfo.id, userInfo.name, userInfo.email)
-                            .flatMap {
-                                case Left(_)  => SeeOther(Location(uri"/"))
-                                case Right(_) => BadRequest("Failed to create user")
-                            }
-                    } yield response
-                }
+                for {
+                    token <- getToken(
+                        client,
+                        code,
+                        oauthConfig,
+                        oauthConfig.redirectUri + "/signup_callback"
+                    )
+                    userInfo <- getUserInfo(client, token.access_token)
+                    response <- userService
+                        .createUser(userInfo.id, userInfo.name, userInfo.email)
+                        .flatMap {
+                            case Left(_)  => SeeOther(Location(uri"/"))
+                            case Right(_) => BadRequest("Failed to create user")
+                        }
+                } yield response
 
             case req @ POST -> Root / "logout" =>
                 req.cookies.find(_.name == "sessionId") match {

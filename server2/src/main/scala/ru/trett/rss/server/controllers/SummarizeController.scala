@@ -8,16 +8,13 @@ import ru.trett.rss.server.services.SummarizeService
 
 object SummarizeController {
 
-  def routes(summarizeService: SummarizeService): AuthedRoutes[User, IO] = {
-    AuthedRoutes.of[User, IO] {
-      case GET -> Root / "api" / "summarize" :? UrlQueryParamMatcher(url) as user =>
-        for {
-          summary <- summarizeService.getSummary(url)
-          response <- Ok(summary)
-        } yield response
+    def routes(summarizeService: SummarizeService): AuthedRoutes[User, IO] = {
+        AuthedRoutes.of[User, IO] { case GET -> Root / "api" / "summarize" as user =>
+            for {
+                summary <- summarizeService.getSummary(user)
+                response <- Ok(summary)
+            } yield response
+        }
     }
-  }
-
-  private object UrlQueryParamMatcher extends QueryParamDecoderMatcher[String]("url")
 
 }

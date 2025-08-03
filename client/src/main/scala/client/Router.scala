@@ -15,6 +15,7 @@ case object LoginRoute extends Route
 case object HomeRoute extends Route
 case object ErrorRoute extends Route
 case object SettingsRoute extends Route
+case object SummaryRoute extends Route
 case object NotFoundRoute extends Route
 
 object Router:
@@ -26,11 +27,13 @@ object Router:
     private def notifications = NotifyComponent.render
     def home: Element = Home.render
     def settings: Element = SettingsPage.render
+    def summary: Element = SummaryPage.render
 
     private val root = div(child <-- currentPageVar.signal.map {
         case LoginRoute    => login
         case HomeRoute     => div(navbar, notifications, home)
         case SettingsRoute => div(navbar, notifications, settings)
+        case SummaryRoute  => div(navbar, notifications, summary)
         case ErrorRoute    => div(Text("An error occured"))
         case NotFoundRoute => div(Text("Not Found"))
     })

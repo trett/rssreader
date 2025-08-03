@@ -3,13 +3,11 @@ package client
 import be.doeraene.webcomponents.ui5.configkeys.*
 import be.doeraene.webcomponents.ui5.{Button, *}
 import client.NetworkUtils.*
-import com.raquo.laminar.DomApi
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
-import org.scalajs.dom
 import ru.trett.rss.models.{ChannelData, FeedItemData}
 
 import java.time.format.DateTimeFormatter
@@ -154,17 +152,6 @@ object Home:
                 )
             )
         )
-    )
-
-    private def unsafeParseToHtmlFragment(html: String): HtmlElement = div(
-        DomApi
-            .unsafeParseHtmlStringIntoNodeArray(html)
-            .flatMap {
-                case el: dom.html.Element => Some(el)
-                case raw                  => Some(div(raw.textContent).ref)
-            }
-            .filter(_.textContent.nonEmpty)
-            .map(foreignHtmlElement)
     )
 
     private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =

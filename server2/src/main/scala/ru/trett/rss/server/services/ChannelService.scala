@@ -150,4 +150,3 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             case 0 => IO.raiseError(Exception("Channel does not belong to the user"))
             case _ => IO.pure(id)
         }
-
