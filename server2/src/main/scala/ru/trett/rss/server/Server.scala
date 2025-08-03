@@ -22,12 +22,20 @@ import ru.trett.rss.server.controllers.{
     ChannelController,
     FeedController,
     LoginController,
+    SummarizeController,
     UserController
 }
 import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}
-import ru.trett.rss.server.services.{ChannelService, FeedService, UpdateTask, UserService}
+import ru.trett.rss.server.services.{
+    ChannelService,
+    FeedService,
+    SummarizeService,
+    Summarizer,
+    UpdateTask,
+    UserService
+}
 
 object Server extends IOApp:
 
@@ -61,6 +69,8 @@ object Server extends IOApp:
                     feedService = FeedService(feedRepository)
                     userRepository = UserRepository(xa)
                     userService = UserService(userRepository)
+                    summarizer = new Summarizer(appConfig.google.apiKey, client)
+                    summarizeService = new SummarizeService(summarizer, client)
                     channelService = ChannelService(channelRepository, client)
                     _ <- logger.info("Starting server on port: " + appConfig.server.port)
                     exitCode <- UpdateTask(channelService, userService).background.use { task =>
@@ -80,7 +90,8 @@ object Server extends IOApp:
                                                 feedService,
                                                 appConfig.oauth,
                                                 authFilter,
-                                                client
+                                                client,
+                                                summarizeService
                                             )
                                         )
                                     ).orNotFound
@@ -132,7 +143,8 @@ object Server extends IOApp:
         feedService: FeedService,
         oauthConfig: OAuthConfig,
         authFilter: AuthFilter[IO],
-        client: Client[IO]
+        client: Client[IO],
+        summarizeService: SummarizeService
     ): HttpRoutes[IO] =
         unprotectedRoutes(sessionManager, oauthConfig, userService, client) <+>
             authFilter.middleware(sessionManager, userService)(
@@ -140,6 +152,7 @@ object Server extends IOApp:
                     channelService,
                     userService,
                     feedService,
+                    summarizeService,
                     user => authFilter.updateCache(user)
                 )
             )
@@ -156,11 +169,13 @@ object Server extends IOApp:
         channelService: ChannelService,
         userService: UserService,
         feedService: FeedService,
+        summarizeService: SummarizeService,
         cacheUpdater: User => IO[Unit]
     ): AuthedRoutes[User, IO] =
         ChannelController.routes(channelService)
             <+> UserController.routes(userService, cacheUpdater)
             <+> FeedController.routes(feedService)
+            <+> SummarizeController.routes(summarizeService)
 
     private def withErrorLogging(routes: HttpRoutes[IO]) =
         ErrorHandling.Recover.total(
