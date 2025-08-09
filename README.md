@@ -2,7 +2,7 @@
 
 # Simple RSS Reader
 
-Written using Scala and Laminar with UI5 components
+Written using Scala and ScalaJs/Laminar with UI5 components
 
 Authorization based on Google OAuth2 API
 
@@ -29,6 +29,8 @@ MIT
 `DATASOURCE_PASS` - DB password
 
 `DATASOURCE_URL` - DB url
+
+`GOOGLE_API_KEY` - Google AI studio token
 
 ### Local development
 
