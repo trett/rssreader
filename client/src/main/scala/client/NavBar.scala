@@ -64,16 +64,6 @@ object NavBar {
                             EventBus.emit(Home.markAllAsReadBus -> (), popoverBus -> None)
                         }
                     ),
-                    // _.item(
-                    //     _.icon := IconName.`batch-payments`,
-                    //     "Summary",
-                    //     onClick
-                    //         .mapTo(())
-                    //         .flatMap(_ => summarizeRequest()) --> { summary =>
-                    //         Router.currentPageVar.set(SummaryRoute(summary))
-                    //         popoverBus.writer.onNext(None)
-                    //     }
-                    // ),
                     _.item(_.icon := IconName.log, "Sign out") // TODO
                 )
             )
