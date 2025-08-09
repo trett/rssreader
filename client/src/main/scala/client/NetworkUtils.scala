@@ -7,6 +7,9 @@ import com.raquo.airstream.core.Observer
 import io.circe.Decoder
 import io.circe.parser.decode
 import org.scalajs.dom.Response
+import com.raquo.laminar.DomApi
+import com.raquo.laminar.api.L.*
+import org.scalajs.dom
 
 import scala.util.Failure
 import scala.util.Success
@@ -39,4 +42,15 @@ object NetworkUtils {
         case _                                  => errorMessage(ex)
 
     AirstreamError.registerUnhandledErrorCallback(err => errorMessage(err))
+
+    def unsafeParseToHtmlFragment(html: String): HtmlElement = div(
+        DomApi
+            .unsafeParseHtmlStringIntoNodeArray(html)
+            .flatMap {
+                case el: dom.html.Element => Some(el)
+                case raw                  => Some(div(raw.textContent).ref)
+            }
+            .filter(_.textContent.nonEmpty)
+            .map(foreignHtmlElement)
+    )
 }

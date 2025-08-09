@@ -9,7 +9,7 @@ import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
 import client.AppConfig.BASE_URI
-import client.NetworkUtils.responseDecoder
+import client.NetworkUtils.{responseDecoder}
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows
@@ -27,6 +27,11 @@ object NavBar {
             _.primaryTitle := "RSS Reader",
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
+            _.item(
+                _.icon := IconName.ai,
+                _.text := "Summary",
+                onClick.mapTo(()) --> { Router.currentPageVar.set(SummaryRoute) }
+            ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
             _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) }
         ),

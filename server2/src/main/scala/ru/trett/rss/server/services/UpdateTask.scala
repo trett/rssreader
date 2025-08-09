@@ -44,6 +44,7 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
         ) >> task
 
 object UpdateTask:
+
     def apply(channelService: ChannelService, userService: UserService)(using
         loggerFactory: LoggerFactory[IO]
     ): IO[List[Int]] =
