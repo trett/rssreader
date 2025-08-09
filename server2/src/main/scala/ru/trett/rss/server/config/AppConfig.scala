@@ -4,8 +4,13 @@ import pureconfig.*
 
 import scala.concurrent.duration.FiniteDuration
 
-case class AppConfig(server: ServerConfig, db: DbConfig, oauth: OAuthConfig, cors: CorsConfig)
-    derives ConfigReader
+case class AppConfig(
+    server: ServerConfig,
+    db: DbConfig,
+    oauth: OAuthConfig,
+    cors: CorsConfig,
+    google: GoogleConfig
+) derives ConfigReader
 
 case class ServerConfig(port: Int, host: String = "0.0.0.0") derives ConfigReader
 
@@ -17,3 +22,5 @@ case class OAuthConfig(clientId: String, clientSecret: String, redirectUri: Stri
 
 case class CorsConfig(allowedOrigin: String, allowCredentials: Boolean, maxAge: FiniteDuration)
     derives ConfigReader
+
+case class GoogleConfig(apiKey: String) derives ConfigReader

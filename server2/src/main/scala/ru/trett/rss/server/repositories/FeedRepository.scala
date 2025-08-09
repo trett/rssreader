@@ -36,3 +36,11 @@ class FeedRepository(xa: Transactor[IO]):
       FROM feeds 
       WHERE channel_id = $channelId AND read = false
     """.query[Int].unique.transact(xa)
+
+    def getUnreadFeeds(user: User): IO[List[Feed]] =
+        sql"""
+      SELECT f.link, f.channel_id, f.title, f.description, f.pub_date, f.read
+      FROM feeds f
+      JOIN user_channels uc ON f.channel_id = uc.channel_id
+      WHERE uc.user_id = ${user.id} AND f.read = false LIMIT 40
+    """.query[Feed].to[List].transact(xa)
