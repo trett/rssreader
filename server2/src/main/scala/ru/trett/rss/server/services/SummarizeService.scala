@@ -32,7 +32,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
     given Decoder[GeminiResponse] = Decoder.forProduct1("candidates")(GeminiResponse.apply)
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     private val endpoint =
-        uri"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent"
+        uri"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
 
     def getSummary(user: User): IO[String] = {
         for {
@@ -71,7 +71,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                                     8. Use <em> tags for emphasized text.
                                     9. Never use <script> tags.
                                     10. Group the summary by topic.
-                                    Now, following these rules exactly summarize the following text in Russian: $text."""
+                                    Now, following these rules exactly summarize the following text. Answer in Russian: $text."""
                                 )
                             )
                         )
