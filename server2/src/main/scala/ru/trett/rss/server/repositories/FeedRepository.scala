@@ -42,5 +42,5 @@ class FeedRepository(xa: Transactor[IO]):
       SELECT f.link, f.channel_id, f.title, f.description, f.pub_date, f.read
       FROM feeds f
       JOIN user_channels uc ON f.channel_id = uc.channel_id
-      WHERE uc.user_id = ${user.id} AND f.read = false LIMIT 40
+      WHERE uc.user_id = ${user.id} AND f.read = false LIMIT 60
     """.query[Feed].to[List].transact(xa)
