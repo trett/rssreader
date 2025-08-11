@@ -4,12 +4,17 @@ import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import client.NetworkUtils.HOST
 import com.raquo.laminar.api.L.*
+import scala.scalajs.js
+import scala.scalajs.js.annotation.JSImport
+
+@js.native @JSImport("/images/background.png", JSImport.Default)
+val backgroundImage: String = js.native
 
 object LoginPage {
 
     def render: Element = div(
         div(
-            background := "url(images/background.png)",
+            background := s"url($backgroundImage)",
             backgroundSize := "cover",
             backgroundPosition := "center",
             backgroundRepeat := "no-repeat",
@@ -35,9 +40,9 @@ object LoginPage {
                 ),
                 div(
                     display := "flex",
-                    flexDirection := "column", // Stack buttons vertically
-                    alignItems := "center", // Center buttons horizontally
-                    gap := "1rem", // Add spacing between buttons
+                    flexDirection := "column",
+                    alignItems := "center",
+                    gap := "1rem",
                     Link(
                         cls("google-button", "signup-button"),
                         "Sign Up",
