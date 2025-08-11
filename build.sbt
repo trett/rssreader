@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.1.2"
+lazy val projectVersion = "2.1.3"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.4.2"
 lazy val circeVersion = "0.14.14"

@@ -4,7 +4,7 @@
 }
 
 .google-button {
-    background-color: #4285f4;
+    background-color: #eaa623;
     color: white;
     border-radius: 5px;
     padding: 10px 20px;
@@ -35,3 +35,6 @@
     --sapContent_FocusStyle: none;
 }
 
+.signup-button {
+    background-color: #6c757d !important; /* A dark grey color */
+}
