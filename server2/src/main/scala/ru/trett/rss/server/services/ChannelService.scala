@@ -78,6 +78,9 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                                 }
                         }
                     }
+                    .handleErrorWith { error =>
+                        logger.error(error)(s"Failed to get channel: $link") *> IO.none
+                    }
         } yield channel
 
     private def parse(reader: XmlReader, link: String): IO[Option[Channel]] = {
