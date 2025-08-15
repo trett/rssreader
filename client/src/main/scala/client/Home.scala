@@ -11,7 +11,7 @@ import io.circe.syntax.*
 import ru.trett.rss.models.{ChannelData, FeedItemData}
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, OffsetDateTime, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.language.implicitConversions
 import scala.scalajs.js
 import scala.util.{Failure, Success, Try}

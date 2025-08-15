@@ -13,7 +13,6 @@ import client.NetworkUtils.{responseDecoder}
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows
-import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
 
 object NavBar {
