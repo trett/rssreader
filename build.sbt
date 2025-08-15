@@ -4,9 +4,9 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.1.4"
+lazy val projectVersion = "2.1.5"
 lazy val organizationName = "ru.trett"
-lazy val scala3Version = "3.4.2"
+lazy val scala3Version = "3.7.2"
 lazy val circeVersion = "0.14.14"
 lazy val htt4sVersion = "1.0.0-M39"
 lazy val logs4catVersion = "2.7.1"
@@ -59,13 +59,13 @@ lazy val client = project
         Universal / mappings ++= directory(buildClientDist.value),
         dockerRepository := sys.env.get("REGISTRY"),
         dockerCommands := Seq(
-            Cmd("FROM", "nginx:1.26-alpine"),
+            Cmd("FROM", "nginx:1.29.1-alpine"),
             Cmd("COPY", "opt/docker/dist/", "/usr/share/nginx/html/")
         ),
         dockerExposedPorts := Seq(80),
         libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.1",
         libraryDependencies += "com.raquo" %%% "laminar" % "17.2.1",
-        libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.1.0",
+        libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.12.1",
         libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0",
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
