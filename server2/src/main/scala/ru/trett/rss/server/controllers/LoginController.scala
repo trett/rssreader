@@ -86,8 +86,8 @@ object LoginController:
                     response <- userService
                         .createUser(userInfo.id, userInfo.name, userInfo.email)
                         .flatMap {
-                            case Left(_)  => SeeOther(Location(uri"/"))
-                            case Right(_) => BadRequest("Failed to create user")
+                            case Right(_) => MovedPermanently(Location(uri"/"), "Session expired")
+                            case Left(_)  => BadRequest("Failed to create user")
                         }
                 } yield response
 
