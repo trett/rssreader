@@ -1,12 +1,13 @@
-name: 'Build and Publish'
+name: 'Run Tests'
 
 on:
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  Build-Containers:
+  Test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,11 +23,5 @@ jobs:
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
 
-      - name: Login to registry
-        run: echo ${{ secrets.TOKEN }} | docker login --username oauth --password-stdin cr.yandex
-
-      - name: Push images
-        run: sbt pushImages
-        env: 
-          SERVER_URL: ${{ secrets.SERVER_URL }}
-          REGISTRY: ${{ secrets.REGISTRY }}
+      - name: Run tests
+        run: sbt server2/test
