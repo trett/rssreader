@@ -43,15 +43,18 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             result <- channels.parTraverse { channel =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
-                    maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds)
-                    rows <- maybeUpdatedChannel
-                        .map(updatedChannel =>
+                    maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
+                    rows <- maybeUpdatedChannel match {
+                        case Right(Some(updatedChannel)) =>
                             channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
-                        )
-                        .getOrElse {
-                            logger.error(s"Failed to update channel: ${channel.title}")
-                                *> IO.pure(0)
-                        }
+                        case Right(None) =>
+                            logger.error(
+                                s"Failed to update channel. ${channel.title}. Response is empty."
+                            ) *> IO.pure(0)
+                        case Left(error) =>
+                            logger.error(error)(s"Failed to update channel: ${channel.title}") *> IO
+                                .pure(0)
+                    }
                 } yield rows
             }
         } yield result
