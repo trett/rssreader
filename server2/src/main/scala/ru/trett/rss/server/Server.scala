@@ -22,6 +22,7 @@ import ru.trett.rss.server.controllers.{
     ChannelController,
     FeedController,
     LoginController,
+    LogoutController,
     SummarizeController,
     UserController
 }
@@ -93,7 +94,8 @@ object Server extends IOApp:
                                                 appConfig.oauth,
                                                 authFilter,
                                                 client,
-                                                summarizeService
+                                                summarizeService,
+                                                new LogoutController[IO](sessionManager)
                                             )
                                         )
                                     ).orNotFound
@@ -146,7 +148,8 @@ object Server extends IOApp:
         oauthConfig: OAuthConfig,
         authFilter: AuthFilter[IO],
         client: Client[IO],
-        summarizeService: SummarizeService
+        summarizeService: SummarizeService,
+        logoutController: LogoutController[IO]
     ): HttpRoutes[IO] =
         unprotectedRoutes(sessionManager, oauthConfig, userService, client) <+>
             authFilter.middleware(sessionManager, userService)(
@@ -155,7 +158,8 @@ object Server extends IOApp:
                     userService,
                     feedService,
                     summarizeService,
-                    user => authFilter.updateCache(user)
+                    user => authFilter.updateCache(user),
+                    logoutController
                 )
             )
 
@@ -172,12 +176,14 @@ object Server extends IOApp:
         userService: UserService,
         feedService: FeedService,
         summarizeService: SummarizeService,
-        cacheUpdater: User => IO[Unit]
+        cacheUpdater: User => IO[Unit],
+        logoutController: LogoutController[IO]
     ): AuthedRoutes[User, IO] =
         ChannelController.routes(channelService)
             <+> UserController.routes(userService, cacheUpdater)
             <+> FeedController.routes(feedService)
             <+> SummarizeController.routes(summarizeService)
+            <+> logoutController.routes
 
     private def withErrorLogging(routes: HttpRoutes[IO]) =
         ErrorHandling.Recover.total(

@@ -53,4 +53,7 @@ object NetworkUtils {
             .filter(_.textContent.nonEmpty)
             .map(foreignHtmlElement)
     )
+
+    def logout(): EventStream[Unit] =
+        FetchStream.post(s"$HOST/api/logout", _.body("")).mapTo(())
 }
