@@ -24,4 +24,4 @@ jobs:
       - uses: sbt/setup-sbt@v1
 
       - name: Run tests
-        run: sbt server2/test
+        run: sbt server/test
