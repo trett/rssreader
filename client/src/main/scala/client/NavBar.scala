@@ -63,7 +63,13 @@ object NavBar {
                             EventBus.emit(Home.markAllAsReadBus -> (), popoverBus -> None)
                         }
                     ),
-                    _.item(_.icon := IconName.log, "Sign out") // TODO
+                    _.item(
+                        _.icon := IconName.log,
+                        "Sign out",
+                        onClick.flatMap(_ => NetworkUtils.logout()) --> { _ =>
+                            Router.currentPageVar.set(LoginRoute)
+                        }
+                    )
                 )
             )
         )

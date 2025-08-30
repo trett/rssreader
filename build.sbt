@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.1.7"
+lazy val projectVersion = "2.1.8"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.2"
 lazy val circeVersion = "0.14.14"
@@ -95,7 +95,7 @@ lazy val server2 = project
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         libraryDependencies ++= Seq(
-            "org.typelevel" %% "cats-effect" % "3.5.4",
+            "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.13",
             "ch.qos.logback" % "logback-classic" % "1.5.6",
             "org.flywaydb" % "flyway-core" % "10.15.2",
