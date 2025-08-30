@@ -82,15 +82,15 @@ lazy val client = project
         )
     )
 
-lazy val server2 = project
-    .in(file("server2"))
+lazy val server = project
+    .in(file("server"))
     .dependsOn(shared.jvm)
     .enablePlugins(JavaAppPackaging, DockerPlugin)
     .settings(
         version := projectVersion,
         organization := organizationName,
         scalaVersion := scala3Version,
-        name := "server2",
+        name := "server",
         dockerBaseImage := "eclipse-temurin:17-jre-noble",
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
@@ -144,9 +144,9 @@ ThisBuild / buildClientDist := {
 }
 buildImages := {
     (client / Docker / publishLocal).value
-    (server2 / Docker / publishLocal).value
+    (server / Docker / publishLocal).value
 }
 pushImages := {
     (client / Docker / publish).value
-    (server2 / Docker / publish).value
+    (server / Docker / publish).value
 }
