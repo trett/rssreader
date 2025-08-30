@@ -12,11 +12,11 @@ class LogoutController[F[_]: Async: LoggerFactory](sessionManager: SessionManage
 
   private val logger = LoggerFactory[F].getLogger
 
-  val routes: AuthedRoutes[User, F] = AuthedRoutes.of { case authReq @ POST -> Root / "logout" as user =>
+  val routes: AuthedRoutes[User, F] = AuthedRoutes.of { case authReq @ POST -> Root / "api" / "logout" as user =>
     authReq.req.cookies.find(_.name == "sessionId") match {
         case Some(cookie) =>
             for {
-                _ <- logger.info(s"Logging out session: ${cookie.content} for user: ${user.email}")
+                _ <- logger.info(s"Deleting session for user: ${user.email}")
                 _ <- sessionManager.deleteSession(cookie.content)
                 res <- Ok()
             } yield res
