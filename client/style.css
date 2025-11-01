@@ -38,3 +38,14 @@
 .signup-button {
     background-color: #6c757d !important; /* A dark grey color */
 }
+
+@media (min-width: 768px) {
+  .app-container {
+    background-color: #e1e1e1;
+    min-height: 100vh;
+  }
+  .main-content {
+    margin: 0 auto;
+    max-width: 50%;
+  }
+}

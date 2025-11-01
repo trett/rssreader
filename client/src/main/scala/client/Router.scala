@@ -29,13 +29,16 @@ object Router:
     def settings: Element = SettingsPage.render
     def summary: Element = SummaryPage.render
 
-    private val root = div(child <-- currentPageVar.signal.map {
-        case LoginRoute    => login
-        case HomeRoute     => div(navbar, notifications, home)
-        case SettingsRoute => div(navbar, notifications, settings)
-        case SummaryRoute  => div(navbar, notifications, summary)
-        case ErrorRoute    => div(Text("An error occured"))
-        case NotFoundRoute => div(Text("Not Found"))
-    })
+    private val root = div(
+        child <-- currentPageVar.signal.map {
+            case LoginRoute    => login
+            case HomeRoute     => div(navbar, notifications, home)
+            case SettingsRoute => div(navbar, notifications, settings)
+            case SummaryRoute  => div(navbar, notifications, summary)
+            case ErrorRoute    => div(Text("An error occured"))
+            case NotFoundRoute => div(Text("Not Found"))
+        },
+        className := "app-container"
+    )
 
     def appElement(): Element = div(root)

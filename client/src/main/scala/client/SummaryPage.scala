@@ -14,14 +14,17 @@ object SummaryPage {
             FetchStream.get(req)
         }
         val isLoading = response.map(_.isPending)
-        Panel(
-            _.headerText := "Summary",
-            BusyIndicator(
-                _.active <-- isLoading,
-                UList(
-                    child <-- response
-                        .splitStatus((resolved, _) => resolved.output, (pending, _) => "")
-                        .map(unsafeParseToHtmlFragment(_))
+        div(
+            cls := "main-content",
+            Panel(
+                _.headerText := "Summary",
+                BusyIndicator(
+                    _.active <-- isLoading,
+                    UList(
+                        child <-- response
+                            .splitStatus((resolved, _) => resolved.output, (pending, _) => "")
+                            .map(unsafeParseToHtmlFragment(_))
+                    )
                 )
             )
         )
