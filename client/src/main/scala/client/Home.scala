@@ -46,7 +46,7 @@ object Home:
         feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
 
     def render: Element = div(
-        cls := "cards",
+        cls := "cards main-content",
         div(
             onMountBind(ctx =>
                 refreshFeedsBus --> { page =>
