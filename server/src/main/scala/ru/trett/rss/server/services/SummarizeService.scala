@@ -39,7 +39,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             feeds <- feedRepository.getUnreadFeeds(user)
             text = feeds.map(_.description).mkString("\n")
             strippedText = Jsoup.parse(text).text()
-            summary <- summarize(strippedText, user.settings.summaryLanguage.getOrElse("Russian"))
+            summary <- summarize(strippedText, user.settings.summaryLanguage.getOrElse("English"))
         } yield summary
     }
 
