@@ -39,11 +39,11 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             feeds <- feedRepository.getUnreadFeeds(user)
             text = feeds.map(_.description).mkString("\n")
             strippedText = Jsoup.parse(text).text()
-            summary <- summarize(strippedText)
+            summary <- summarize(strippedText, user.settings.summaryLanguage.getOrElse("Russian"))
         } yield summary
     }
 
-    private def summarize(text: String): IO[String] = {
+    private def summarize(text: String, language: String): IO[String] = {
         val request = Request[IO](
             method = Method.POST,
             uri = endpoint,
@@ -71,7 +71,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                                     8. Use <em> tags for emphasized text.
                                     9. Never use <script> tags.
                                     10. Group the summary by topic.
-                                    Now, following these rules exactly summarize the following text. Answer in Russian: $text."""
+                                     Now, following these rules exactly summarize the following text. Answer in $language: $text."""
                                 )
                             )
                         )

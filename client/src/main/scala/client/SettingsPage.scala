@@ -110,6 +110,33 @@ object SettingsPage {
                         )
                     )
                 ),
+                br(),
+                div(
+                    formBlockStyle,
+                    Label(
+                        "Summary language",
+                        _.forId := "summary-language-cmb",
+                        _.showColon := true,
+                        _.wrappingType := WrappingType.None,
+                        paddingRight.px := 20
+                    ),
+                    Select(
+                        _.id := "summary-language-cmb",
+                        _.events.onChange.map(_.detail.selectedOption.textContent) --> settingsVar
+                            .updater[String]((a, b) =>
+                                a.map(x => x.copy(summaryLanguage = Some(b)))
+                            ),
+                        List("English", "Spanish", "Mandarin Chinese", "Hindi", "Russian").map(
+                            lang =>
+                                Select.option(
+                                    _.selected <-- settingsSignal.map(x =>
+                                        x.flatMap(_.summaryLanguage).contains(lang)
+                                    ),
+                                    lang
+                                )
+                        )
+                    )
+                ),
                 div(
                     paddingTop.px := 10,
                     Button(

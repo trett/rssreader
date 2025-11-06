@@ -32,7 +32,11 @@ object UserController {
                 for {
                     settings <- req.req.as[UserSettings]
                     updatedUser = user.copy(settings =
-                        User.Settings(settings.retentionDays, settings.hideRead)
+                        User.Settings(
+                            settings.retentionDays,
+                            settings.hideRead,
+                            settings.summaryLanguage
+                        )
                     )
                     result <- userService.updateUserSettings(updatedUser)
                     _ <- logger.info(
