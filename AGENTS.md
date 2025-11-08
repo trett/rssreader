@@ -45,3 +45,8 @@ The project is a multi-module sbt project with the following key directories:
 - **Testing**: Tests are run using `sbt test`.
 - **Running Locally**: The `scripts` directory contains `docker-compose.yml` files to run the application stack (backend, frontend, database) locally.
 - **CI/CD**: GitHub Actions are configured to build and test the application on push and pull requests.
+
+## Repository
+
+- The main branch for this project is called "main". Never push directly to main; always use feature branches and create pull requests for changes.
+- Commit messages should follow the Conventional Commits specification for clarity and consistency.

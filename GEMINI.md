@@ -1,4 +1,4 @@
 # GEMINI
 
-Follow instructions from @./AGENTS.md.
+Follow instructions from @./AGENTS.md
 
