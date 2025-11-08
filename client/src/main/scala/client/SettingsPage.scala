@@ -91,22 +91,25 @@ object SettingsPage {
                 div(
                     formBlockStyle,
                     Label(
-                        "Days to keep",
-                        _.forId := "days-to-keep-cmb",
+                        "Summary language",
+                        _.forId := "summary-language-cmb",
                         _.showColon := true,
                         _.wrappingType := WrappingType.None,
                         paddingRight.px := 20
                     ),
-                    StepInput(
-                        _.id := "days-to-keep-cmb",
-                        _.value <-- settingsSignal.map(x =>
-                            x.map(_.retentionDays.toDouble).getOrElse(3)
-                        ),
-                        _.min := 1,
-                        _.max := 14,
-                        _.step := 1,
-                        _.events.onChange.map(x => x.target.value) --> settingsVar.updater[Double](
-                            (a, b) => a.map(x => x.copy(retentionDays = b.toInt))
+                    Select(
+                        _.id := "summary-language-cmb",
+                        _.events.onChange.map(_.detail.selectedOption.textContent) --> settingsVar
+                            .updater[String]((a, b) =>
+                                a.map(x => x.copy(summaryLanguage = Some(b)))
+                            ),
+                        List("English", "Serbian", "Russian", "German", "Spanish").map(lang =>
+                            Select.option(
+                                _.selected <-- settingsSignal.map(x =>
+                                    x.flatMap(_.summaryLanguage).contains(lang)
+                                ),
+                                lang
+                            )
                         )
                     )
                 ),

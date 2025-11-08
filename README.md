@@ -6,6 +6,10 @@ Written using Scala and ScalaJs/Laminar with UI5 components
 
 Authorization based on Google OAuth2 API
 
+## Summary
+
+The application can generate a summary of all unread feeds.
+
 ## Browser Support
 
 Supports all modern browsers as well as adapted to mobile

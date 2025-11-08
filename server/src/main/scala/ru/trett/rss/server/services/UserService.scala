@@ -23,7 +23,7 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
     def getUserSettings(id: String): IO[Option[UserSettings]] =
         userRepository.findUserById(id).map {
             case Some(user) =>
-                Some(UserSettings(user.name, user.settings.retentionDays, user.settings.hideRead))
+                Some(UserSettings(user.name, user.settings.hideRead, user.settings.summaryLanguage))
             case None => None
         }
 
