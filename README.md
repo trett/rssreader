@@ -8,7 +8,7 @@ Authorization based on Google OAuth2 API
 
 ## Summary
 
-The application can generate a summary of all unread feeds. The user can choose the language of the summary from the following options: English, Spanish, Mandarin Chinese, Hindi, and Russian.
+The application can generate a summary of all unread feeds.
 
 ## Browser Support
 
