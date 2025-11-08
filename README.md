@@ -1,47 +1,124 @@
 [![Build and Publish](https://github.com/trett/rssreader/actions/workflows/build.yml/badge.svg)](https://github.com/trett/rssreader/actions/workflows/build.yml)
 
-# Simple RSS Reader
+# RSS Reader
 
-Written using Scala and ScalaJs/Laminar with UI5 components
+A modern, web-based RSS reader application built with Scala, Scala.js, and Laminar. It provides a simple and clean interface for reading your favorite RSS feeds, with the ability to generate summaries of unread articles.
 
-Authorization based on Google OAuth2 API
+## Features
 
-## Summary
+-   **Feed Management**: Add and manage your RSS feed subscriptions.
+-   **Clean Reading Interface**: A simple and uncluttered interface for reading articles.
+-   **Automatic Updates**: Feeds are automatically fetched in the background to keep your content up-to-date.
+-   **AI-Powered Summaries**: Generate summaries of all your unread articles using Google's Generative AI.
+-   **Secure Authentication**: Authentication is handled securely via Google OAuth2.
+-   **Responsive Design**: The application is designed to work on both desktop and mobile browsers.
 
-The application can generate a summary of all unread feeds.
+## Tech Stack
 
-## Browser Support
+### Backend
 
-Supports all modern browsers as well as adapted to mobile
+-   [Scala](https://www.scala-lang.org/)
+-   [http4s](https://http4s.org/): A functional, type-safe HTTP library.
+-   [doobie](https://tpolecat.github.io/doobie/): A functional JDBC layer for Scala.
+-   [PostgreSQL](https://www.postgresql.org/): The application uses a PostgreSQL database.
+-   [Flyway](https://flywaydb.org/): For database migrations.
+-   [circe](https://circe.github.io/circe/): For JSON manipulation.
+-   [PureConfig](https://pureconfig.github.io/): For loading configuration.
+
+### Frontend
+
+-   [Scala.js](https://www.scala-js.org/): To compile Scala code to JavaScript.
+-   [Laminar](https://laminar.dev/): A reactive UI library for Scala.js.
+-   [UI5 Web Components](https://sap.github.io/ui5-webcomponents/): A set of enterprise-grade UI components.
+-   [Vite](https://vitejs.dev/): For frontend tooling and development server.
+
+## Getting Started
+
+### Prerequisites
+
+-   [Java 17+](https://www.oracle.com/java/technologies/downloads/)
+-   [sbt](https://www.scala-sbt.org/)
+-   [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
+-   [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
+
+### Running with Docker (Recommended)
+
+This is the easiest way to run the application.
+
+1.  **Set up environment variables**:
+    You'll need to provide your Google OAuth credentials. Create a `.env` file in the `scripts/local-docker` directory with the following content:
+    ```
+    CLIENT_ID=your_google_client_id
+    CLIENT_SECRET=your_google_client_secret
+    GOOGLE_API_KEY=your_google_ai_api_key
+    ```
+
+2.  **Build Docker images**:
+    This command will build the Docker images for the server and the client.
+    ```bash
+    sbt buildImages
+    ```
+
+3.  **Run the application**:
+    Use Docker Compose to start all the services.
+    ```bash
+    docker-compose -f scripts/local-docker/docker-compose.yml up
+    ```
+    The application will be available at `http://localhost`.
+
+### Local Development
+
+This setup is for actively developing the application.
+
+1.  **Start the database**:
+    This will start a PostgreSQL database instance.
+    ```bash
+    docker-compose -f scripts/local-dev/docker-compose.yml up
+    ```
+
+2.  **Run the backend server**:
+    In a new terminal, start the backend server using sbt. You need to set the required environment variables.
+    ```bash
+    export CLIENT_ID=your_google_client_id
+    export CLIENT_SECRET=your_google_client_secret
+    export GOOGLE_API_KEY=your_google_ai_api_key
+    sbt server/run
+    ```
+    The server will be running on `http://localhost:8080`.
+
+3.  **Run the frontend development server**:
+    - In new terminal, navigate to the `client` directory, install dependencies, and build JS bundle.
+    ```bash
+    cd client
+    sbt ~fastLinkJs
+    ```
+    - start one more new terminal from the `client` folder and start Vite development server
+    ```bash
+    npm run dev
+    ```
+    The frontend will be available at `http://localhost:5173`.
+
+## Configuration
+
+The application is configured using environment variables.
+
+| Variable          | Description                                                                              | Default Value                  | Required           |
+| ----------------- | ---------------------------------------------------------------------------------------- | ------------------------------ | ------------------ |
+| `SERVER_PORT`     | The port for the backend server.                                                         | `8080`                         | No                 |
+| `DATASOURCE_URL`  | The JDBC URL for the PostgreSQL database.                                                | `jdbc:postgresql://localhost:5432/rss` | No                 |
+| `DATASOURCE_USER` | The username for the database.                                                           | `rss_user`                     | No                 |
+| `DATASOURCE_PASS` | The password for the database.                                                           | `123456`                       | No                 |
+| `CLIENT_ID`       | The client ID for Google OAuth2.                                                         | -                              | **Yes**            |
+| `CLIENT_SECRET`   | The client secret for Google OAuth2.                                                     | -                              | **Yes**            |
+| `SERVER_URL`      | The public URL of the server. Used for OAuth redirect URI.                               | `https://localhost`            | No                 |
+| `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
+| `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
+| `REGISTRY`        | The Docker registry to push images to (used with `sbt pushImages`).                      | -                              | No                 |
+
+## Deployment
+
+The Docker images built with `sbt buildImages` can be used for production deployment. You can adapt the `scripts/local-docker/docker-compose.yml` file for your production environment. Remember to configure all the necessary environment variables.
 
 ## License
 
-MIT
-
-## Environments
-
-`SERVER_URL` - API location URL
-
-`CORS_URL` - Cors accepted paths
-
-`CLIENT_ID` - ID using for identifying app in Google OAuth service
-
-`CLIENT_SECRET` - Google app secret
-
-`DATASOURCE_USER` - DB user
-
-`DATASOURCE_PASS` - DB password
-
-`DATASOURCE_URL` - DB url
-
-`GOOGLE_API_KEY` - Google AI studio token
-
-### Local development
-
-```bash
-sbt buildImages
-```
-
-### Production deploy 
-
-Use the `scripts/local-docker/docker-compose.yml` as a starting point to prepare your installation.
+This project is licensed under the MIT License.
