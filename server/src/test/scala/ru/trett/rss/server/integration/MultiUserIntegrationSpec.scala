@@ -20,10 +20,16 @@ import java.time.OffsetDateTime
   *   - Channels from one user are not visible to others
   *   - Updates work independently for each user
   *   - Mark as read functionality works independently for each user
+  *
+  * Note: These tests share a single database instance and run sequentially.
+  * Tests are designed to be order-dependent and build upon each other's state
+  * to minimize the overhead of database recreation. Each test uses unique
+  * identifiers to avoid conflicts where possible.
   */
 class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
     private var transactor: HikariTransactor[IO] = scala.compiletime.uninitialized
+    private var cleanup: IO[Unit] = scala.compiletime.uninitialized
     private var userRepository: UserRepository = scala.compiletime.uninitialized
     private var channelRepository: ChannelRepository = scala.compiletime.uninitialized
     private var feedRepository: FeedRepository = scala.compiletime.uninitialized
@@ -36,13 +42,16 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
     override def beforeAll(): Unit = {
         super.beforeAll()
         val resource = TestDatabase.createTestTransactor()
-        transactor = resource.allocated.unsafeRunSync()._1
+        val (xa, cleanupIO) = resource.allocated.unsafeRunSync()
+        transactor = xa
+        cleanup = cleanupIO
         userRepository = new UserRepository(transactor)
         channelRepository = new ChannelRepository(transactor)
         feedRepository = new FeedRepository(transactor)
     }
 
     override def afterAll(): Unit = {
+        cleanup.unsafeRunSync()
         super.afterAll()
     }
 
@@ -176,7 +185,10 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
     }
 
     test("Mark as read works independently for each user") {
-        // Each user has a different feed in their own channel
+        // Note: Due to the current schema (feeds.link is PK), the same feed cannot exist
+        // in multiple channels. This test verifies that marking feeds as read for one user
+        // doesn't affect feeds in another user's channels by testing with different feeds.
+        // Each user has a different feed in their own channel.
         val user1FeedLink = "https://example.com/user1/feed2/item1"
         val user2FeedLink = "https://example.com/user2/feed2/item1"
         val now = OffsetDateTime.now()

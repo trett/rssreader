@@ -19,11 +19,11 @@ object TestDatabase:
       */
     def createTestTransactor(): Resource[IO, HikariTransactor[IO]] =
         for {
-            container <- Resource.make(IO {
+            container <- Resource.make(IO.blocking {
                 val c = new PgContainer()
                 c.start()
                 c
-            })(c => IO(c.stop()))
+            })(c => IO.blocking(c.stop()))
             _ <- Resource.eval(runMigrations(
                 container.getJdbcUrl,
                 container.getUsername,
