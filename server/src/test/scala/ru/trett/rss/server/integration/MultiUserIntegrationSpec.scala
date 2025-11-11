@@ -24,8 +24,8 @@ import java.time.OffsetDateTime
   *   - Updates work independently for each user
   *   - Mark as read functionality works independently for each user
   *
-  * Each test runs in isolation with a clean database state to ensure tests
-  * can run independently and in any order.
+  * Each test runs in isolation with a clean database state to ensure tests can run independently
+  * and in any order.
   */
 class MultiUserIntegrationSpec
     extends AnyFunSuite
@@ -33,11 +33,13 @@ class MultiUserIntegrationSpec
     with BeforeAndAfterAll
     with BeforeAndAfterEach {
 
+    // scalafix:off DisableSyntax.var
     private var transactor: Option[HikariTransactor[IO]] = None
     private var cleanup: Option[IO[Unit]] = None
     private var userRepository: Option[UserRepository] = None
     private var channelRepository: Option[ChannelRepository] = None
     private var feedRepository: Option[FeedRepository] = None
+    // scalafix:on DisableSyntax.var
 
     private val user1 = User("user1-id", "User One", "user1@example.com", User.Settings())
     private val user2 = User("user2-id", "User Two", "user2@example.com", User.Settings())
@@ -97,7 +99,7 @@ class MultiUserIntegrationSpec
         r2.isRight shouldBe true
         r3.isRight shouldBe true
         users should have size 3
-        users.map(_.id) should contain allOf (user1.id, user2.id, user3.id)
+        (users.map(_.id) should contain).allOf(user1.id, user2.id, user3.id)
     }
 
     test("Users can be retrieved by ID") {
@@ -411,10 +413,8 @@ class MultiUserIntegrationSpec
             )
         )
 
-        val feedLinks = List(
-            "https://example.com/user1/feed3/item1",
-            "https://example.com/user1/feed3/item2"
-        )
+        val feedLinks =
+            List("https://example.com/user1/feed3/item1", "https://example.com/user1/feed3/item2")
 
         val result = for {
             _ <- setupUsers(user1)
@@ -489,12 +489,7 @@ class MultiUserIntegrationSpec
     }
 
     test("User can only delete their own channels") {
-        val channel7 = Channel(
-            0,
-            "User 2 Third Channel",
-            "https://example.com/user2/feed3",
-            List()
-        )
+        val channel7 = Channel(0, "User 2 Third Channel", "https://example.com/user2/feed3", List())
 
         val result = for {
             _ <- setupUsers(user1, user2)
@@ -512,12 +507,8 @@ class MultiUserIntegrationSpec
     }
 
     test("User can delete their own channels") {
-        val channel8 = Channel(
-            0,
-            "User 2 Fourth Channel to Delete",
-            "https://example.com/user2/feed4",
-            List()
-        )
+        val channel8 =
+            Channel(0, "User 2 Fourth Channel to Delete", "https://example.com/user2/feed4", List())
 
         val result = for {
             _ <- setupUsers(user2)

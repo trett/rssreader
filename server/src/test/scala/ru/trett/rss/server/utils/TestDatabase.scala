@@ -24,11 +24,9 @@ object TestDatabase:
                 c.start()
                 c
             })(c => IO.blocking(c.stop()))
-            _ <- Resource.eval(runMigrations(
-                container.getJdbcUrl,
-                container.getUsername,
-                container.getPassword
-            ))
+            _ <- Resource.eval(
+                runMigrations(container.getJdbcUrl, container.getUsername, container.getPassword)
+            )
             hikariConfig <- Resource.eval(IO.blocking {
                 val config = new HikariConfig()
                 config.setDriverClassName("org.postgresql.Driver")
