@@ -39,6 +39,12 @@
     background-color: #6c757d !important; /* A dark grey color */
 }
 
+@media (max-width: 767px) {
+  .main-content {
+    padding: 0 8px;
+  }
+}
+
 @media (min-width: 768px) {
   .app-container {
     background-color: #e1e1e1;
@@ -47,5 +53,10 @@
   .main-content {
     margin: 0 auto;
     max-width: 50%;
+  }
+  
+  /* Force Select to use popover instead of dialog on desktop */
+  ui5-select#summary-language-cmb {
+    --_ui5_input_width: 100%;
   }
 }

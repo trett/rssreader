@@ -49,81 +49,107 @@ object SettingsPage {
     given settingsEncoder: Encoder[UserSettings] = deriveEncoder
 
     def render: Element = div(
-        cls := "container",
+        cls := "cards main-content",
         display.flex,
         flexWrap.wrap,
-        settingsForm(),
-        div(flexBasis.percent := 100),
-        channelsList(),
+        settingsCard(),
         newChannelDialog()
     )
 
-    private def settingsForm(): HtmlElement =
-        val response = getSettingsRequest; val data = response.collectSuccess
-        val errors = response.collectFailure
-        div(
-            paddingLeft.px := 40,
-            paddingBottom.px := 40,
-            Link(
-                "Return to feeds",
-                _.icon := IconName.`nav-back`,
-                _.events.onClick.mapTo(HomeRoute) --> {
-                    Router.currentPageVar.set
-                },
-                marginBottom.px := 10
-            ),
-            form(
-                onSubmit.preventDefault
-                    .mapTo(settingsSignal.now())
-                    .flatMap(updateSettingsRequest) --> updateSettingsObserver,
-                div(
-                    formBlockStyle,
-                    Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
-                    CheckBox(
-                        _.id := "hide-read-cb",
-                        _.checked <-- settingsSignal.map(x => x.forall(_.hideRead)),
-                        _.events.onChange.mapToChecked --> settingsVar.updater[Boolean]((a, b) =>
-                            a.map(x => x.copy(hideRead = b))
-                        )
-                    )
+    private def settingsCard(): HtmlElement =
+        val settingsResponse = getSettingsRequest
+        val settingsData = settingsResponse.collectSuccess
+        val settingsErrors = settingsResponse.collectFailure
+        val channelsResponse = getChannelsRequest
+        val channels = channelsResponse.collectSuccess
+        val channelsErrors = channelsResponse.collectFailure
+        Card(
+            div(
+                padding.px := 20,
+                Link(
+                    "Return to feeds",
+                    _.icon := IconName.`nav-back`,
+                    _.events.onClick.mapTo(HomeRoute) --> {
+                        Router.currentPageVar.set
+                    },
+                    marginBottom.px := 20
                 ),
-                br(),
-                div(
-                    formBlockStyle,
-                    Label(
-                        "Summary language",
-                        _.forId := "summary-language-cmb",
-                        _.showColon := true,
-                        _.wrappingType := WrappingType.None,
-                        paddingRight.px := 20
+                form(
+                    onSubmit.preventDefault
+                        .mapTo(settingsSignal.now())
+                        .flatMap(updateSettingsRequest) --> updateSettingsObserver,
+                    div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
+                        CheckBox(
+                            _.id := "hide-read-cb",
+                            _.checked <-- settingsSignal.map(x => x.forall(_.hideRead)),
+                            _.events.onChange.mapToChecked --> settingsVar
+                                .updater[Boolean]((a, b) => a.map(x => x.copy(hideRead = b)))
+                        )
                     ),
-                    Select(
-                        _.id := "summary-language-cmb",
-                        _.events.onChange.map(_.detail.selectedOption.textContent) --> settingsVar
-                            .updater[String]((a, b) =>
-                                a.map(x => x.copy(summaryLanguage = Some(b)))
-                            ),
-                        List("English", "Serbian", "Russian", "German", "Spanish").map(lang =>
-                            Select.option(
-                                _.selected <-- settingsSignal.map(x =>
-                                    x.flatMap(_.summaryLanguage).contains(lang)
+                    div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label(
+                            "Summary language",
+                            _.forId := "summary-language-cmb",
+                            _.showColon := true,
+                            _.wrappingType := WrappingType.None,
+                            paddingRight.px := 20
+                        ),
+                        Select(
+                            _.id := "summary-language-cmb",
+                            _.events.onChange
+                                .map(_.detail.selectedOption.textContent) --> settingsVar
+                                .updater[String]((a, b) =>
+                                    a.map(x => x.copy(summaryLanguage = Some(b)))
                                 ),
-                                lang
+                            List("English", "Serbian", "Russian", "German", "Spanish").map(lang =>
+                                Select.option(
+                                    _.selected <-- settingsSignal.map(x =>
+                                        x.flatMap(_.summaryLanguage).contains(lang)
+                                    ),
+                                    lang
+                                )
                             )
                         )
-                    )
+                    ),
+                    div(
+                        paddingTop.px := 10,
+                        Button(
+                            _.design := ButtonDesign.Emphasized,
+                            "Save",
+                            _.icon := IconName.save,
+                            _.tpe := ButtonType.Submit
+                        )
+                    ),
+                    settingsData --> settingsVar.writer,
+                    settingsErrors --> errorObserver
                 ),
                 div(
-                    paddingTop.px := 10,
+                    formBlockStyle,
+                    marginTop.px := 32,
+                    marginBottom.px := 16,
+                    Label("Your channels", _.forId := "channels-list", _.showColon := true),
                     Button(
-                        _.design := ButtonDesign.Emphasized,
-                        "Save",
-                        _.icon := IconName.save,
-                        _.tpe := ButtonType.Submit
+                        _.design := ButtonDesign.Default,
+                        _.icon := IconName.add,
+                        _.iconOnly := true,
+                        _.events.onClick.mapTo(true) --> openDialogBus
                     )
                 ),
-                data --> settingsVar.writer,
-                errors --> errorObserver
+                UList(
+                    _.id := "channels-list",
+                    _.events.onItemDelete
+                        .map(_.detail.item.dataset.get("channelId").get)
+                        .flatMap(deleteChannelRequest) --> deleteChannelObserver,
+                    _.selectionMode := ListMode.Delete,
+                    children <-- channelSignal.split(_.id)(renderChannel),
+                    channels --> channelObserver,
+                    channelsErrors --> errorObserver
+                )
             )
         )
 
@@ -146,36 +172,6 @@ object SettingsPage {
             .withDecoder(responseDecoder[Option[UserSettings]])
             .get(s"$HOST/api/user/settings")
             .mapSuccess(_.get)
-
-    private def channelsList(): HtmlElement =
-        val response = getChannelsRequest
-        val channels = response.collectSuccess
-        val errors = response.collectFailure
-        div(
-            borderTopStyle.ridge,
-            padding.px := 40,
-            minWidth.px := 200,
-            div(
-                formBlockStyle,
-                Label("Your channels", _.forId := "channels-list", _.showColon := true),
-                Button(
-                    _.design := ButtonDesign.Default,
-                    _.icon := IconName.add,
-                    _.iconOnly := true,
-                    _.events.onClick.mapTo(true) --> openDialogBus
-                )
-            ),
-            UList(
-                _.id := "channels-list",
-                _.events.onItemDelete
-                    .map(_.detail.item.dataset.get("channelId").get)
-                    .flatMap(deleteChannelRequest) --> deleteChannelObserver,
-                _.selectionMode := ListMode.Delete,
-                children <-- channelSignal.split(_.id)(renderChannel),
-                channels --> channelObserver,
-                errors --> errorObserver
-            )
-        )
 
     private def renderChannel(
         id: Long,
