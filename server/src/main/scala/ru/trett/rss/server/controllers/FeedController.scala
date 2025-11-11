@@ -19,9 +19,11 @@ object FeedController:
                     response <- Ok(s"Feed marked as read: $result")
                 } yield response
 
-            case GET -> Root / "api" / "feeds" / "channel" / LongVar(channelId) / "unread" as _ =>
+            case GET -> Root / "api" / "feeds" / "channel" / LongVar(
+                    channelId
+                ) / "unread" as user =>
                 for {
-                    count <- feedService.getUnreadCount(channelId)
+                    count <- feedService.getUnreadCount(channelId, user.id)
                     response <- Ok(count)
                 } yield response
         }

@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 
 case class Feed(
     link: String,
+    userId: String,
     channelId: Long,
     title: String,
     description: String,

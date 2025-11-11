@@ -103,12 +103,13 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
             "https://example.com/user1/feed",
             List(
                 Feed(
-                    "https://example.com/user1/feed/item1",
-                    0,
-                    "Item 1",
-                    "Description 1",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user1/feed/item1",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 )
             )
         )
@@ -119,12 +120,13 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
             "https://example.com/user2/feed",
             List(
                 Feed(
-                    "https://example.com/user2/feed/item1",
-                    0,
-                    "Item 1",
-                    "Description 1",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user2/feed/item1",
+                    userId = user2.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 )
             )
         )
@@ -185,10 +187,9 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
     }
 
     test("Mark as read works independently for each user") {
-        // Note: Due to the current schema (feeds.link is PK), the same feed cannot exist
-        // in multiple channels. This test verifies that marking feeds as read for one user
-        // doesn't affect feeds in another user's channels by testing with different feeds.
-        // Each user has a different feed in their own channel.
+        // With the updated schema (composite PK on link, user_id), we can now test
+        // per-user read states. This test verifies that marking feeds as read for one user
+        // doesn't affect the same feed in another user's view.
         val user1FeedLink = "https://example.com/user1/feed2/item1"
         val user2FeedLink = "https://example.com/user2/feed2/item1"
         val now = OffsetDateTime.now()
@@ -197,14 +198,14 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
             0,
             "User 1 Second Channel",
             "https://example.com/user1/feed2",
-            List(Feed(user1FeedLink, 0, "User 1 Item", "Description", Some(now), false))
+            List(Feed(user1FeedLink, user1.id, 0, "User 1 Item", "Description", Some(now), false))
         )
 
         val channel4 = Channel(
             0,
             "User 2 Second Channel",
             "https://example.com/user2/feed2",
-            List(Feed(user2FeedLink, 0, "User 2 Item", "Description", Some(now), false))
+            List(Feed(user2FeedLink, user2.id, 0, "User 2 Item", "Description", Some(now), false))
         )
 
         val result = for {
@@ -234,6 +235,58 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         user2Feed.get.isRead shouldBe false // Still unread for user2
     }
 
+    test("Same feed link can have independent read states per user") {
+        // This test verifies the new schema allows the same feed URL to exist
+        // for multiple users with independent read states
+        val sharedFeedLink = "https://example.com/shared/feed/item"
+        val now = OffsetDateTime.now()
+
+        val channel3a = Channel(
+            0,
+            "User 1 Shared Feed Channel",
+            "https://example.com/user1/feed_shared",
+            List(Feed(sharedFeedLink, user1.id, 0, "Shared Item", "Description", Some(now), false))
+        )
+
+        val channel3b = Channel(
+            0,
+            "User 2 Shared Feed Channel",
+            "https://example.com/user2/feed_shared",
+            List(Feed(sharedFeedLink, user2.id, 0, "Shared Item", "Description", Some(now), false))
+        )
+
+        val result = for {
+            _ <- channelRepository.insertChannel(channel3a, user1)
+            _ <- channelRepository.insertChannel(channel3b, user2)
+
+            // Mark as read for user1 only
+            markedCount <- feedRepository.markFeedAsRead(List(sharedFeedLink), user1)
+
+            // Get feeds for both users
+            user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 50, 0)
+            user2Feeds <- channelRepository.getChannelsWithFeedsByUser(user2, 50, 0)
+        } yield (markedCount, user1Feeds, user2Feeds)
+
+        val (marked, u1Feeds, u2Feeds) = result.unsafeRunSync()
+
+        marked shouldBe 1 // Only one feed marked for user1
+
+        // Find the shared feed for both users
+        val user1SharedFeed = u1Feeds.find(_._2.link == sharedFeedLink).map(_._2)
+        val user2SharedFeed = u2Feeds.find(_._2.link == sharedFeedLink).map(_._2)
+
+        user1SharedFeed shouldBe defined
+        user2SharedFeed shouldBe defined
+
+        // Both users have the same feed URL but with different read states
+        user1SharedFeed.get.link shouldBe sharedFeedLink
+        user2SharedFeed.get.link shouldBe sharedFeedLink
+        user1SharedFeed.get.userId shouldBe user1.id
+        user2SharedFeed.get.userId shouldBe user2.id
+        user1SharedFeed.get.isRead shouldBe true // Marked as read for user1
+        user2SharedFeed.get.isRead shouldBe false // Still unread for user2
+    }
+
     test("Multiple feeds can be marked as read for a single user") {
         val channel5 = Channel(
             0,
@@ -241,28 +294,31 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
             "https://example.com/user1/feed3",
             List(
                 Feed(
-                    "https://example.com/user1/feed3/item1",
-                    0,
-                    "Item 1",
-                    "Desc",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user1/feed3/item1",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Desc",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 ),
                 Feed(
-                    "https://example.com/user1/feed3/item2",
-                    0,
-                    "Item 2",
-                    "Desc",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user1/feed3/item2",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 2",
+                    description = "Desc",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 ),
                 Feed(
-                    "https://example.com/user1/feed3/item3",
-                    0,
-                    "Item 3",
-                    "Desc",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user1/feed3/item3",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 3",
+                    description = "Desc",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 )
             )
         )
@@ -304,20 +360,22 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
             "https://example.com/user3/feed",
             List(
                 Feed(
-                    "https://example.com/user3/feed/item1",
-                    0,
-                    "Item 1",
-                    "Desc",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user3/feed/item1",
+                    userId = user3.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Desc",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 ),
                 Feed(
-                    "https://example.com/user3/feed/item2",
-                    0,
-                    "Item 2",
-                    "Desc",
-                    Some(OffsetDateTime.now()),
-                    false
+                    link = "https://example.com/user3/feed/item2",
+                    userId = user3.id,
+                    channelId = 0,
+                    title = "Item 2",
+                    description = "Desc",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
                 )
             )
         )
@@ -396,13 +454,13 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         u1Unread should not be empty
         u2Unread should not be empty
 
-        // Verify feeds belong to correct users by checking links
+        // Verify all feeds have the correct userId
         u1Unread.foreach { feed =>
-            feed.link should startWith("https://example.com/user1/")
+            feed.userId shouldBe user1.id
         }
 
         u2Unread.foreach { feed =>
-            feed.link should startWith("https://example.com/user2/")
+            feed.userId shouldBe user2.id
         }
     }
 }
