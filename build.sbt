@@ -127,6 +127,9 @@ lazy val server = project
         libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.10.4" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
         libraryDependencies += "org.scalamock" %% "scalamock" % "7.4.0" % Test,
+        libraryDependencies += "org.testcontainers" % "testcontainers" % "1.19.3" % Test,
+        libraryDependencies += "org.testcontainers" % "postgresql" % "1.19.3" % Test,
+        libraryDependencies += "org.postgresql" % "postgresql" % "42.7.1" % Test,
         scalacOptions ++= customScalaOptions,
         Compile / run / fork := true,
         inThisBuild(
