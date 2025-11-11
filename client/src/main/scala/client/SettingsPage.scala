@@ -49,7 +49,7 @@ object SettingsPage {
     given settingsEncoder: Encoder[UserSettings] = deriveEncoder
 
     def render: Element = div(
-        cls := "container",
+        cls := "cards main-content",
         display.flex,
         flexWrap.wrap,
         settingsForm(),
