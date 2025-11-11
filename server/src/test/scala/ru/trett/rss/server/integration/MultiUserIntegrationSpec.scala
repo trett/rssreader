@@ -2,8 +2,11 @@ package ru.trett.rss.server.integration
 
 import cats.effect.*
 import cats.effect.unsafe.implicits.global
+import cats.implicits.*
+import doobie.*
+import doobie.implicits.*
 import doobie.hikari.HikariTransactor
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import ru.trett.rss.server.models.{Channel, Feed, User}
@@ -21,12 +24,14 @@ import java.time.OffsetDateTime
   *   - Updates work independently for each user
   *   - Mark as read functionality works independently for each user
   *
-  * Note: These tests share a single database instance and run sequentially.
-  * Tests are designed to be order-dependent and build upon each other's state
-  * to minimize the overhead of database recreation. Each test uses unique
-  * identifiers to avoid conflicts where possible.
+  * Each test runs in isolation with a clean database state to ensure tests
+  * can run independently and in any order.
   */
-class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll {
+class MultiUserIntegrationSpec
+    extends AnyFunSuite
+    with Matchers
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
     private var transactor: HikariTransactor[IO] = scala.compiletime.uninitialized
     private var cleanup: IO[Unit] = scala.compiletime.uninitialized
@@ -55,6 +60,29 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         super.afterAll()
     }
 
+    override def beforeEach(): Unit = {
+        super.beforeEach()
+        // Clean up database state before each test for isolation
+        cleanDatabase().unsafeRunSync()
+    }
+
+    private def cleanDatabase(): IO[Unit] =
+        val deleteFeeds = sql"DELETE FROM feeds".update.run
+        val deleteChannels = sql"DELETE FROM channels".update.run
+        val deleteUserChannels = sql"DELETE FROM user_channels".update.run
+        val deleteUsers = sql"DELETE FROM users".update.run
+
+        (for {
+            _ <- deleteFeeds
+            _ <- deleteUserChannels
+            _ <- deleteChannels
+            _ <- deleteUsers
+        } yield ()).transact(transactor)
+
+    // Helper method to set up users for tests
+    private def setupUsers(users: User*): IO[Unit] =
+        users.toList.traverse_(user => userRepository.insertUser(user).void)
+
     test("Multiple users can be created") {
         val result = for {
             result1 <- userRepository.insertUser(user1)
@@ -74,6 +102,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
 
     test("Users can be retrieved by ID") {
         val result = for {
+            _ <- setupUsers(user1, user2)
             maybeUser1 <- userRepository.findUserById(user1.id)
             maybeUser2 <- userRepository.findUserById(user2.id)
         } yield (maybeUser1, maybeUser2)
@@ -86,6 +115,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
 
     test("Users can be retrieved by email") {
         val result = for {
+            _ <- setupUsers(user1, user2)
             maybeUser1 <- userRepository.findUserByEmail(user1.email)
             maybeUser2 <- userRepository.findUserByEmail(user2.email)
         } yield (maybeUser1, maybeUser2)
@@ -132,6 +162,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user1, user2)
             channelId1 <- channelRepository.insertChannel(channel1, user1)
             channelId2 <- channelRepository.insertChannel(channel2, user2)
             user1Channels <- channelRepository.findUserChannels(user1)
@@ -150,7 +181,26 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
     }
 
     test("User cannot see channels from other users") {
+        val channel1 = Channel(
+            0,
+            "User 1 Channel",
+            "https://example.com/user1/feed",
+            List(
+                Feed(
+                    link = "https://example.com/user1/feed/item1",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
+                )
+            )
+        )
+
         val result = for {
+            _ <- setupUsers(user1, user2, user3)
+            _ <- channelRepository.insertChannel(channel1, user1)
             user1Channels <- channelRepository.findUserChannels(user1)
             user2Channels <- channelRepository.findUserChannels(user2)
             user3Channels <- channelRepository.findUserChannels(user3)
@@ -159,15 +209,51 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         val (u1Channels, u2Channels, u3Channels) = result.unsafeRunSync()
 
         u1Channels should have size 1
-        u2Channels should have size 1
+        u2Channels should have size 0
         u3Channels should have size 0
 
         u1Channels.map(_.title) should not contain "User 2 Channel"
-        u2Channels.map(_.title) should not contain "User 1 Channel"
     }
 
     test("Feeds are associated with correct users through channels") {
+        val channel1 = Channel(
+            0,
+            "User 1 Channel",
+            "https://example.com/user1/feed",
+            List(
+                Feed(
+                    link = "https://example.com/user1/feed/item1",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
+                )
+            )
+        )
+
+        val channel2 = Channel(
+            0,
+            "User 2 Channel",
+            "https://example.com/user2/feed",
+            List(
+                Feed(
+                    link = "https://example.com/user2/feed/item1",
+                    userId = user2.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
+                )
+            )
+        )
+
         val result = for {
+            _ <- setupUsers(user1, user2)
+            _ <- channelRepository.insertChannel(channel1, user1)
+            _ <- channelRepository.insertChannel(channel2, user2)
             user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 10, 0)
             user2Feeds <- channelRepository.getChannelsWithFeedsByUser(user2, 10, 0)
         } yield (user1Feeds, user2Feeds)
@@ -209,6 +295,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user1, user2)
             _ <- channelRepository.insertChannel(channel3, user1)
             _ <- channelRepository.insertChannel(channel4, user2)
 
@@ -256,6 +343,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user1, user2)
             _ <- channelRepository.insertChannel(channel3a, user1)
             _ <- channelRepository.insertChannel(channel3b, user2)
 
@@ -329,6 +417,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user1)
             _ <- channelRepository.insertChannel(channel5, user1)
             markedCount <- feedRepository.markFeedAsRead(feedLinks, user1)
             user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 50, 0)
@@ -381,6 +470,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user3)
             _ <- channelRepository.insertChannel(channel6, user3)
             _ <- feedRepository.markFeedAsRead(
                 List("https://example.com/user3/feed/item1"),
@@ -407,6 +497,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user1, user2)
             channelId <- channelRepository.insertChannel(channel7, user2)
             user1Channels <- channelRepository.findUserChannels(user1)
             // Try to delete user2's channel as user1
@@ -429,6 +520,7 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
         )
 
         val result = for {
+            _ <- setupUsers(user2)
             channelId <- channelRepository.insertChannel(channel8, user2)
             channelsBeforeDelete <- channelRepository.findUserChannels(user2)
             deleted <- channelRepository.deleteChannel(channelId, user2)
@@ -443,7 +535,44 @@ class MultiUserIntegrationSpec extends AnyFunSuite with Matchers with BeforeAndA
     }
 
     test("Get unread feeds for a specific user") {
+        val channel1 = Channel(
+            0,
+            "User 1 Channel",
+            "https://example.com/user1/feed",
+            List(
+                Feed(
+                    link = "https://example.com/user1/feed/item1",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
+                )
+            )
+        )
+
+        val channel2 = Channel(
+            0,
+            "User 2 Channel",
+            "https://example.com/user2/feed",
+            List(
+                Feed(
+                    link = "https://example.com/user2/feed/item1",
+                    userId = user2.id,
+                    channelId = 0,
+                    title = "Item 1",
+                    description = "Description 1",
+                    pubDate = Some(OffsetDateTime.now()),
+                    isRead = false
+                )
+            )
+        )
+
         val result = for {
+            _ <- setupUsers(user1, user2)
+            _ <- channelRepository.insertChannel(channel1, user1)
+            _ <- channelRepository.insertChannel(channel2, user2)
             user1Unread <- feedRepository.getUnreadFeeds(user1)
             user2Unread <- feedRepository.getUnreadFeeds(user2)
         } yield (user1Unread, user2Unread)

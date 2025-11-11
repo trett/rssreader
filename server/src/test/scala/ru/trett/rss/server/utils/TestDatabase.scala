@@ -29,7 +29,7 @@ object TestDatabase:
                 container.getUsername,
                 container.getPassword
             ))
-            hikariConfig <- Resource.eval(IO {
+            hikariConfig <- Resource.eval(IO.blocking {
                 val config = new HikariConfig()
                 config.setDriverClassName("org.postgresql.Driver")
                 config.setJdbcUrl(container.getJdbcUrl)
@@ -42,7 +42,7 @@ object TestDatabase:
         } yield xa
 
     private def runMigrations(jdbcUrl: String, username: String, password: String): IO[Unit] =
-        IO {
+        IO.blocking {
             val flyway = Flyway
                 .configure()
                 .dataSource(jdbcUrl, username, password)
