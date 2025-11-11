@@ -33,11 +33,11 @@ class MultiUserIntegrationSpec
     with BeforeAndAfterAll
     with BeforeAndAfterEach {
 
-    private var transactor: HikariTransactor[IO] = scala.compiletime.uninitialized
-    private var cleanup: IO[Unit] = scala.compiletime.uninitialized
-    private var userRepository: UserRepository = scala.compiletime.uninitialized
-    private var channelRepository: ChannelRepository = scala.compiletime.uninitialized
-    private var feedRepository: FeedRepository = scala.compiletime.uninitialized
+    private var transactor: Option[HikariTransactor[IO]] = None
+    private var cleanup: Option[IO[Unit]] = None
+    private var userRepository: Option[UserRepository] = None
+    private var channelRepository: Option[ChannelRepository] = None
+    private var feedRepository: Option[FeedRepository] = None
 
     private val user1 = User("user1-id", "User One", "user1@example.com", User.Settings())
     private val user2 = User("user2-id", "User Two", "user2@example.com", User.Settings())
@@ -48,15 +48,15 @@ class MultiUserIntegrationSpec
         super.beforeAll()
         val resource = TestDatabase.createTestTransactor()
         val (xa, cleanupIO) = resource.allocated.unsafeRunSync()
-        transactor = xa
-        cleanup = cleanupIO
-        userRepository = new UserRepository(transactor)
-        channelRepository = new ChannelRepository(transactor)
-        feedRepository = new FeedRepository(transactor)
+        transactor = Some(xa)
+        cleanup = Some(cleanupIO)
+        userRepository = Some(new UserRepository(xa))
+        channelRepository = Some(new ChannelRepository(xa))
+        feedRepository = Some(new FeedRepository(xa))
     }
 
     override def afterAll(): Unit = {
-        cleanup.unsafeRunSync()
+        cleanup.foreach(_.unsafeRunSync())
         super.afterAll()
     }
 
@@ -77,18 +77,18 @@ class MultiUserIntegrationSpec
             _ <- deleteUserChannels
             _ <- deleteChannels
             _ <- deleteUsers
-        } yield ()).transact(transactor)
+        } yield ()).transact(transactor.get)
 
     // Helper method to set up users for tests
     private def setupUsers(users: User*): IO[Unit] =
-        users.toList.traverse_(user => userRepository.insertUser(user).void)
+        users.toList.traverse_(user => userRepository.get.insertUser(user).void)
 
     test("Multiple users can be created") {
         val result = for {
-            result1 <- userRepository.insertUser(user1)
-            result2 <- userRepository.insertUser(user2)
-            result3 <- userRepository.insertUser(user3)
-            allUsers <- userRepository.findUsers()
+            result1 <- userRepository.get.insertUser(user1)
+            result2 <- userRepository.get.insertUser(user2)
+            result3 <- userRepository.get.insertUser(user3)
+            allUsers <- userRepository.get.findUsers()
         } yield (result1, result2, result3, allUsers)
 
         val (r1, r2, r3, users) = result.unsafeRunSync()
@@ -103,8 +103,8 @@ class MultiUserIntegrationSpec
     test("Users can be retrieved by ID") {
         val result = for {
             _ <- setupUsers(user1, user2)
-            maybeUser1 <- userRepository.findUserById(user1.id)
-            maybeUser2 <- userRepository.findUserById(user2.id)
+            maybeUser1 <- userRepository.get.findUserById(user1.id)
+            maybeUser2 <- userRepository.get.findUserById(user2.id)
         } yield (maybeUser1, maybeUser2)
 
         val (u1, u2) = result.unsafeRunSync()
@@ -116,8 +116,8 @@ class MultiUserIntegrationSpec
     test("Users can be retrieved by email") {
         val result = for {
             _ <- setupUsers(user1, user2)
-            maybeUser1 <- userRepository.findUserByEmail(user1.email)
-            maybeUser2 <- userRepository.findUserByEmail(user2.email)
+            maybeUser1 <- userRepository.get.findUserByEmail(user1.email)
+            maybeUser2 <- userRepository.get.findUserByEmail(user2.email)
         } yield (maybeUser1, maybeUser2)
 
         val (u1, u2) = result.unsafeRunSync()
@@ -163,10 +163,10 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2)
-            channelId1 <- channelRepository.insertChannel(channel1, user1)
-            channelId2 <- channelRepository.insertChannel(channel2, user2)
-            user1Channels <- channelRepository.findUserChannels(user1)
-            user2Channels <- channelRepository.findUserChannels(user2)
+            channelId1 <- channelRepository.get.insertChannel(channel1, user1)
+            channelId2 <- channelRepository.get.insertChannel(channel2, user2)
+            user1Channels <- channelRepository.get.findUserChannels(user1)
+            user2Channels <- channelRepository.get.findUserChannels(user2)
         } yield (channelId1, channelId2, user1Channels, user2Channels)
 
         val (cid1, cid2, u1Channels, u2Channels) = result.unsafeRunSync()
@@ -200,10 +200,10 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2, user3)
-            _ <- channelRepository.insertChannel(channel1, user1)
-            user1Channels <- channelRepository.findUserChannels(user1)
-            user2Channels <- channelRepository.findUserChannels(user2)
-            user3Channels <- channelRepository.findUserChannels(user3)
+            _ <- channelRepository.get.insertChannel(channel1, user1)
+            user1Channels <- channelRepository.get.findUserChannels(user1)
+            user2Channels <- channelRepository.get.findUserChannels(user2)
+            user3Channels <- channelRepository.get.findUserChannels(user3)
         } yield (user1Channels, user2Channels, user3Channels)
 
         val (u1Channels, u2Channels, u3Channels) = result.unsafeRunSync()
@@ -252,10 +252,10 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2)
-            _ <- channelRepository.insertChannel(channel1, user1)
-            _ <- channelRepository.insertChannel(channel2, user2)
-            user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 10, 0)
-            user2Feeds <- channelRepository.getChannelsWithFeedsByUser(user2, 10, 0)
+            _ <- channelRepository.get.insertChannel(channel1, user1)
+            _ <- channelRepository.get.insertChannel(channel2, user2)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 10, 0)
+            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user2, 10, 0)
         } yield (user1Feeds, user2Feeds)
 
         val (u1Feeds, u2Feeds) = result.unsafeRunSync()
@@ -296,15 +296,15 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2)
-            _ <- channelRepository.insertChannel(channel3, user1)
-            _ <- channelRepository.insertChannel(channel4, user2)
+            _ <- channelRepository.get.insertChannel(channel3, user1)
+            _ <- channelRepository.get.insertChannel(channel4, user2)
 
             // Mark as read for user1 only
-            markedCount <- feedRepository.markFeedAsRead(List(user1FeedLink), user1)
+            markedCount <- feedRepository.get.markFeedAsRead(List(user1FeedLink), user1)
 
             // Get feeds for both users
-            user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 20, 0)
-            user2Feeds <- channelRepository.getChannelsWithFeedsByUser(user2, 20, 0)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 20, 0)
+            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user2, 20, 0)
         } yield (markedCount, user1Feeds, user2Feeds)
 
         val (marked, u1Feeds, u2Feeds) = result.unsafeRunSync()
@@ -344,15 +344,15 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2)
-            _ <- channelRepository.insertChannel(channel3a, user1)
-            _ <- channelRepository.insertChannel(channel3b, user2)
+            _ <- channelRepository.get.insertChannel(channel3a, user1)
+            _ <- channelRepository.get.insertChannel(channel3b, user2)
 
             // Mark as read for user1 only
-            markedCount <- feedRepository.markFeedAsRead(List(sharedFeedLink), user1)
+            markedCount <- feedRepository.get.markFeedAsRead(List(sharedFeedLink), user1)
 
             // Get feeds for both users
-            user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 50, 0)
-            user2Feeds <- channelRepository.getChannelsWithFeedsByUser(user2, 50, 0)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 50, 0)
+            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user2, 50, 0)
         } yield (markedCount, user1Feeds, user2Feeds)
 
         val (marked, u1Feeds, u2Feeds) = result.unsafeRunSync()
@@ -418,9 +418,9 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1)
-            _ <- channelRepository.insertChannel(channel5, user1)
-            markedCount <- feedRepository.markFeedAsRead(feedLinks, user1)
-            user1Feeds <- channelRepository.getChannelsWithFeedsByUser(user1, 50, 0)
+            _ <- channelRepository.get.insertChannel(channel5, user1)
+            markedCount <- feedRepository.get.markFeedAsRead(feedLinks, user1)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 50, 0)
         } yield (markedCount, user1Feeds)
 
         val (marked, feeds) = result.unsafeRunSync()
@@ -471,13 +471,13 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user3)
-            _ <- channelRepository.insertChannel(channel6, user3)
-            _ <- feedRepository.markFeedAsRead(
+            _ <- channelRepository.get.insertChannel(channel6, user3)
+            _ <- feedRepository.get.markFeedAsRead(
                 List("https://example.com/user3/feed/item1"),
                 user3
             )
             // user3 has hideRead = true in settings
-            user3Feeds <- channelRepository.getChannelsWithFeedsByUser(user3, 50, 0)
+            user3Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user3, 50, 0)
         } yield user3Feeds
 
         val feeds = result.unsafeRunSync()
@@ -498,11 +498,11 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2)
-            channelId <- channelRepository.insertChannel(channel7, user2)
-            user1Channels <- channelRepository.findUserChannels(user1)
+            channelId <- channelRepository.get.insertChannel(channel7, user2)
+            user1Channels <- channelRepository.get.findUserChannels(user1)
             // Try to delete user2's channel as user1
-            deleted <- channelRepository.deleteChannel(channelId, user1)
-            user2Channels <- channelRepository.findUserChannels(user2)
+            deleted <- channelRepository.get.deleteChannel(channelId, user1)
+            user2Channels <- channelRepository.get.findUserChannels(user2)
         } yield (channelId, deleted, user2Channels)
 
         val (cid, deleted, u2Channels) = result.unsafeRunSync()
@@ -521,10 +521,10 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user2)
-            channelId <- channelRepository.insertChannel(channel8, user2)
-            channelsBeforeDelete <- channelRepository.findUserChannels(user2)
-            deleted <- channelRepository.deleteChannel(channelId, user2)
-            channelsAfterDelete <- channelRepository.findUserChannels(user2)
+            channelId <- channelRepository.get.insertChannel(channel8, user2)
+            channelsBeforeDelete <- channelRepository.get.findUserChannels(user2)
+            deleted <- channelRepository.get.deleteChannel(channelId, user2)
+            channelsAfterDelete <- channelRepository.get.findUserChannels(user2)
         } yield (channelId, deleted, channelsBeforeDelete, channelsAfterDelete)
 
         val (cid, deleted, before, after) = result.unsafeRunSync()
@@ -571,10 +571,10 @@ class MultiUserIntegrationSpec
 
         val result = for {
             _ <- setupUsers(user1, user2)
-            _ <- channelRepository.insertChannel(channel1, user1)
-            _ <- channelRepository.insertChannel(channel2, user2)
-            user1Unread <- feedRepository.getUnreadFeeds(user1)
-            user2Unread <- feedRepository.getUnreadFeeds(user2)
+            _ <- channelRepository.get.insertChannel(channel1, user1)
+            _ <- channelRepository.get.insertChannel(channel2, user2)
+            user1Unread <- feedRepository.get.getUnreadFeeds(user1)
+            user2Unread <- feedRepository.get.getUnreadFeeds(user2)
         } yield (user1Unread, user2Unread)
 
         val (u1Unread, u2Unread) = result.unsafeRunSync()

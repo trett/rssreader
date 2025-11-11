@@ -10,7 +10,7 @@ import org.testcontainers.containers.PostgreSQLContainer
   */
 object TestDatabase:
 
-    private class PgContainer extends PostgreSQLContainer[PgContainer]("postgres:15-alpine")
+    private class PgContainer extends PostgreSQLContainer[PgContainer]("postgres:18-alpine")
 
     /** Creates a PostgreSQL container with Flyway migrations applied.
       *
