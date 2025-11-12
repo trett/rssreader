@@ -32,24 +32,30 @@ class ChannelRepository(xa: Transactor[IO]):
         val transaction = for {
             channelId <- insertChannelQuery
             _ <- insertUserChannelsQuery(user.id, channelId)
-            _ <- insertFeedItemsQuery(channelId, channel.feedItems)
+            _ <- insertFeedItemsQuery(channelId, user.id, channel.feedItems)
         } yield channelId
         transaction.transact(xa)
 
-    private def insertFeedItemsQuery(channelId: Long, feeds: List[Feed]): ConnectionIO[Int] =
+    private def insertFeedItemsQuery(
+        channelId: Long,
+        userId: String,
+        feeds: List[Feed]
+    ): ConnectionIO[Int] =
         val sql =
             """
-            INSERT INTO feeds (channel_id, title, link, description, pub_date, read)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT (link)
+            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (link, user_id)
             DO UPDATE SET description = EXCLUDED.description,
-            pub_date = EXCLUDED.pub_date, title = EXCLUDED.title
+            pub_date = EXCLUDED.pub_date, title = EXCLUDED.title, channel_id = EXCLUDED.channel_id
             """
         type FeedInfo =
-            (Long, String, String, String, Option[OffsetDateTime], Boolean)
+            (String, String, Long, String, String, Option[OffsetDateTime], Boolean)
         Update[FeedInfo](sql)
             .updateMany(
-                feeds.map(f => (channelId, f.title, f.link, f.description, f.pubDate, f.isRead))
+                feeds.map(f =>
+                    (f.link, userId, channelId, f.title, f.description, f.pubDate, f.isRead)
+                )
             )
 
     def findUserChannels(user: User): IO[List[Channel]] =
@@ -70,10 +76,10 @@ class ChannelRepository(xa: Transactor[IO]):
     ): IO[List[(Channel, Feed)]] = {
         val query = fr"""
           SELECT c.id, c.title, c.link,
-          f.link, f.channel_id, f.title, f.description, f.pub_date, f.read
+          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read
           FROM channels c
           JOIN user_channels uc ON c.id = uc.channel_id
-          JOIN feeds f ON c.id = f.channel_id
+          JOIN feeds f ON c.id = f.channel_id AND f.user_id = ${user.id}
           WHERE uc.user_id = ${user.id}
         """
         val condition =
@@ -88,8 +94,8 @@ class ChannelRepository(xa: Transactor[IO]):
             .transact(xa)
     }
 
-    def insertFeeds(feeds: List[Feed], channelId: Long): IO[Int] =
-        insertFeedItemsQuery(channelId, feeds)
+    def insertFeeds(feeds: List[Feed], channelId: Long, userId: String): IO[Int] =
+        insertFeedItemsQuery(channelId, userId, feeds)
             .transact(xa)
 
     def deleteChannel(id: Long, user: User): IO[Int] = {

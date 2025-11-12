@@ -46,7 +46,11 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
                     rows <- maybeUpdatedChannel match {
                         case Right(Some(updatedChannel)) =>
-                            channelRepository.insertFeeds(updatedChannel.feedItems, channel.id)
+                            channelRepository.insertFeeds(
+                                updatedChannel.feedItems,
+                                channel.id,
+                                user.id
+                            )
                         case Right(None) =>
                             logger.error(
                                 s"Failed to update channel. ${channel.title}. Response is empty."
@@ -96,9 +100,10 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
 
             feedItems = syndFeed.getEntries.asScala.map { entry =>
                 Feed(
+                    link = entry.getLink,
+                    userId = "", // Will be set when inserted
                     channelId = 0L, // This will be set after channel creation
                     title = entry.getTitle,
-                    link = entry.getLink,
                     description = extractDescription(entry),
                     pubDate = extractDate(entry)
                 )
