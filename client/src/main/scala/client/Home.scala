@@ -23,7 +23,7 @@ object Home:
     private val pageLimit = 20
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
-    private val model = new Model
+    private val model = AppState.model
     import model.*
 
     given Decoder[FeedItemData] = deriveDecoder

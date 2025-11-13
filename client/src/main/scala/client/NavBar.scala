@@ -19,11 +19,15 @@ object NavBar {
 
     private val popoverBus: EventBus[Option[HTMLElement]] = new EventBus
     private val profileId = "shellbar-profile-id"
+    private val model = AppState.model
+    import model.*
 
     def render: Element = div(
         cls := "sticky-navbar",
         ShellBar(
-            _.primaryTitle := "RSS Reader",
+            _.primaryTitle <-- unreadCountSignal.map(count =>
+                if (count > 0) s"RSS Reader ($count unread)" else "RSS Reader"
+            ),
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
             _.item(

@@ -13,3 +13,4 @@ final class Model:
     val feedSignal: StrictSignal[FeedItemList] = feedVar.signal
     val channelSignal: StrictSignal[ChannelList] = channelVar.signal
     val settingsSignal: StrictSignal[Option[UserSettings]] = settingsVar.signal
+    val unreadCountSignal = feedSignal.map(_.count(!_.isRead))

@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 
 object SettingsPage {
 
-    private val model = new Model
+    private val model = AppState.model
     import model.*
     private val openDialogBus: EventBus[Boolean] = new EventBus
     private val newChannelBus: EventBus[Unit] = new EventBus
