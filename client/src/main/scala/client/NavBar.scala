@@ -25,8 +25,9 @@ object NavBar {
     def render: Element = div(
         cls := "sticky-navbar",
         ShellBar(
-            _.primaryTitle <-- unreadCountSignal.map(count =>
-                if (count > 0) s"RSS Reader ($count unread)" else "RSS Reader"
+            _.primaryTitle := "RSS Reader",
+            _.notificationsCount <-- unreadCountSignal.map(count =>
+                if (count > 0) count.toString else ""
             ),
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
