@@ -40,8 +40,7 @@ object Home:
                     if (ids.contains(feed.link)) feed.copy(isRead = true) else feed
                 }
             }
-            // Refresh unread count from server after marking as read
-            refreshUnreadCount()
+            EventBus.emit(refreshUnreadCountBus -> ())
         case Failure(err) => handleError(err)
     }
 
@@ -53,10 +52,6 @@ object Home:
         case Failure(err)   => handleError(err)
     }
 
-    private def refreshUnreadCount(): Unit = {
-        getUnreadCountRequest().addObserver(unreadCountObserver)(unsafeWindowOwner)
-    }
-
     def render: Element = div(
         cls := "cards main-content",
         div(
@@ -66,7 +61,6 @@ object Home:
                     val data = response.collectSuccess
                     val errors = response.collectFailure
                     data.addObserver(feedsObserver)(ctx.owner)
-                    errors.addObserver(errorObserver)(ctx.owner)
                 }
             ),
             div(
@@ -83,7 +77,8 @@ object Home:
             div(
                 onMountBind(ctx =>
                     refreshUnreadCountBus --> { _ =>
-                        refreshUnreadCount()
+                        val response = getUnreadCountRequest()
+                        response.addObserver(unreadCountObserver)(ctx.owner)
                     }
                 )
             )
