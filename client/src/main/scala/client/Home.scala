@@ -61,6 +61,7 @@ object Home:
                     val data = response.collectSuccess
                     val errors = response.collectFailure
                     data.addObserver(feedsObserver)(ctx.owner)
+                    errors.addObserver(errorObserver)(ctx.owner)
                 }
             ),
             div(
