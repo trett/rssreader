@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Docker Images",
+			"type": "shell",
+			"command": "sbt buildImages",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run scalafix",
+			"type": "shell",
+			"command": "sbt scalafixAll",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Run scalafmt",
+			"type": "shell",
+			"command": "sbt scalafmtAll",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		}
+	]
+}

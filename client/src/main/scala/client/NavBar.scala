@@ -29,6 +29,7 @@ object NavBar {
             _.notificationsCount <-- unreadCountSignal.map(count =>
                 if (count > 0) count.toString else ""
             ),
+            _.showNotifications <-- unreadCountSignal.map(_ > 0),
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
             _.item(

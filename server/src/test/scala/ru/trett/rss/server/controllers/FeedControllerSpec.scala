@@ -42,7 +42,9 @@ class FeedControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         response.as[Int].unsafeRunSync().shouldBe(42)
     }
 
-    test("GET /api/feeds/channel/{channelId}/unread should return unread count for specific channel") {
+    test(
+        "GET /api/feeds/channel/{channelId}/unread should return unread count for specific channel"
+    ) {
         val request =
             AuthedRequest(user, Request[IO](Method.GET, uri"/api/feeds/channel/1/unread"))
         val response = authedRoutes.run(request).value.unsafeRunSync().get
