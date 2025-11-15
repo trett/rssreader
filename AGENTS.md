@@ -25,7 +25,7 @@ The project uses a hybrid build system:
 
 - **Scala.js**: The frontend is written in Scala and compiled to JavaScript using Scala.js.
 - **Laminar**: The UI is built using Laminar, a reactive UI library for Scala.js.
-- **UI5 Web Components**: The project uses UI5 Web Components for a consistent and modern UI.
+- **UI5 Web Components**: The project uses UI5 Web Components for a consistent and modern UI. There is a binding to `Laminar` that is used to interact with UI5. https://github.com/sherpal/LaminarSAPUI5Bindings 
 - **Vite**: The `@scala-js/vite-plugin-scalajs` plugin integrates Scala.js with Vite for a fast development experience and optimized builds.
 
 ## Project Structure
@@ -45,6 +45,7 @@ The project is a multi-module sbt project with the following key directories:
 - **Testing**: Tests are run using `sbt test`.
 - **Running Locally**: The `scripts` directory contains `docker-compose.yml` files to run the application stack (backend, frontend, database) locally.
 - **CI/CD**: GitHub Actions are configured to build and test the application on push and pull requests.
+- **Code style**: Run `scalafixAll` and `scalafmtAll` every time before make a commit to make the style consistently.
 
 ## Repository
 

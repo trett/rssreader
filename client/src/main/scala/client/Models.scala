@@ -10,6 +10,8 @@ final class Model:
     val feedVar: Var[FeedItemList] = Var(List())
     val channelVar: Var[ChannelList] = Var(List())
     val settingsVar: Var[Option[UserSettings]] = Var(Option.empty)
+    val unreadCountVar: Var[Int] = Var(0)
     val feedSignal: StrictSignal[FeedItemList] = feedVar.signal
     val channelSignal: StrictSignal[ChannelList] = channelVar.signal
     val settingsSignal: StrictSignal[Option[UserSettings]] = settingsVar.signal
+    val unreadCountSignal: StrictSignal[Int] = unreadCountVar.signal

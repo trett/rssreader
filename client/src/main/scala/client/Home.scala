@@ -20,10 +20,11 @@ object Home:
 
     val refreshFeedsBus: EventBus[Int] = new EventBus
     val markAllAsReadBus: EventBus[Unit] = new EventBus
+    val refreshUnreadCountBus: EventBus[Unit] = new EventBus
     private val pageLimit = 20
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
-    private val model = new Model
+    private val model = AppState.model
     import model.*
 
     given Decoder[FeedItemData] = deriveDecoder
@@ -39,11 +40,17 @@ object Home:
                     if (ids.contains(feed.link)) feed.copy(isRead = true) else feed
                 }
             }
+            EventBus.emit(refreshUnreadCountBus -> ())
         case Failure(err) => handleError(err)
     }
 
     private val feedsObserver =
         feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
+
+    private val unreadCountObserver = Observer[Try[Int]] {
+        case Success(count) => unreadCountVar.set(count)
+        case Failure(err)   => handleError(err)
+    }
 
     def render: Element = div(
         cls := "cards main-content",
@@ -65,6 +72,14 @@ object Home:
                             val response = updateFeedRequest(link)
                             response.addObserver(itemClickObserver)(ctx.owner)
                         }
+                    }
+                )
+            ),
+            div(
+                onMountBind(ctx =>
+                    refreshUnreadCountBus --> { _ =>
+                        val response = getUnreadCountRequest()
+                        response.addObserver(unreadCountObserver)(ctx.owner)
                     }
                 )
             )
@@ -89,11 +104,13 @@ object Home:
         val response = getChannelsAndFeedsRequest(1)
         val data = response.collectSuccess
         val errors = response.collectFailure
+        val unreadCountResponse = getUnreadCountRequest()
         UList(
             _.noDataText := "Nothing to read",
             children <-- feedSignal.split(_.link)(renderItem),
             data --> feedsObserver,
-            errors --> errorObserver
+            errors --> errorObserver,
+            unreadCountResponse --> unreadCountObserver
         )
 
     private def renderItem(
@@ -173,3 +190,9 @@ object Home:
                     _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
                 )
                 .mapSuccess(_ => seen.map(_.link))
+
+    private def getUnreadCountRequest(): EventStream[Try[Int]] =
+        FetchStream
+            .withDecoder(responseDecoder[Int])
+            .get(s"$HOST/api/feeds/unread/total")
+            .mapSuccess(_.get)

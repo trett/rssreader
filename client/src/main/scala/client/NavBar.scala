@@ -19,11 +19,17 @@ object NavBar {
 
     private val popoverBus: EventBus[Option[HTMLElement]] = new EventBus
     private val profileId = "shellbar-profile-id"
+    private val model = AppState.model
+    import model.*
 
     def render: Element = div(
         cls := "sticky-navbar",
         ShellBar(
             _.primaryTitle := "RSS Reader",
+            _.notificationsCount <-- unreadCountSignal.map(count =>
+                if (count > 0) count.toString else ""
+            ),
+            _.showNotifications <-- unreadCountSignal.map(_ > 0),
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
             _.item(
@@ -53,7 +59,11 @@ object NavBar {
                             .mapTo(())
                             // TODO: show loading spinner
                             .flatMap(_ => refreshFeedsRequest()) --> { _ =>
-                            EventBus.emit(Home.refreshFeedsBus -> 1, popoverBus -> None)
+                            EventBus.emit(
+                                Home.refreshFeedsBus -> 1,
+                                Home.refreshUnreadCountBus -> (),
+                                popoverBus -> None
+                            )
                         }
                     ),
                     _.item(

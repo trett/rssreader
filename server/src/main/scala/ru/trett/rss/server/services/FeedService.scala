@@ -11,3 +11,6 @@ class FeedService(feedRepository: FeedRepository):
 
     def getUnreadCount(channelId: Long, userId: String): IO[Int] =
         feedRepository.getUnreadCount(channelId, userId)
+
+    def getTotalUnreadCount(userId: String): IO[Int] =
+        feedRepository.getTotalUnreadCount(userId)
