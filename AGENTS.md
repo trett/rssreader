@@ -45,7 +45,7 @@ The project is a multi-module sbt project with the following key directories:
 - **Testing**: Tests are run using `sbt test`.
 - **Running Locally**: The `scripts` directory contains `docker-compose.yml` files to run the application stack (backend, frontend, database) locally.
 - **CI/CD**: GitHub Actions are configured to build and test the application on push and pull requests.
-- **Code style**: Run `scalafixAll` and `scalafmtAll` everytime before make a commit to make the style consistently.
+- **Code style**: Run `scalafixAll` and `scalafmtAll` every time before make a commit to make the style consistently.
 
 ## Repository
 
