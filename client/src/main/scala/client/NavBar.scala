@@ -58,7 +58,11 @@ object NavBar {
                             .mapTo(())
                             // TODO: show loading spinner
                             .flatMap(_ => refreshFeedsRequest()) --> { _ =>
-                            EventBus.emit(Home.refreshFeedsBus -> 1, popoverBus -> None)
+                            EventBus.emit(
+                                Home.refreshFeedsBus -> 1,
+                                Home.refreshUnreadCountBus -> (),
+                                popoverBus -> None
+                            )
                         }
                     ),
                     _.item(

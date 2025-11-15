@@ -20,6 +20,7 @@ object Home:
 
     val refreshFeedsBus: EventBus[Int] = new EventBus
     val markAllAsReadBus: EventBus[Unit] = new EventBus
+    val refreshUnreadCountBus: EventBus[Unit] = new EventBus
     private val pageLimit = 20
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
@@ -76,6 +77,13 @@ object Home:
                             val response = updateFeedRequest(link)
                             response.addObserver(itemClickObserver)(ctx.owner)
                         }
+                    }
+                )
+            ),
+            div(
+                onMountBind(ctx =>
+                    refreshUnreadCountBus --> { _ =>
+                        refreshUnreadCount()
                     }
                 )
             )
