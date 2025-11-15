@@ -26,4 +26,10 @@ object FeedController:
                     count <- feedService.getUnreadCount(channelId, user.id)
                     response <- Ok(count)
                 } yield response
+
+            case GET -> Root / "api" / "feeds" / "unread" / "total" as user =>
+                for {
+                    count <- feedService.getTotalUnreadCount(user.id)
+                    response <- Ok(count)
+                } yield response
         }
