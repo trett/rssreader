@@ -25,7 +25,7 @@ The project uses a hybrid build system:
 
 - **Scala.js**: The frontend is written in Scala and compiled to JavaScript using Scala.js.
 - **Laminar**: The UI is built using Laminar, a reactive UI library for Scala.js.
-- **UI5 Web Components**: The project uses UI5 Web Components for a consistent and modern UI. There is a binding to `Laminar` that uses to interact with UI5. https://github.com/sherpal/LaminarSAPUI5Bindings 
+- **UI5 Web Components**: The project uses UI5 Web Components for a consistent and modern UI. There is a binding to `Laminar` that is used to interact with UI5. https://github.com/sherpal/LaminarSAPUI5Bindings 
 - **Vite**: The `@scala-js/vite-plugin-scalajs` plugin integrates Scala.js with Vite for a fast development experience and optimized builds.
 
 ## Project Structure
