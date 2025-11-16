@@ -119,7 +119,14 @@ object Home:
         itemSignal: Signal[FeedItemData]
     ): HtmlElement = div(
         padding.px := 2,
+        borderRadius.px := 4,
         Card(
+            styleAttr <-- itemSignal.map(x =>
+                if (x.highlighted)
+                    "--sapTile_Background: #F9F9DF;"
+                else
+                    ""
+            ),
             _.slots.header := CardHeader(
                 _.slots.avatar := Icon(_.name := IconName.feed),
                 _.titleText <-- itemSignal.map(_.title),
@@ -136,6 +143,9 @@ object Home:
                     .flatMapStream(updateFeedRequest) --> itemClickObserver,
                 child <-- itemSignal.map(x =>
                     CustomListItem(
+                        backgroundColor <-- itemSignal.map(x =>
+                            if (x.highlighted) "#F9F9DF" else ""
+                        ),
                         div(
                             cls("feed-content"),
                             width.percent := 100,

@@ -61,6 +61,13 @@ object ChannelController:
                         ) *> NotFound()
                     case Success(result) => Ok(result)
                 }
+
+            case req @ PUT -> Root / "api" / "channels" / LongVar(id) / "highlight" as user =>
+                for {
+                    highlighted <- req.req.as[Boolean]
+                    result <- channelService.updateChannelHighlight(id, user, highlighted)
+                    response <- Ok(result)
+                } yield response
         }
 
     private object PageQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("page")

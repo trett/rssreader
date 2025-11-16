@@ -39,8 +39,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
 
     def updateFeeds(user: User): IO[List[Int]] =
         for {
-            channels <- channelRepository.findUserChannels(user)
-            result <- channels.parTraverse { channel =>
+            channels <- channelRepository.findUserChannelsWithHighlight(user)
+            result <- channels.parTraverse { (channel, _) =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
@@ -132,9 +132,9 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             .map(t => OffsetDateTime.ofInstant(t.toInstant, ZoneId))
 
     def getChannels(user: User): IO[List[ChannelData]] =
-        channelRepository.findUserChannels(user).flatMap {
-            _.traverse { channel =>
-                IO.pure(ChannelData(channel.id, channel.title, channel.link))
+        channelRepository.findUserChannelsWithHighlight(user).flatMap {
+            _.traverse { case (channel, highlighted) =>
+                IO.pure(ChannelData(channel.id, channel.title, channel.link, highlighted))
             }
         }
 
@@ -142,7 +142,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
         val offset = (page - 1) * limit
         val channels = channelRepository.getChannelsWithFeedsByUser(user, limit, offset)
         channels.flatMap {
-            _.traverse { case (channel, feed) =>
+            _.traverse { case (channel, feed, highlighted) =>
                 IO.pure(
                     FeedItemData(
                         feed.link,
@@ -150,7 +150,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                         feed.title,
                         feed.description,
                         feed.pubDate.getOrElse(OffsetDateTime.now()),
-                        feed.isRead
+                        feed.isRead,
+                        highlighted
                     )
                 )
             }
@@ -161,3 +162,6 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             case 0 => IO.raiseError(Exception("Channel does not belong to the user"))
             case _ => IO.pure(id)
         }
+
+    def updateChannelHighlight(id: Long, user: User, highlighted: Boolean): IO[Int] =
+        channelRepository.updateChannelHighlight(id, user, highlighted)

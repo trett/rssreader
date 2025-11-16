@@ -83,6 +83,7 @@ object SettingsPage {
                         marginBottom.px := 16,
                         Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
                         CheckBox(
+                            title := "Hide read articles",
                             _.id := "hide-read-cb",
                             _.checked <-- settingsSignal.map(x => x.forall(_.hideRead)),
                             _.events.onChange.mapToChecked --> settingsVar
@@ -128,20 +129,10 @@ object SettingsPage {
                     settingsData --> settingsVar.writer,
                     settingsErrors --> errorObserver
                 ),
-                div(
-                    formBlockStyle,
-                    marginTop.px := 32,
-                    marginBottom.px := 16,
-                    Label("Your channels", _.forId := "channels-list", _.showColon := true),
-                    Button(
-                        _.design := ButtonDesign.Default,
-                        _.icon := IconName.add,
-                        _.iconOnly := true,
-                        _.events.onClick.mapTo(true) --> openDialogBus
-                    )
-                ),
                 UList(
+                    _.headerText := "Channels",
                     _.id := "channels-list",
+                    marginTop.px := 20,
                     _.events.onItemDelete
                         .map(_.detail.item.dataset.get("channelId").get)
                         .flatMap(deleteChannelRequest) --> deleteChannelObserver,
@@ -149,6 +140,17 @@ object SettingsPage {
                     children <-- channelSignal.split(_.id)(renderChannel),
                     channels --> channelObserver,
                     channelsErrors --> errorObserver
+                ),
+                div(
+                    formBlockStyle,
+                    marginTop.px := 32,
+                    marginBottom.px := 16,
+                    Button(
+                        "Add",
+                        _.design := ButtonDesign.Positive,
+                        _.icon := IconName.add,
+                        _.events.onClick.mapTo(true) --> openDialogBus
+                    )
                 )
             )
         )
@@ -181,8 +183,55 @@ object SettingsPage {
         UList.item(
             _.icon := IconName.list,
             dataAttr("channel-id") <-- itemSignal.map(_.id.text),
-            child <-- itemSignal.map(_.title)
+            div(
+                display.flex,
+                alignItems.center,
+                justifyContent.spaceBetween,
+                width.percent := 100,
+                div(
+                    flex := "1",
+                    minWidth := "0",
+                    overflow.hidden,
+                    textOverflow.ellipsis,
+                    whiteSpace.nowrap,
+                    child <-- itemSignal.map(_.title)
+                ),
+                CheckBox(
+                    title := "Highlight channel",
+                    flexShrink := "0",
+                    _.checked <-- itemSignal.map(_.highlighted),
+                    _.events.onChange.mapToChecked
+                        .map(highlighted => (item.id, highlighted))
+                        .flatMap { case (channelId, highlighted) =>
+                            updateChannelHighlightRequest(channelId, highlighted)
+                        } --> Observer[Try[Boolean]] {
+                        case Success(newValue) =>
+                            channelVar.update(channels =>
+                                channels.map(ch =>
+                                    if (ch.id == item.id) ch.copy(highlighted = newValue)
+                                    else ch
+                                )
+                            )
+                            infoMessage("Highlight updated")
+                        case Failure(err) => handleError(err)
+                    },
+                    marginLeft.px := 10
+                )
+            )
         )
+
+    private def updateChannelHighlightRequest(
+        id: Long,
+        highlighted: Boolean
+    ): EventStream[Try[Boolean]] =
+        FetchStream
+            .withDecoder(responseDecoder[String])
+            .put(
+                s"$HOST/api/channels/$id/highlight",
+                _.body(highlighted.asJson.toString),
+                _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
+            )
+            .mapSuccess(_ => highlighted)
 
     private def deleteChannelRequest(id: String): EventStream[Try[Long]] =
         FetchStream
@@ -219,7 +268,7 @@ object SettingsPage {
                 div(flex := "1"),
                 Button(
                     _.design := ButtonDesign.Emphasized,
-                    "Add",
+                    "Save",
                     _.icon := IconName.save,
                     _.events.onClick.mapTo(false) --> openDialogBus.writer
                 )

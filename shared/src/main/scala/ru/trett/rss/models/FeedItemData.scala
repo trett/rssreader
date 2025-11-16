@@ -8,5 +8,6 @@ case class FeedItemData(
     title: String,
     description: String,
     pubDate: OffsetDateTime,
-    isRead: Boolean
+    isRead: Boolean,
+    highlighted: Boolean = false
 )
