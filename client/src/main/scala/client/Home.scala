@@ -119,7 +119,6 @@ object Home:
         itemSignal: Signal[FeedItemData]
     ): HtmlElement = div(
         padding.px := 2,
-        borderRadius.px := 4,
         Card(
             styleAttr <-- itemSignal.map(x =>
                 if (x.highlighted)

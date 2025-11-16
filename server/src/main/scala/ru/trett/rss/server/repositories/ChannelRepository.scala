@@ -69,6 +69,17 @@ class ChannelRepository(xa: Transactor[IO]):
             .to[List]
             .transact(xa)
 
+    def findUserChannelsWithHighlight(user: User): IO[List[(Channel, Boolean)]] =
+        sql"""
+          SELECT c.id, c.title, c.link, uc.highlighted
+          FROM channels c
+          JOIN user_channels uc ON c.id = uc.channel_id
+          WHERE uc.user_id = ${user.id}
+         """
+            .query[(Channel, Boolean)]
+            .to[List]
+            .transact(xa)
+
     def getChannelsWithFeedsByUser(
         user: User,
         limit: Int,
