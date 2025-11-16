@@ -204,11 +204,11 @@ object SettingsPage {
                         .map(highlighted => (item.id, highlighted))
                         .flatMap { case (channelId, highlighted) =>
                             updateChannelHighlightRequest(channelId, highlighted)
-                        } --> Observer[Try[Unit]] {
-                        case Success(_) =>
+                        } --> Observer[Try[Boolean]] {
+                        case Success(newValue) =>
                             channelVar.update(channels =>
                                 channels.map(ch =>
-                                    if (ch.id == item.id) ch.copy(highlighted = !ch.highlighted)
+                                    if (ch.id == item.id) ch.copy(highlighted = newValue)
                                     else ch
                                 )
                             )
@@ -223,7 +223,7 @@ object SettingsPage {
     private def updateChannelHighlightRequest(
         id: Long,
         highlighted: Boolean
-    ): EventStream[Try[Unit]] =
+    ): EventStream[Try[Boolean]] =
         FetchStream
             .withDecoder(responseDecoder[String])
             .put(
@@ -231,7 +231,7 @@ object SettingsPage {
                 _.body(highlighted.asJson.toString),
                 _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
             )
-            .mapSuccess(_ => ())
+            .mapSuccess(_ => highlighted)
 
     private def deleteChannelRequest(id: String): EventStream[Try[Long]] =
         FetchStream
