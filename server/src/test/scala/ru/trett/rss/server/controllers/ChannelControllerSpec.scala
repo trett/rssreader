@@ -3,6 +3,7 @@ package ru.trett.rss.server.controllers
 import cats.effect.*
 import cats.effect.unsafe.implicits.global
 import io.circe.*
+import io.circe.syntax.*
 import org.http4s.*
 import org.http4s.circe.*
 import org.http4s.client.Client
@@ -30,13 +31,34 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             ): IO[List[FeedItemData]] =
                 IO.pure(
                     List(
-                        FeedItemData("1", "test", "test", "test", OffsetDateTime.now(), false),
-                        FeedItemData("2", "test2", "test2", "test2", OffsetDateTime.now(), false)
+                        FeedItemData(
+                            "1",
+                            "test",
+                            "test",
+                            "test",
+                            OffsetDateTime.now(),
+                            false,
+                            false
+                        ),
+                        FeedItemData(
+                            "2",
+                            "test2",
+                            "test2",
+                            "test2",
+                            OffsetDateTime.now(),
+                            false,
+                            false
+                        )
                     )
                 )
 
             override def getChannels(user: User): IO[List[ChannelData]] =
-                IO.pure(List(ChannelData(1, "test", "test"), ChannelData(2, "test2", "test2")))
+                IO.pure(
+                    List(
+                        ChannelData(1, "test", "test", false),
+                        ChannelData(2, "test2", "test2", false)
+                    )
+                )
         }
     private val user = User("1", "Test User", "test@example.com", User.Settings())
     private val authedRoutes = ChannelController.routes(mockChannelService)
@@ -58,5 +80,27 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
         response.status shouldBe Status.Ok
         response.as[Json].unsafeRunSync().asArray.get.size shouldBe 2
+    }
+
+    test("PUT /api/channels/:id/highlight should update channel highlight status") {
+        val mockChannelServiceWithHighlight =
+            new ChannelService(mock[ChannelRepository], mock[Client[IO]]) {
+                override def updateChannelHighlight(
+                    id: Long,
+                    user: User,
+                    highlighted: Boolean
+                ): IO[Int] =
+                    IO.pure(1)
+            }
+        val routes = ChannelController.routes(mockChannelServiceWithHighlight)
+
+        val request = AuthedRequest(
+            user,
+            Request[IO](Method.PUT, uri"/api/channels/1/highlight")
+                .withEntity(true.asJson)
+        )
+        val response = routes.run(request).value.unsafeRunSync().get
+
+        response.status shouldBe Status.Ok
     }
 }

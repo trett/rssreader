@@ -181,8 +181,46 @@ object SettingsPage {
         UList.item(
             _.icon := IconName.list,
             dataAttr("channel-id") <-- itemSignal.map(_.id.text),
-            child <-- itemSignal.map(_.title)
+            div(
+                display.flex,
+                alignItems.center,
+                justifyContent.spaceBetween,
+                width.percent := 100,
+                child <-- itemSignal.map(_.title),
+                CheckBox(
+                    _.checked <-- itemSignal.map(_.highlighted),
+                    _.events.onChange.mapToChecked
+                        .map(highlighted => (item.id, highlighted))
+                        .flatMap { case (channelId, highlighted) =>
+                            updateChannelHighlightRequest(channelId, highlighted)
+                        } --> Observer[Try[Unit]] {
+                        case Success(_) =>
+                            channelVar.update(channels =>
+                                channels.map(ch =>
+                                    if (ch.id == item.id) ch.copy(highlighted = !ch.highlighted)
+                                    else ch
+                                )
+                            )
+                            infoMessage("Highlight updated")
+                        case Failure(err) => handleError(err)
+                    },
+                    marginLeft.px := 10
+                )
+            )
         )
+
+    private def updateChannelHighlightRequest(
+        id: Long,
+        highlighted: Boolean
+    ): EventStream[Try[Unit]] =
+        FetchStream
+            .withDecoder(responseDecoder[String])
+            .put(
+                s"$HOST/api/channels/$id/highlight",
+                _.body(highlighted.asJson.toString),
+                _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
+            )
+            .mapSuccess(_ => ())
 
     private def deleteChannelRequest(id: String): EventStream[Try[Long]] =
         FetchStream

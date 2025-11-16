@@ -265,8 +265,8 @@ class MultiUserIntegrationSpec
         u1Feeds should have size 1
         u2Feeds should have size 1
 
-        val (u1Channel, u1Feed) = u1Feeds.head
-        val (u2Channel, u2Feed) = u2Feeds.head
+        val (u1Channel, u1Feed, _) = u1Feeds.head
+        val (u2Channel, u2Feed, _) = u2Feeds.head
 
         u1Channel.title shouldBe "User 1 Channel"
         u2Channel.title shouldBe "User 2 Channel"

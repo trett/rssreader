@@ -120,6 +120,9 @@ object Home:
     ): HtmlElement = div(
         padding.px := 2,
         Card(
+            backgroundColor <-- itemSignal.map(x =>
+                if (x.highlighted) "#FFFACD" else "transparent"
+            ),
             _.slots.header := CardHeader(
                 _.slots.avatar := Icon(_.name := IconName.feed),
                 _.titleText <-- itemSignal.map(_.title),

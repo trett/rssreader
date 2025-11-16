@@ -69,14 +69,26 @@ class ChannelRepository(xa: Transactor[IO]):
             .to[List]
             .transact(xa)
 
+    def findUserChannelsWithHighlight(user: User): IO[List[(Channel, Boolean)]] =
+        sql"""
+          SELECT c.id, c.title, c.link, uc.highlighted
+          FROM channels c
+          JOIN user_channels uc ON c.id = uc.channel_id
+          WHERE uc.user_id = ${user.id}
+         """
+            .query[(Channel, Boolean)]
+            .to[List]
+            .transact(xa)
+
     def getChannelsWithFeedsByUser(
         user: User,
         limit: Int,
         offset: Int
-    ): IO[List[(Channel, Feed)]] = {
+    ): IO[List[(Channel, Feed, Boolean)]] = {
         val query = fr"""
           SELECT c.id, c.title, c.link,
-          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read
+          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read,
+          uc.highlighted
           FROM channels c
           JOIN user_channels uc ON c.id = uc.channel_id
           JOIN feeds f ON c.id = f.channel_id AND f.user_id = ${user.id}
@@ -89,7 +101,7 @@ class ChannelRepository(xa: Transactor[IO]):
                 fr"ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset"
         val finalQuery = query ++ condition
         finalQuery
-            .query[(Channel, Feed)]
+            .query[(Channel, Feed, Boolean)]
             .to[List]
             .transact(xa)
     }
@@ -115,4 +127,12 @@ class ChannelRepository(xa: Transactor[IO]):
             }
         } yield deleted
         transaction.transact(xa)
+    }
+
+    def updateChannelHighlight(id: Long, user: User, highlighted: Boolean): IO[Int] = {
+        sql"""
+          UPDATE user_channels
+          SET highlighted = $highlighted
+          WHERE user_id = ${user.id} AND channel_id = $id
+        """.update.run.transact(xa)
     }
