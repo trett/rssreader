@@ -129,18 +129,6 @@ object SettingsPage {
                     settingsData --> settingsVar.writer,
                     settingsErrors --> errorObserver
                 ),
-                div(
-                    formBlockStyle,
-                    marginTop.px := 32,
-                    marginBottom.px := 16,
-                    Label("Your channels", _.forId := "channels-list", _.showColon := true),
-                    Button(
-                        _.design := ButtonDesign.Default,
-                        _.icon := IconName.add,
-                        _.iconOnly := true,
-                        _.events.onClick.mapTo(true) --> openDialogBus
-                    )
-                ),
                 UList(
                     _.headerText := "Channels",
                     _.id := "channels-list",
