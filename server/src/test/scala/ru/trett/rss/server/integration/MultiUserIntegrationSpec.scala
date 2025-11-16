@@ -583,4 +583,56 @@ class MultiUserIntegrationSpec
             feed.userId shouldBe user2.id
         }
     }
+
+    test("Channel highlight status works independently per user") {
+        val now = OffsetDateTime.now()
+
+        val channel1 = Channel(
+            0,
+            "Channel to Highlight",
+            "https://example.com/highlight/feed",
+            List(
+                Feed(
+                    "https://example.com/highlight/item1",
+                    user1.id,
+                    0,
+                    "Item 1",
+                    "Desc",
+                    Some(now),
+                    false
+                )
+            )
+        )
+
+        val result = for {
+            _ <- setupUsers(user1, user2)
+            channelId <- channelRepository.get.insertChannel(channel1, user1)
+            _ <- channelRepository.get.insertChannel(channel1.copy(feedItems = List()), user2)
+
+            // User1 highlights the channel
+            updated <- channelRepository.get.updateChannelHighlight(
+                channelId,
+                user1,
+                highlighted = true
+            )
+
+            // Get channels for both users
+            user1Channels <- channelRepository.get.findUserChannelsWithHighlight(user1)
+            user2Channels <- channelRepository.get.findUserChannelsWithHighlight(user2)
+        } yield (updated, user1Channels, user2Channels)
+
+        val (updatedCount, u1Channels, u2Channels) = result.unsafeRunSync()
+
+        updatedCount shouldBe 1
+
+        // User1's channel should be highlighted
+        val u1HighlightedChannel = u1Channels.find(_._1.link == channel1.link)
+        u1HighlightedChannel shouldBe defined
+        u1HighlightedChannel.get._2 shouldBe true
+
+        // User2's same channel should NOT be highlighted (different user)
+        val u2HighlightedChannel = u2Channels.find(_._1.link == channel1.link)
+        u2HighlightedChannel shouldBe defined
+        u2HighlightedChannel.get._2 shouldBe false
+    }
 }
