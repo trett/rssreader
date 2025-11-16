@@ -39,8 +39,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
 
     def updateFeeds(user: User): IO[List[Int]] =
         for {
-            channels <- channelRepository.findUserChannels(user)
-            result <- channels.parTraverse { channel =>
+            channels <- channelRepository.findUserChannelsWithHighlight(user)
+            result <- channels.parTraverse { (channel, _) =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt

@@ -83,6 +83,7 @@ object SettingsPage {
                         marginBottom.px := 16,
                         Label("Hide read", _.forId := "hide-read-cb", _.showColon := true),
                         CheckBox(
+                            title := "Hide read articles",
                             _.id := "hide-read-cb",
                             _.checked <-- settingsSignal.map(x => x.forall(_.hideRead)),
                             _.events.onChange.mapToChecked --> settingsVar
@@ -128,20 +129,10 @@ object SettingsPage {
                     settingsData --> settingsVar.writer,
                     settingsErrors --> errorObserver
                 ),
-                div(
-                    formBlockStyle,
-                    marginTop.px := 32,
-                    marginBottom.px := 16,
-                    Label("Your channels", _.forId := "channels-list", _.showColon := true),
-                    Button(
-                        _.design := ButtonDesign.Default,
-                        _.icon := IconName.add,
-                        _.iconOnly := true,
-                        _.events.onClick.mapTo(true) --> openDialogBus
-                    )
-                ),
                 UList(
+                    _.headerText := "Channels",
                     _.id := "channels-list",
+                    marginTop.px := 20,
                     _.events.onItemDelete
                         .map(_.detail.item.dataset.get("channelId").get)
                         .flatMap(deleteChannelRequest) --> deleteChannelObserver,
@@ -149,6 +140,17 @@ object SettingsPage {
                     children <-- channelSignal.split(_.id)(renderChannel),
                     channels --> channelObserver,
                     channelsErrors --> errorObserver
+                ),
+                div(
+                    formBlockStyle,
+                    marginTop.px := 32,
+                    marginBottom.px := 16,
+                    Button(
+                        "Add",
+                        _.design := ButtonDesign.Positive,
+                        _.icon := IconName.add,
+                        _.events.onClick.mapTo(true) --> openDialogBus
+                    )
                 )
             )
         )
@@ -186,8 +188,17 @@ object SettingsPage {
                 alignItems.center,
                 justifyContent.spaceBetween,
                 width.percent := 100,
-                child <-- itemSignal.map(_.title),
+                div(
+                    flex := "1",
+                    minWidth := "0",
+                    overflow.hidden,
+                    textOverflow.ellipsis,
+                    whiteSpace.nowrap,
+                    child <-- itemSignal.map(_.title)
+                ),
                 CheckBox(
+                    title := "Highlight channel",
+                    flexShrink := "0",
                     _.checked <-- itemSignal.map(_.highlighted),
                     _.events.onChange.mapToChecked
                         .map(highlighted => (item.id, highlighted))
@@ -257,7 +268,7 @@ object SettingsPage {
                 div(flex := "1"),
                 Button(
                     _.design := ButtonDesign.Emphasized,
-                    "Add",
+                    "Save",
                     _.icon := IconName.save,
                     _.events.onClick.mapTo(false) --> openDialogBus.writer
                 )
