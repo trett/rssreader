@@ -1,28 +1,29 @@
 package ru.trett.rss.server.authorization
 
 import cats.effect.*
-import cats.effect.std.{MapRef, UUIDGen}
+import cats.effect.std.UUIDGen
 import cats.syntax.all.*
-
-import java.util.concurrent.ConcurrentHashMap
+import com.github.blemale.scaffeine.{Cache, Scaffeine}
 
 case class SessionData(userEmail: String)
 
-class SessionManager[F[_]: Sync] private (sessions: MapRef[F, String, Option[SessionData]]):
+class SessionManager[F[_]: Sync] private (cache: Cache[String, SessionData]):
 
     def createSession(data: SessionData): F[String] =
         for {
             sessionId <- UUIDGen.randomString[F]
-            _ <- sessions(sessionId).update(_ => Some(data))
+            _ <- Sync[F].delay(cache.put(sessionId, data))
         } yield sessionId
 
     def getSession(sessionId: String): F[Option[SessionData]] =
-        sessions(sessionId).get
+        Sync[F].delay(cache.getIfPresent(sessionId))
 
     def deleteSession(sessionId: String): F[Unit] =
-        sessions(sessionId).update(_ => None)
+        Sync[F].delay(cache.invalidate(sessionId))
 
 object SessionManager:
     def apply[F[_]: Sync]: F[SessionManager[F]] =
-        new SessionManager(MapRef.fromConcurrentHashMap(new ConcurrentHashMap[String, SessionData]))
-            .pure[F]
+        val cache: Cache[String, SessionData] = Scaffeine()
+            .maximumSize(500)
+            .build[String, SessionData]()
+        new SessionManager(cache).pure[F]
