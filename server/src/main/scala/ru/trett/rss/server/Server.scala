@@ -195,7 +195,4 @@ object Server extends IOApp:
         )
 
     private def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
-        OptionT.liftF(
-            IO.println(msg) >>
-                IO(t.printStackTrace())
-        )
+        OptionT.liftF(logger.error(t)(msg))
