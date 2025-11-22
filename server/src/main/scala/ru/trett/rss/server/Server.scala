@@ -76,34 +76,32 @@ object Server extends IOApp:
                     )
                     channelService = ChannelService(channelRepository, client)
                     _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                    exitCode <- UpdateTask(channelService, userService).background.use { task =>
-                        for {
-                            authFilter <- AuthFilter[IO]
-                            server <- EmberServerBuilder
-                                .default[IO]
-                                .withHost(ipv4"0.0.0.0")
-                                .withPort(Port.fromInt(appConfig.server.port).get)
-                                .withHttpApp(
-                                    withErrorLogging(
-                                        corsPolicy(
-                                            routes(
-                                                sessionManager,
-                                                channelService,
-                                                userService,
-                                                feedService,
-                                                appConfig.oauth,
-                                                authFilter,
-                                                client,
-                                                summarizeService,
-                                                new LogoutController[IO](sessionManager)
-                                            )
-                                        )
-                                    ).orNotFound
+                    authFilter <- AuthFilter[IO]
+                    exitCode <- EmberServerBuilder
+                        .default[IO]
+                        .withHost(ipv4"0.0.0.0")
+                        .withPort(Port.fromInt(appConfig.server.port).get)
+                        .withHttpApp(
+                            withErrorLogging(
+                                corsPolicy(
+                                    routes(
+                                        sessionManager,
+                                        channelService,
+                                        userService,
+                                        feedService,
+                                        appConfig.oauth,
+                                        authFilter,
+                                        client,
+                                        summarizeService,
+                                        new LogoutController[IO](sessionManager)
+                                    )
                                 )
-                                .build
-                                .use(_ => IO.never)
-                        } yield server
-                    }
+                            ).orNotFound
+                        )
+                        .build
+                        .use { _ =>
+                            UpdateTask(channelService, userService).use(_ => IO.never)
+                        }
                 } yield exitCode
             }
         }
