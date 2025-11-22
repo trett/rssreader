@@ -26,7 +26,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
 ):
 
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
-    private val ZoneId = java.time.ZoneId.systemDefault()
+    private val zoneId = java.time.ZoneId.systemDefault()
 
     def createChannel(link: String, user: User): IO[Long] =
         for {
@@ -129,7 +129,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
     private def extractDate(entry: SyndEntry): Option[OffsetDateTime] =
         Option(entry.getPublishedDate)
             .orElse(Option(entry.getUpdatedDate))
-            .map(t => OffsetDateTime.ofInstant(t.toInstant, ZoneId))
+            .map(t => OffsetDateTime.ofInstant(t.toInstant, zoneId))
 
     def getChannels(user: User): IO[List[ChannelData]] =
         channelRepository.findUserChannelsWithHighlight(user).flatMap {

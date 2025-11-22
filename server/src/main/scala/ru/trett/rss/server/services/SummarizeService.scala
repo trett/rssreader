@@ -33,10 +33,11 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     private val endpoint =
         uri"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+    private val summaryFeedLimit = 60
 
     def getSummary(user: User): IO[String] = {
         for {
-            feeds <- feedRepository.getUnreadFeeds(user)
+            feeds <- feedRepository.getUnreadFeeds(user, summaryFeedLimit)
             text = feeds.map(_.description).mkString("\n")
             strippedText = Jsoup.parse(text).text()
             summary <- summarize(strippedText, user.settings.summaryLanguage.getOrElse("English"))

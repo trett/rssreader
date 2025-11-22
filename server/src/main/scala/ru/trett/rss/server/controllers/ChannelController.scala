@@ -10,8 +10,6 @@ import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.ChannelService
 
-import scala.util.{Failure, Success, Try}
-
 object ChannelController:
 
     def routes(channelService: ChannelService)(using LoggerFactory[IO]): AuthedRoutes[User, IO] =
@@ -54,12 +52,12 @@ object ChannelController:
                 } yield response
 
             case DELETE -> Root / "api" / "channels" / LongVar(id) as user =>
-                Try(channelService.removeChannel(id, user)) match {
-                    case Failure(exception) =>
+                channelService.removeChannel(id, user).attempt.flatMap {
+                    case Left(exception) =>
                         logger.error(exception)(
                             s"Error deleting channel: $id ${exception.getMessage}"
                         ) *> NotFound()
-                    case Success(result) => Ok(result)
+                    case Right(result) => Ok(result)
                 }
 
             case req @ PUT -> Root / "api" / "channels" / LongVar(id) / "highlight" as user =>

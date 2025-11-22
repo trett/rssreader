@@ -76,7 +76,7 @@ object Server extends IOApp:
                     )
                     channelService = ChannelService(channelRepository, client)
                     _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                    exitCode <- UpdateTask(channelService, userService).background.use { task =>
+                    exitCode <- UpdateTask(channelService, userService).background.void.surround {
                         for {
                             authFilter <- AuthFilter[IO]
                             server <- EmberServerBuilder
@@ -195,7 +195,4 @@ object Server extends IOApp:
         )
 
     private def errorHandler(t: Throwable, msg: => String): OptionT[IO, Unit] =
-        OptionT.liftF(
-            IO.println(msg) >>
-                IO(t.printStackTrace())
-        )
+        OptionT.liftF(logger.error(t)(msg))

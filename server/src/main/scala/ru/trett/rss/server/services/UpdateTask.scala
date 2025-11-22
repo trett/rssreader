@@ -18,34 +18,31 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
         for {
             users <- userService.getUsers
             _ <- logger.info(s"Found ${users.size} users")
-            _ <- users.parTraverse { user =>
+            channelCounts <- users.parTraverse { user =>
                 for {
                     channels <- channelService.updateFeeds(user)
                     _ <- logger.info(s"Updated ${channels.size} channels for user ${user.email}")
                 } yield channels.size
             }
-        } yield users.size
+        } yield channelCounts.sum
     }
 
-    val task: Stream[IO, Int] =
-        Stream.eval(updateChannels()) ++
-            Stream
-                .awakeEvery[IO](10.minutes)
-                .evalMap(_ => updateChannels())
-                .handleErrorWith { error =>
-                    Stream.eval(
-                        logger.error(error)("Stream failed, restarting") *> IO.pure(0)
-                    ) ++ task
-                }
+    private def taskStream: Stream[IO, Int] =
+        Stream
+            .awakeEvery[IO](10.minutes)
+            .evalMap(_ => updateChannels())
+            .handleErrorWith { error =>
+                Stream.exec(logger.error(error)("Stream failed, restarting"))
+            }
 
-    private def job: Stream[IO, Int] =
-        Stream.bracket(IO(logger.info("Starting background job")))(_ =>
-            IO(logger.info("Stopping background job"))
-        ) >> task
+    private def job: Stream[IO, Unit] =
+        Stream.bracket(logger.info("Starting background job"))(_ =>
+            logger.info("Stopping background job")
+        ) >> taskStream.drain
 
 object UpdateTask:
 
     def apply(channelService: ChannelService, userService: UserService)(using
         loggerFactory: LoggerFactory[IO]
-    ): IO[List[Int]] =
-        new UpdateTask(channelService, userService).job.compile.toList
+    ): IO[Unit] =
+        new UpdateTask(channelService, userService).job.compile.drain

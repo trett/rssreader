@@ -582,8 +582,8 @@ class MultiUserIntegrationSpec
             _ <- setupUsers(user1, user2)
             _ <- channelRepository.get.insertChannel(channel1, user1)
             _ <- channelRepository.get.insertChannel(channel2, user2)
-            user1Unread <- feedRepository.get.getUnreadFeeds(user1)
-            user2Unread <- feedRepository.get.getUnreadFeeds(user2)
+            user1Unread <- feedRepository.get.getUnreadFeeds(user1, 100)
+            user2Unread <- feedRepository.get.getUnreadFeeds(user2, 100)
         } yield (user1Unread, user2Unread)
 
         val (u1Unread, u2Unread) = result.unsafeRunSync()
