@@ -1,6 +1,6 @@
 package ru.trett.rss.server.services
 
-import cats.effect.{IO, Resource}
+import cats.effect.IO
 import cats.syntax.all.*
 import fs2.Stream
 import org.typelevel.log4cats.Logger
@@ -28,13 +28,13 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
     }
 
     private def taskStream: Stream[IO, Int] =
-        Stream.eval(updateChannels()) ++
-            Stream
-                .awakeEvery[IO](10.minutes)
-                .evalMap(_ => updateChannels())
-                .handleErrorWith { error =>
-                    Stream.exec(logger.error(error)("Stream failed, restarting")) ++ taskStream
-                }
+        Stream
+            .awakeEvery[IO](10.minutes)
+            .evalMap(_ => updateChannels())
+            .handleErrorWith { error =>
+                Stream.exec(logger.error(error)("Stream failed, restarting"))
+            }
+            .foreverM
 
     private def job: Stream[IO, Unit] =
         Stream.bracket(logger.info("Starting background job"))(_ =>
@@ -45,5 +45,5 @@ object UpdateTask:
 
     def apply(channelService: ChannelService, userService: UserService)(using
         loggerFactory: LoggerFactory[IO]
-    ): Resource[IO, Unit] =
-        new UpdateTask(channelService, userService).job.compile.resource.lastOrError.void
+    ): IO[Unit] =
+        new UpdateTask(channelService, userService).job.compile.drain

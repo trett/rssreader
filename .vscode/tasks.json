@@ -10,7 +10,7 @@
 			"group": "build"
 		},
 		{
-			"label": "Run scalafix",
+			"label": "Run Scalafix",
 			"type": "shell",
 			"command": "sbt scalafixAll",
 			"isBackground": false,
@@ -18,12 +18,20 @@
 			"group": "none"
 		},
 		{
-			"label": "Run scalafmt",
+			"label": "Run Scalafmt",
 			"type": "shell",
 			"command": "sbt scalafmtAll",
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "none"
-		}
+		},
+		{
+			"label": "Run Tests",
+			"type": "shell",
+			"command": "sbt test",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
 	]
 }
