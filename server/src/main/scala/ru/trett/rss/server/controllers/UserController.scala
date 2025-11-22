@@ -8,7 +8,7 @@ import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
 import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
-import ru.trett.rss.models.UserSettings
+import ru.trett.rss.models.{SummaryLanguage, UserSettings}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
 
@@ -31,8 +31,12 @@ object UserController {
             case req @ POST -> Root / "api" / "user" / "settings" as user =>
                 for {
                     settings <- req.req.as[UserSettings]
+                    validatedLanguage = settings.summaryLanguage.flatMap { lang =>
+                        if (SummaryLanguage.isValid(lang)) Some(lang)
+                        else None
+                    }
                     updatedUser = user.copy(settings =
-                        User.Settings(settings.hideRead, settings.summaryLanguage)
+                        User.Settings(settings.hideRead, validatedLanguage)
                     )
                     result <- userService.updateUserSettings(updatedUser)
                     _ <- logger.info(
