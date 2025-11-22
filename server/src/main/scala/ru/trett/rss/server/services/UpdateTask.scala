@@ -34,7 +34,6 @@ class UpdateTask private (channelService: ChannelService, userService: UserServi
             .handleErrorWith { error =>
                 Stream.exec(logger.error(error)("Stream failed, restarting"))
             }
-            .foreverM
 
     private def job: Stream[IO, Unit] =
         Stream.bracket(logger.info("Starting background job"))(_ =>
