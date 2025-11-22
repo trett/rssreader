@@ -5,6 +5,8 @@ import cats.effect.std.UUIDGen
 import cats.syntax.all.*
 import com.github.blemale.scaffeine.{Cache, Scaffeine}
 
+import scala.concurrent.duration.DurationInt
+
 case class SessionData(userEmail: String)
 
 class SessionManager[F[_]: Sync] private (cache: Cache[String, SessionData]):
@@ -25,5 +27,6 @@ object SessionManager:
     def apply[F[_]: Sync]: F[SessionManager[F]] =
         val cache: Cache[String, SessionData] = Scaffeine()
             .maximumSize(500)
+            .expireAfterWrite(1.days)
             .build[String, SessionData]()
         new SessionManager(cache).pure[F]

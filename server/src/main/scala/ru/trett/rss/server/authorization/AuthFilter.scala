@@ -11,12 +11,7 @@ import ru.trett.rss.server.services.UserService
 
 import scala.concurrent.duration.*
 
-class AuthFilter[F[_]: Sync: LiftIO]:
-
-    private val cache: Cache[String, User] = Scaffeine()
-        .maximumSize(100)
-        .expireAfterWrite(1.hour)
-        .build[String, User]()
+class AuthFilter[F[_]: Sync: LiftIO] private (cache: Cache[String, User]):
 
     def middleware(
         sessionManager: SessionManager[F],
@@ -57,4 +52,9 @@ class AuthFilter[F[_]: Sync: LiftIO]:
         }
 
 object AuthFilter:
-    def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] = new AuthFilter().pure[F]
+    def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] =
+        val cache: Cache[String, User] = Scaffeine()
+            .maximumSize(100)
+            .expireAfterWrite(1.hour)
+            .build[String, User]()
+        new AuthFilter(cache).pure[F]
