@@ -107,12 +107,12 @@ object SettingsPage {
                                 .updater[String]((a, b) =>
                                     a.map(x => x.copy(summaryLanguage = Some(b)))
                                 ),
-                            List("English", "Serbian", "Russian", "German", "Spanish").map(lang =>
+                            SummaryLanguage.all.map(lang =>
                                 Select.option(
                                     _.selected <-- settingsSignal.map(x =>
-                                        x.flatMap(_.summaryLanguage).contains(lang)
+                                        x.flatMap(_.summaryLanguage).contains(lang.displayName)
                                     ),
-                                    lang
+                                    lang.displayName
                                 )
                             )
                         )
