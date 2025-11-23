@@ -16,6 +16,7 @@ import org.http4s.client.Client
 import org.typelevel.ci.*
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.LoggerFactory
+import ru.trett.rss.models.SummaryLanguage
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.FeedRepository
 import org.jsoup.Jsoup
@@ -40,7 +41,10 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             feeds <- feedRepository.getUnreadFeeds(user, summaryFeedLimit)
             text = feeds.map(_.description).mkString("\n")
             strippedText = Jsoup.parse(text).text()
-            summary <- summarize(strippedText, user.settings.summaryLanguage.getOrElse("English"))
+            validatedLanguage = user.settings.summaryLanguage
+                .flatMap(SummaryLanguage.fromString)
+                .getOrElse(SummaryLanguage.English)
+            summary <- summarize(strippedText, validatedLanguage.displayName)
         } yield summary
     }
 
