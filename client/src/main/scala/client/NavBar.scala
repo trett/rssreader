@@ -39,7 +39,7 @@ object NavBar {
             ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
             _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) },
-            _.events.onNotificationsClick.mapTo(()) --> { _ =>
+            _.events.onNotificationsClick.mapTo(()) --> {
                 EventBus.emit(Home.markAllAsReadBus -> ())
             }
         ),
