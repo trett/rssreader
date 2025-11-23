@@ -32,8 +32,7 @@ object UserController {
                 for {
                     settings <- req.req.as[UserSettings]
                     validatedLanguage = settings.summaryLanguage.flatMap { lang =>
-                        if (SummaryLanguage.isValid(lang)) Some(lang)
-                        else None
+                        SummaryLanguage.fromString(lang).map(_.displayName)
                     }
                     updatedUser = user.copy(settings =
                         User.Settings(settings.hideRead, validatedLanguage)
