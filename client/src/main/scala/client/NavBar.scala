@@ -38,7 +38,10 @@ object NavBar {
                 onClick.mapTo(()) --> { Router.currentPageVar.set(SummaryRoute) }
             ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
-            _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) }
+            _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) },
+            _.events.onNotificationsClick.mapTo(()) --> {
+                EventBus.emit(Home.markAllAsReadBus -> ())
+            }
         ),
         Popover(
             _.openerId := profileId,
@@ -64,13 +67,6 @@ object NavBar {
                                 Home.refreshUnreadCountBus -> (),
                                 popoverBus -> None
                             )
-                        }
-                    ),
-                    _.item(
-                        _.icon := IconName.complete,
-                        "Mark all as read",
-                        onClick.mapTo(()) --> { _ =>
-                            EventBus.emit(Home.markAllAsReadBus -> (), popoverBus -> None)
                         }
                     ),
                     _.item(
