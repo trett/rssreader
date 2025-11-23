@@ -1,26 +1,28 @@
-**/target/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
+# sbt/Scala
+.bloop/
+.metals/
+.sbt/
+target/
+project/target/
+project/project/
+.idea/
+.vscode/
 .project
-.settings
-.springBeans
-.sts4-cache
+.metals
+.bloop
+**/.bsp/
+**/metals.sbt
 
-### IntelliJ IDEA ###
+# IntelliJ IDEA
 .idea
 *.iws
 *.iml
 *.ipr
 
+# Vite
 .workspace/
-**/node_modules/
+.vite
 dist
+**/node_modules/
 
 .DS_Store
-.metals
-.bloop
-**/.bsp/
-.vite
