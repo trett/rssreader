@@ -6,8 +6,8 @@ import scala.sys.process.*
 
 lazy val projectVersion = "2.2.6"
 lazy val organizationName = "ru.trett"
-lazy val scala3Version = "3.7.2"
-lazy val circeVersion = "0.14.14"
+lazy val scala3Version = "3.7.4"
+lazy val circeVersion = "0.14.15"
 lazy val htt4sVersion = "1.0.0-M39"
 lazy val logs4catVersion = "2.7.1"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
@@ -96,9 +96,9 @@ lazy val server = project
         dockerExposedPorts := Seq(8080),
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
-            "org.slf4j" % "slf4j-api" % "2.0.13",
-            "ch.qos.logback" % "logback-classic" % "1.5.6",
-            "org.flywaydb" % "flyway-core" % "10.15.2",
+            "org.slf4j" % "slf4j-api" % "2.0.17",
+            "ch.qos.logback" % "logback-classic" % "1.5.21",
+            "org.flywaydb" % "flyway-core" % "11.17.2",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
             "com.rometools" % "rome" % "2.1.0"
         ),
@@ -123,14 +123,14 @@ lazy val server = project
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
         ).map(_ % "1.0.0-RC5"),
-        libraryDependencies += "org.jsoup" % "jsoup" % "1.21.1",
+        libraryDependencies += "org.jsoup" % "jsoup" % "1.21.2",
         libraryDependencies += "com.github.blemale" %% "scaffeine" % "5.3.0",
-        libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.10.4" % "runtime",
+        libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.17.2" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-        libraryDependencies += "org.scalamock" %% "scalamock" % "7.4.0" % Test,
-        libraryDependencies += "org.testcontainers" % "testcontainers" % "1.19.3" % Test,
-        libraryDependencies += "org.testcontainers" % "postgresql" % "1.19.3" % Test,
-        libraryDependencies += "org.postgresql" % "postgresql" % "42.7.1" % Test,
+        libraryDependencies += "org.scalamock" %% "scalamock" % "7.5.2" % Test,
+        libraryDependencies += "org.testcontainers" % "testcontainers" % "2.0.2" % Test,
+        libraryDependencies += "org.testcontainers" % "postgresql" % "1.21.3" % Test,
+        libraryDependencies += "org.postgresql" % "postgresql" % "42.7.8" % Test,
         scalacOptions ++= customScalaOptions,
         Compile / run / fork := true,
         inThisBuild(
