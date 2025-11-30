@@ -24,7 +24,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
         version := projectVersion,
         organization := organizationName,
         scalaVersion := scala3Version,
-        scalacOptions ++= customScalaOptions,
+        scalacOptions ++= customScalaOptions
     )
     .jsSettings()
     .jvmSettings()
@@ -32,7 +32,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
 lazy val client = project
     .in(file("client"))
     .dependsOn(shared.js)
-    .enablePlugins(ScalaJSPlugin, DockerPlugin)
+    .enablePlugins(ScalaJSPlugin, UniversalPlugin)
     .settings(
         version := projectVersion,
         organization := organizationName,
@@ -42,27 +42,21 @@ lazy val client = project
             _.withModuleKind(ModuleKind.ESModule)
                 .withModuleSplitStyle(ModuleSplitStyle.SmallModulesFor(List("client")))
         },
-        Compile / sourceGenerators += Def.task {
-            val out =
-                (Compile / sourceManaged).value / "scala/client/AppConfig.scala"
-            IO.write(
-                out,
-                s"""
-        package client
-        object AppConfig {
-          val BASE_URI="${sys.env.getOrElse("SERVER_URL", "https://localhost")}"
-        }
-        """
-            )
-            Seq(out)
-        },
+        //Compile / sourceGenerators += Def.task {
+            //val out =
+                //(Compile / sourceManaged).value / "scala/client/AppConfig.scala"
+            //IO.write(
+                //out,
+                //s"""
+        //package client
+        //object AppConfig {
+          //val BASE_URI="${sys.env.getOrElse("SERVER_URL", "http://localhost")}"
+        //}
+        //"""
+            //)
+            //Seq(out)
+        //},
         Universal / mappings ++= directory(buildClientDist.value),
-        dockerRepository := sys.env.get("REGISTRY"),
-        dockerCommands := Seq(
-            Cmd("FROM", "nginx:1.29.1-alpine"),
-            Cmd("COPY", "opt/docker/dist/", "/usr/share/nginx/html/")
-        ),
-        dockerExposedPorts := Seq(80),
         libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.1",
         libraryDependencies += "com.raquo" %%% "laminar" % "17.2.1",
         libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.12.1",
@@ -73,6 +67,7 @@ lazy val client = project
             "io.circe" %%% "circe-parser"
         ).map(_ % circeVersion),
         scalacOptions ++= customScalaOptions,
+        Compile / packageDoc / mappings := Seq(),
         inThisBuild(
             List(
                 scalaVersion := scala3Version,
@@ -94,6 +89,8 @@ lazy val server = project
         dockerBaseImage := "eclipse-temurin:17-jre-noble",
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
+        // trigger on compile for hot reloading, e.g. ~reStart
+        buildClientDist := buildClientDist.triggeredBy(Compile / compile).value,
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
@@ -133,6 +130,12 @@ lazy val server = project
         libraryDependencies += "org.postgresql" % "postgresql" % "42.7.8" % Test,
         scalacOptions ++= customScalaOptions,
         Compile / run / fork := true,
+        Compile / packageDoc / mappings := Seq(),
+        Compile / resourceGenerators += buildClientDist.taskValue.map { distDir =>
+            val targetDir = (Compile / resourceManaged).value / "public"
+            IO.copyDirectory(distDir, targetDir)
+            (targetDir ** "*").get
+        },
         inThisBuild(
             List(
                 scalaVersion := scala3Version,
@@ -144,13 +147,11 @@ lazy val server = project
 ThisBuild / buildClientDist := {
     Process("npm install", client.base).!
     Process("npm run build", client.base).!
-    new java.io.File(client.base.getPath + "/dist")
+    client.base / "dist"
 }
 buildImages := {
-    (client / Docker / publishLocal).value
     (server / Docker / publishLocal).value
 }
 pushImages := {
-    (client / Docker / publish).value
     (server / Docker / publish).value
 }

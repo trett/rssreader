@@ -8,7 +8,6 @@ import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
-import client.AppConfig.BASE_URI
 import client.NetworkUtils.{responseDecoder}
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L.*
@@ -84,6 +83,6 @@ object NavBar {
     private def refreshFeedsRequest(): EventStream[Unit] =
         FetchStream
             .withDecoder(responseDecoder[Unit])
-            .post(s"$BASE_URI/api/channels/refresh")
+            .post("/api/channels/refresh")
             .mapTo(())
 }

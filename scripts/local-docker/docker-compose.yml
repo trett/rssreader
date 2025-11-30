@@ -41,9 +41,3 @@ services:
       CLIENT_SECRET: ${CLIENT_SECRET}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
 
-  client:
-    image: client:2.2.8
-    container_name: rss_client
-    restart: always
-    depends_on:
-      - server
