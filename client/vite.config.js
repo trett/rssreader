@@ -5,5 +5,5 @@ export default defineConfig({
   plugins: [scalaJSPlugin({
       cwd: '../',
       projectID: 'client',
-  })],
+  })]
 });

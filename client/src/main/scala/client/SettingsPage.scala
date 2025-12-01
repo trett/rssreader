@@ -161,7 +161,7 @@ object SettingsPage {
                 FetchStream
                     .withDecoder(responseDecoder[String])
                     .post(
-                        s"$HOST/api/user/settings",
+                        "/api/user/settings",
                         _.body(s.asJson.toString),
                         _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
                     )
@@ -172,7 +172,7 @@ object SettingsPage {
     private def getSettingsRequest: EventStream[Try[Option[UserSettings]]] =
         FetchStream
             .withDecoder(responseDecoder[Option[UserSettings]])
-            .get(s"$HOST/api/user/settings")
+            .get("/api/user/settings")
             .mapSuccess(_.get)
 
     private def renderChannel(
@@ -227,7 +227,7 @@ object SettingsPage {
         FetchStream
             .withDecoder(responseDecoder[String])
             .put(
-                s"$HOST/api/channels/$id/highlight",
+                s"/api/channels/$id/highlight",
                 _.body(highlighted.asJson.toString),
                 _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
             )
@@ -236,7 +236,7 @@ object SettingsPage {
     private def deleteChannelRequest(id: String): EventStream[Try[Long]] =
         FetchStream
             .withDecoder(responseDecoder[Long])
-            .apply(_.DELETE, s"$HOST/api/channels/$id")
+            .apply(_.DELETE, s"/api/channels/$id")
             .mapSuccess(_.get)
 
     private def newChannelDialog(): HtmlElement = div(
@@ -279,14 +279,14 @@ object SettingsPage {
     private def getChannelsRequest: EventStream[Try[ChannelList]] =
         FetchStream
             .withDecoder(responseDecoder[ChannelList])
-            .get(s"$HOST/api/channels")
+            .get("/api/channels")
             .mapSuccess(_.get)
 
     private def updateChannelRequest(link: String): EventStream[Try[Unit]] =
         FetchStream
             .withDecoder(responseDecoder[String])
             .post(
-                s"$HOST/api/channels",
+                "/api/channels",
                 _.body(link.asJson.toString),
                 _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
             )

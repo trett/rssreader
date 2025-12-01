@@ -175,7 +175,7 @@ object Server extends IOApp:
             )
     private def resourceRoutes: HttpRoutes[IO] =
         val indexRoute = HttpRoutes.of[IO] {
-            case request @ GET -> Root  =>
+            case request @ GET -> Root =>
                 StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
 
             case request @ GET -> Root / "" =>
