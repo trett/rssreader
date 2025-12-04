@@ -13,8 +13,8 @@ lazy val logs4catVersion = "2.7.1"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
-lazy val buildImages = taskKey[Unit]("Build docker images")
-lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
+lazy val buildImage = taskKey[Unit]("Build docker image")
+lazy val pushImage = taskKey[Unit]("Push docker image to remote repository")
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
     .crossType(CrossType.Pure)
@@ -42,20 +42,6 @@ lazy val client = project
             _.withModuleKind(ModuleKind.ESModule)
                 .withModuleSplitStyle(ModuleSplitStyle.SmallModulesFor(List("client")))
         },
-        //Compile / sourceGenerators += Def.task {
-            //val out =
-                //(Compile / sourceManaged).value / "scala/client/AppConfig.scala"
-            //IO.write(
-                //out,
-                //s"""
-        //package client
-        //object AppConfig {
-          //val BASE_URI="${sys.env.getOrElse("SERVER_URL", "http://localhost")}"
-        //}
-        //"""
-            //)
-            //Seq(out)
-        //},
         Universal / mappings ++= directory(buildClientDist.value),
         libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.1",
         libraryDependencies += "com.raquo" %%% "laminar" % "17.2.1",
@@ -149,9 +135,9 @@ ThisBuild / buildClientDist := {
     Process("npm run build", client.base).!
     client.base / "dist"
 }
-buildImages := {
+buildImage := {
     (server / Docker / publishLocal).value
 }
-pushImages := {
+pushImage := {
     (server / Docker / publish).value
 }
