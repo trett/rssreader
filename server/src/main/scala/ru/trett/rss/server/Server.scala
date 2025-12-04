@@ -177,9 +177,6 @@ object Server extends IOApp:
         val indexRoute = HttpRoutes.of[IO] {
             case request @ GET -> Root =>
                 StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
-
-            case request @ GET -> Root / "" =>
-                StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
         }
         indexRoute <+> resourceServiceBuilder[IO]("/public").toRoutes
 
