@@ -25,8 +25,8 @@ jobs:
       - name: Login to registry
         run: echo ${{ secrets.TOKEN }} | docker login --username oauth --password-stdin cr.yandex
 
-      - name: Push images
-        run: sbt pushImages
+      - name: Push image
+        run: sbt pushImage
         env: 
           SERVER_URL: ${{ secrets.SERVER_URL }}
           REGISTRY: ${{ secrets.REGISTRY }}

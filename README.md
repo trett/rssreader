@@ -54,9 +54,9 @@ This is the easiest way to run the application.
     ```
 
 2.  **Build Docker images**:
-    This command will build the Docker images for the server and the client.
+    This command will build the Docker image.
     ```bash
-    sbt buildImages
+    sbt buildImage
     ```
 
 3.  **Run the application**:
@@ -71,10 +71,8 @@ This is the easiest way to run the application.
 This setup is for actively developing the application.
 
 1.  **Start the database**:
-    This will start a PostgreSQL database instance.
-    ```bash
-    docker-compose -f scripts/local-dev/docker-compose.yml up
-    ```
+    Prepare and start a PostgreSQL database instance.
+
 
 2.  **Run the backend server**:
     In a new terminal, start the backend server using sbt. You need to set the required environment variables.
@@ -84,19 +82,8 @@ This setup is for actively developing the application.
     export GOOGLE_API_KEY=your_google_ai_api_key
     sbt server/run
     ```
-    The server will be running on `http://localhost:8080`.
+    The server will be running on `http://localhost`.
 
-3.  **Run the frontend development server**:
-    - In new terminal, navigate to the `client` directory, install dependencies, and build JS bundle.
-    ```bash
-    cd client
-    sbt ~fastLinkJs
-    ```
-    - start one more new terminal from the `client` folder and start Vite development server
-    ```bash
-    npm run dev
-    ```
-    The frontend will be available at `http://localhost:5173`.
 
 ## Configuration
 
@@ -113,11 +100,16 @@ The application is configured using environment variables.
 | `SERVER_URL`      | The public URL of the server. Used for OAuth redirect URI.                               | `https://localhost`            | No                 |
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
 | `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
-| `REGISTRY`        | The Docker registry to push images to (used with `sbt pushImages`).                      | -                              | No                 |
+| `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |
 
 ## Deployment
 
-The Docker images built with `sbt buildImages` can be used for production deployment. You can adapt the `scripts/local-docker/docker-compose.yml` file for your production environment. Remember to configure all the necessary environment variables.
+The Docker image built with `sbt buildImage` can be used for production deployment. The image includes both the backend server and frontend assets. You can adapt the `scripts/local-docker/docker-compose.yml` file for your production environment. Remember to configure all the necessary environment variables.
+
+To push the image to a registry, set the `REGISTRY` environment variable and run:
+```bash
+sbt pushImage
+```
 
 ## License
 
