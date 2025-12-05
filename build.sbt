@@ -75,8 +75,8 @@ lazy val server = project
         dockerBaseImage := "eclipse-temurin:17-jre-noble",
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
-        // trigger on compile for hot reloading, e.g. ~reStart
-        buildClientDist := buildClientDist.triggeredBy(Compile / compile).value,
+        watchSources ++= (client / Compile / watchSources).value,
+        Compile / compile := ((Compile / compile) dependsOn (client / Compile / fastLinkJS)).value,
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
@@ -117,11 +117,13 @@ lazy val server = project
         scalacOptions ++= customScalaOptions,
         Compile / run / fork := true,
         Compile / packageDoc / mappings := Seq(),
-        Compile / resourceGenerators += buildClientDist.taskValue.map { distDir =>
+        Compile / resourceGenerators += Def.task {
+            val _ = (client / Compile / fastLinkJS).value
+            val distDir = buildClientDist.value
             val targetDir = (Compile / resourceManaged).value / "public"
             IO.copyDirectory(distDir, targetDir)
             (targetDir ** "*").get
-        },
+        }.taskValue,
         inThisBuild(
             List(
                 scalaVersion := scala3Version,
