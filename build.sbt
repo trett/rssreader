@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.2.8"
+lazy val projectVersion = "2.2.9"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
@@ -13,8 +13,8 @@ lazy val logs4catVersion = "2.7.1"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
-lazy val buildImages = taskKey[Unit]("Build docker images")
-lazy val pushImages = taskKey[Unit]("Push docker images to remote repository")
+lazy val buildImage = taskKey[Unit]("Build docker image")
+lazy val pushImage = taskKey[Unit]("Push docker image to remote repository")
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
     .crossType(CrossType.Pure)
@@ -24,7 +24,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
         version := projectVersion,
         organization := organizationName,
         scalaVersion := scala3Version,
-        scalacOptions ++= customScalaOptions,
+        scalacOptions ++= customScalaOptions
     )
     .jsSettings()
     .jvmSettings()
@@ -32,7 +32,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
 lazy val client = project
     .in(file("client"))
     .dependsOn(shared.js)
-    .enablePlugins(ScalaJSPlugin, DockerPlugin)
+    .enablePlugins(ScalaJSPlugin, UniversalPlugin)
     .settings(
         version := projectVersion,
         organization := organizationName,
@@ -42,27 +42,7 @@ lazy val client = project
             _.withModuleKind(ModuleKind.ESModule)
                 .withModuleSplitStyle(ModuleSplitStyle.SmallModulesFor(List("client")))
         },
-        Compile / sourceGenerators += Def.task {
-            val out =
-                (Compile / sourceManaged).value / "scala/client/AppConfig.scala"
-            IO.write(
-                out,
-                s"""
-        package client
-        object AppConfig {
-          val BASE_URI="${sys.env.getOrElse("SERVER_URL", "https://localhost")}"
-        }
-        """
-            )
-            Seq(out)
-        },
         Universal / mappings ++= directory(buildClientDist.value),
-        dockerRepository := sys.env.get("REGISTRY"),
-        dockerCommands := Seq(
-            Cmd("FROM", "nginx:1.29.1-alpine"),
-            Cmd("COPY", "opt/docker/dist/", "/usr/share/nginx/html/")
-        ),
-        dockerExposedPorts := Seq(80),
         libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.1",
         libraryDependencies += "com.raquo" %%% "laminar" % "17.2.1",
         libraryDependencies += "be.doeraene" %%% "web-components-ui5" % "2.12.1",
@@ -73,6 +53,7 @@ lazy val client = project
             "io.circe" %%% "circe-parser"
         ).map(_ % circeVersion),
         scalacOptions ++= customScalaOptions,
+        Compile / packageDoc / mappings := Seq(),
         inThisBuild(
             List(
                 scalaVersion := scala3Version,
@@ -94,6 +75,8 @@ lazy val server = project
         dockerBaseImage := "eclipse-temurin:17-jre-noble",
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
+        watchSources ++= (client / Compile / watchSources).value,
+        Compile / compile := ((Compile / compile) dependsOn (client / Compile / fastLinkJS)).value,
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
@@ -133,6 +116,14 @@ lazy val server = project
         libraryDependencies += "org.postgresql" % "postgresql" % "42.7.8" % Test,
         scalacOptions ++= customScalaOptions,
         Compile / run / fork := true,
+        Compile / packageDoc / mappings := Seq(),
+        Compile / resourceGenerators += Def.task {
+            val _ = (client / Compile / fastLinkJS).value
+            val distDir = buildClientDist.value
+            val targetDir = (Compile / resourceManaged).value / "public"
+            IO.copyDirectory(distDir, targetDir)
+            (targetDir ** "*").get
+        }.taskValue,
         inThisBuild(
             List(
                 scalaVersion := scala3Version,
@@ -144,13 +135,11 @@ lazy val server = project
 ThisBuild / buildClientDist := {
     Process("npm install", client.base).!
     Process("npm run build", client.base).!
-    new java.io.File(client.base.getPath + "/dist")
+    client.base / "dist"
 }
-buildImages := {
-    (client / Docker / publishLocal).value
+buildImage := {
     (server / Docker / publishLocal).value
 }
-pushImages := {
-    (client / Docker / publish).value
+pushImage := {
     (server / Docker / publish).value
 }

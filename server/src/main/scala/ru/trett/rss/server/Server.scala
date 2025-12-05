@@ -6,36 +6,47 @@ import cats.implicits.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
-import doobie.util.log.{LogEvent, LogHandler}
+import doobie.util.log.LogEvent
+import doobie.util.log.LogHandler
+import org.http4s.AuthedRoutes
+import org.http4s.HttpRoutes
+import org.http4s.StaticFile
+import org.http4s.Uri
 import org.http4s.client.Client
+import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.*
 import org.http4s.implicits.*
-import org.http4s.server.middleware.{CORS, CORSPolicy, ErrorAction, ErrorHandling}
-import org.http4s.{AuthedRoutes, HttpRoutes, Uri}
+import org.http4s.server.middleware.CORS
+import org.http4s.server.middleware.CORSPolicy
+import org.http4s.server.middleware.ErrorAction
+import org.http4s.server.middleware.ErrorHandling
+import org.http4s.server.staticcontent.*
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
 import pureconfig.ConfigSource
-import ru.trett.rss.server.authorization.{AuthFilter, SessionManager}
-import ru.trett.rss.server.config.{AppConfig, CorsConfig, DbConfig, OAuthConfig}
-import ru.trett.rss.server.controllers.{
-    ChannelController,
-    FeedController,
-    LoginController,
-    LogoutController,
-    SummarizeController,
-    UserController
-}
+import ru.trett.rss.server.authorization.AuthFilter
+import ru.trett.rss.server.authorization.SessionManager
+import ru.trett.rss.server.config.AppConfig
+import ru.trett.rss.server.config.CorsConfig
+import ru.trett.rss.server.config.DbConfig
+import ru.trett.rss.server.config.OAuthConfig
+import ru.trett.rss.server.controllers.ChannelController
+import ru.trett.rss.server.controllers.FeedController
+import ru.trett.rss.server.controllers.LoginController
+import ru.trett.rss.server.controllers.LogoutController
+import ru.trett.rss.server.controllers.SummarizeController
+import ru.trett.rss.server.controllers.UserController
 import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
-import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}
-import ru.trett.rss.server.services.{
-    ChannelService,
-    FeedService,
-    SummarizeService,
-    UpdateTask,
-    UserService
-}
+import ru.trett.rss.server.repositories.ChannelRepository
+import ru.trett.rss.server.repositories.FeedRepository
+import ru.trett.rss.server.repositories.UserRepository
+import ru.trett.rss.server.services.ChannelService
+import ru.trett.rss.server.services.FeedService
+import ru.trett.rss.server.services.SummarizeService
+import ru.trett.rss.server.services.UpdateTask
+import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
 
@@ -162,6 +173,12 @@ object Server extends IOApp:
                     logoutController
                 )
             )
+    private def resourceRoutes: HttpRoutes[IO] =
+        val indexRoute = HttpRoutes.of[IO] {
+            case request @ GET -> Root =>
+                StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
+        }
+        indexRoute <+> resourceServiceBuilder[IO]("/public").toRoutes
 
     private def unprotectedRoutes(
         sessionManager: SessionManager[IO],
@@ -169,7 +186,7 @@ object Server extends IOApp:
         userService: UserService,
         client: Client[IO]
     ): HttpRoutes[IO] =
-        LoginController.routes(sessionManager, oauthConfig, userService, client)
+        LoginController.routes(sessionManager, oauthConfig, userService, client) <+> resourceRoutes
 
     private def authedRoutes(
         channelService: ChannelService,

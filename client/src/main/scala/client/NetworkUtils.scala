@@ -17,8 +17,6 @@ import scala.util.Try
 
 object NetworkUtils {
 
-    def HOST: String = AppConfig.BASE_URI
-
     val JSON_ACCEPT: (String, String) = "Accept" -> "application/json"
     val JSON_CONTENT_TYPE: (String, String) = "Content-Type" -> "application/json"
 
@@ -55,5 +53,5 @@ object NetworkUtils {
     )
 
     def logout(): EventStream[Unit] =
-        FetchStream.post(s"$HOST/api/logout", _.body("")).mapTo(())
+        FetchStream.post("/api/logout", _.body("")).mapTo(())
 }

@@ -2,7 +2,6 @@ package client
 
 import be.doeraene.webcomponents.ui5.Link
 import be.doeraene.webcomponents.ui5.configkeys.IconName
-import client.NetworkUtils.HOST
 import com.raquo.laminar.api.L.*
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
@@ -46,14 +45,14 @@ object LoginPage {
                     Link(
                         cls("google-button", "signup-button"),
                         "Sign Up",
-                        _.href := s"$HOST/signup",
+                        _.href := "/signup",
                         typ("button"),
                         _.icon := IconName.`sys-add`
                     ),
                     Link(
                         cls("google-button"),
                         "Sign In",
-                        _.href := s"$HOST/signin",
+                        _.href := "/signin",
                         typ("button"),
                         _.icon := IconName.`sys-enter`
                     )

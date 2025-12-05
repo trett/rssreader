@@ -184,7 +184,7 @@ object Home:
     private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
-            .get(s"$HOST/api/channels/feeds?page=${page}&limit=${pageLimit}")
+            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}")
             .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =
@@ -195,7 +195,7 @@ object Home:
             FetchStream
                 .withDecoder(responseDecoder[String])
                 .post(
-                    s"$HOST/api/feeds/read",
+                    "/api/feeds/read",
                     _.body(links.asJson.toString),
                     _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
                 )
@@ -204,5 +204,5 @@ object Home:
     private def getUnreadCountRequest(): EventStream[Try[Int]] =
         FetchStream
             .withDecoder(responseDecoder[Int])
-            .get(s"$HOST/api/feeds/unread/total")
+            .get("/api/feeds/unread/total")
             .mapSuccess(_.get)
