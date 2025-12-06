@@ -92,17 +92,6 @@ This setup is for actively developing the application.
     ```
     The server will be running on `http://localhost`.
 
-
-## Metrics and Monitoring
-
-The application includes OpenTelemetry metrics collection with Prometheus and Grafana support.
-
-When running with Docker Compose:
-- **Prometheus**: `http://localhost:9090`
-- **Grafana**: `http://localhost:3000` (admin/admin)
-- **Metrics endpoint**: `http://localhost:9464/metrics`
-
-
 ## Configuration
 
 The application is configured using environment variables.

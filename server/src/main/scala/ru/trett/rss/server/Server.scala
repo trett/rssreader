@@ -26,6 +26,7 @@ import org.http4s.server.middleware.ErrorHandling
 import org.http4s.server.staticcontent.*
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
+import org.typelevel.otel4s.instrumentation.ce.IORuntimeMetrics
 import org.typelevel.otel4s.oteljava.OtelJava
 import pureconfig.ConfigSource
 import ru.trett.rss.server.authorization.AuthFilter
@@ -78,60 +79,75 @@ object Server extends IOApp:
             .autoConfigured[IO]()
             .flatTap(otel4s => registerRuntimeMetrics(otel4s.underlying))
             .evalTap(_ => logger.info("OpenTelemetry metrics initialized"))
-            .use { _ =>
-                val client = EmberClientBuilder
-                    .default[IO]
-                    .build
-                transactor(appConfig.db).use { xa =>
-                    client.use { client =>
-                        for {
-                            _ <- FlywayMigration.migrate(appConfig.db)
-                            corsPolicy = createCorsPolicy(appConfig.cors)
-                            sessionManager <- SessionManager[IO]
-                            channelRepository = ChannelRepository(xa)
-                            feedRepository = FeedRepository(xa)
-                            feedService = FeedService(feedRepository)
-                            userRepository = UserRepository(xa)
-                            userService = UserService(userRepository)
-                            summarizeService = new SummarizeService(
-                                feedRepository,
-                                client,
-                                appConfig.google.apiKey
-                            )
-                            channelService = ChannelService(channelRepository, client)
-                            _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                            exitCode <- UpdateTask(channelService, userService).background.void
-                                .surround {
-                                    for {
-                                        authFilter <- AuthFilter[IO]
-                                        server <- EmberServerBuilder
-                                            .default[IO]
-                                            .withHost(ipv4"0.0.0.0")
-                                            .withPort(Port.fromInt(appConfig.server.port).get)
-                                            .withHttpApp(
-                                                withErrorLogging(
-                                                    corsPolicy(
-                                                        routes(
-                                                            sessionManager,
-                                                            channelService,
-                                                            userService,
-                                                            feedService,
-                                                            appConfig.oauth,
-                                                            authFilter,
-                                                            client,
-                                                            summarizeService,
-                                                            new LogoutController[IO](sessionManager)
-                                                        )
+            .use { otel4s =>
+                given org.typelevel.otel4s.metrics.MeterProvider[IO] =
+                    otel4s.meterProvider
+                IORuntimeMetrics
+                    .register[IO](runtime.metrics, IORuntimeMetrics.Config.default)
+                    .surround {
+                        val client = EmberClientBuilder
+                            .default[IO]
+                            .build
+                        transactor(appConfig.db).use { xa =>
+                            client.use { client =>
+                                for {
+                                    _ <- FlywayMigration.migrate(appConfig.db)
+                                    corsPolicy = createCorsPolicy(appConfig.cors)
+                                    sessionManager <- SessionManager[IO]
+                                    channelRepository = ChannelRepository(xa)
+                                    feedRepository = FeedRepository(xa)
+                                    feedService = FeedService(feedRepository)
+                                    userRepository = UserRepository(xa)
+                                    userService = UserService(userRepository)
+                                    summarizeService = new SummarizeService(
+                                        feedRepository,
+                                        client,
+                                        appConfig.google.apiKey
+                                    )
+                                    channelService = ChannelService(channelRepository, client)
+                                    _ <- logger.info(
+                                        "Starting server on port: " + appConfig.server.port
+                                    )
+                                    exitCode <- UpdateTask(
+                                        channelService,
+                                        userService
+                                    ).background.void
+                                        .surround {
+                                            for {
+                                                authFilter <- AuthFilter[IO]
+                                                server <- EmberServerBuilder
+                                                    .default[IO]
+                                                    .withHost(ipv4"0.0.0.0")
+                                                    .withPort(
+                                                        Port.fromInt(appConfig.server.port).get
                                                     )
-                                                ).orNotFound
-                                            )
-                                            .build
-                                            .use(_ => IO.never)
-                                    } yield server
-                                }
-                        } yield exitCode
+                                                    .withHttpApp(
+                                                        withErrorLogging(
+                                                            corsPolicy(
+                                                                routes(
+                                                                    sessionManager,
+                                                                    channelService,
+                                                                    userService,
+                                                                    feedService,
+                                                                    appConfig.oauth,
+                                                                    authFilter,
+                                                                    client,
+                                                                    summarizeService,
+                                                                    new LogoutController[IO](
+                                                                        sessionManager
+                                                                    )
+                                                                )
+                                                            )
+                                                        ).orNotFound
+                                                    )
+                                                    .build
+                                                    .use(_ => IO.never)
+                                            } yield server
+                                        }
+                                } yield exitCode
+                            }
+                        }
                     }
-                }
             }
 
     private def loadConfig: Option[AppConfig] =

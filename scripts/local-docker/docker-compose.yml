@@ -42,6 +42,8 @@ services:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       OTEL_EXPORTER_PROMETHEUS_PORT: 9464
       OTEL_METRICS_EXPORTER: prometheus
+      OTEL_TRACES_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
 
   prometheus:
     image: prom/prometheus:latest

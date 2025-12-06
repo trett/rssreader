@@ -97,10 +97,12 @@ lazy val server = project
             "org.typelevel" %% "log4cats-slf4j"
         ).map(_ % logs4catVersion),
         libraryDependencies ++= Seq(
-            "org.typelevel" %% "otel4s-oteljava"
+            "org.typelevel" %% "otel4s-oteljava",
+            "org.typelevel" %% "otel4s-instrumentation-metrics"
         ).map(_ % otel4sVersion),
         libraryDependencies ++= Seq(
-            "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % "2.22.0-alpha"
+            "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % "2.22.0-alpha",
+            "io.opentelemetry" % "opentelemetry-exporter-prometheus" % "1.45.0-alpha"
         ),
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
