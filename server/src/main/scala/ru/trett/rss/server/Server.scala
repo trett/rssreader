@@ -79,8 +79,7 @@ object Server extends IOApp:
         OtelJava
             .autoConfigured[IO]()
             .flatTap(otel4s => registerRuntimeMetrics(otel4s.underlying))
-            .use { otel4s =>
-                val _ = otel4s
+            .use { _ =>
                 val client = EmberClientBuilder
                     .default[IO]
                     .build
