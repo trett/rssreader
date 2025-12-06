@@ -8,6 +8,10 @@ import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
 import doobie.util.log.LogEvent
 import doobie.util.log.LogHandler
+import io.opentelemetry.exporter.prometheus.PrometheusHttpServer
+import io.opentelemetry.instrumentation.runtimemetrics.java17.RuntimeMetrics
+import io.opentelemetry.sdk.OpenTelemetrySdk
+import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import org.http4s.AuthedRoutes
 import org.http4s.HttpRoutes
 import org.http4s.StaticFile
@@ -58,6 +62,27 @@ object Server extends IOApp:
             println(logEvent.sql)
         }
 
+    private def initializeOpenTelemetry: Resource[IO, Unit] =
+        Resource.eval(IO {
+            val prometheusServer = PrometheusHttpServer
+                .builder()
+                .setPort(9464)
+                .build()
+
+            val meterProvider = SdkMeterProvider
+                .builder()
+                .registerMetricReader(prometheusServer)
+                .build()
+
+            val openTelemetry = OpenTelemetrySdk
+                .builder()
+                .setMeterProvider(meterProvider)
+                .build()
+
+            // Register all JVM runtime metrics
+            RuntimeMetrics.builder(openTelemetry).enableAllFeatures().build()
+        })
+
     override def run(args: List[String]): IO[ExitCode] =
         val appConfig = loadConfig match {
             case Some(config) => config
@@ -66,56 +91,60 @@ object Server extends IOApp:
                 return IO.pure(ExitCode.Error)
         }
 
-        val client = EmberClientBuilder
-            .default[IO]
-            .build
-        transactor(appConfig.db).use { xa =>
-            client.use { client =>
-                for {
-                    _ <- FlywayMigration.migrate(appConfig.db)
-                    corsPolicy = createCorsPolicy(appConfig.cors)
-                    sessionManager <- SessionManager[IO]
-                    channelRepository = ChannelRepository(xa)
-                    feedRepository = FeedRepository(xa)
-                    feedService = FeedService(feedRepository)
-                    userRepository = UserRepository(xa)
-                    userService = UserService(userRepository)
-                    summarizeService = new SummarizeService(
-                        feedRepository,
-                        client,
-                        appConfig.google.apiKey
-                    )
-                    channelService = ChannelService(channelRepository, client)
-                    _ <- logger.info("Starting server on port: " + appConfig.server.port)
-                    exitCode <- UpdateTask(channelService, userService).background.void.surround {
-                        for {
-                            authFilter <- AuthFilter[IO]
-                            server <- EmberServerBuilder
-                                .default[IO]
-                                .withHost(ipv4"0.0.0.0")
-                                .withPort(Port.fromInt(appConfig.server.port).get)
-                                .withHttpApp(
-                                    withErrorLogging(
-                                        corsPolicy(
-                                            routes(
-                                                sessionManager,
-                                                channelService,
-                                                userService,
-                                                feedService,
-                                                appConfig.oauth,
-                                                authFilter,
-                                                client,
-                                                summarizeService,
-                                                new LogoutController[IO](sessionManager)
-                                            )
+        initializeOpenTelemetry.use { _ =>
+            val client = EmberClientBuilder
+                .default[IO]
+                .build
+            transactor(appConfig.db).use { xa =>
+                client.use { client =>
+                    for {
+                        _ <- FlywayMigration.migrate(appConfig.db)
+                        _ <- logger.info("OpenTelemetry metrics initialized on port 9464")
+                        corsPolicy = createCorsPolicy(appConfig.cors)
+                        sessionManager <- SessionManager[IO]
+                        channelRepository = ChannelRepository(xa)
+                        feedRepository = FeedRepository(xa)
+                        feedService = FeedService(feedRepository)
+                        userRepository = UserRepository(xa)
+                        userService = UserService(userRepository)
+                        summarizeService = new SummarizeService(
+                            feedRepository,
+                            client,
+                            appConfig.google.apiKey
+                        )
+                        channelService = ChannelService(channelRepository, client)
+                        _ <- logger.info("Starting server on port: " + appConfig.server.port)
+                        exitCode <- UpdateTask(channelService, userService).background.void
+                            .surround {
+                                for {
+                                    authFilter <- AuthFilter[IO]
+                                    server <- EmberServerBuilder
+                                        .default[IO]
+                                        .withHost(ipv4"0.0.0.0")
+                                        .withPort(Port.fromInt(appConfig.server.port).get)
+                                        .withHttpApp(
+                                            withErrorLogging(
+                                                corsPolicy(
+                                                    routes(
+                                                        sessionManager,
+                                                        channelService,
+                                                        userService,
+                                                        feedService,
+                                                        appConfig.oauth,
+                                                        authFilter,
+                                                        client,
+                                                        summarizeService,
+                                                        new LogoutController[IO](sessionManager)
+                                                    )
+                                                )
+                                            ).orNotFound
                                         )
-                                    ).orNotFound
-                                )
-                                .build
-                                .use(_ => IO.never)
-                        } yield server
-                    }
-                } yield exitCode
+                                        .build
+                                        .use(_ => IO.never)
+                                } yield server
+                            }
+                    } yield exitCode
+                }
             }
         }
 
@@ -174,9 +203,8 @@ object Server extends IOApp:
                 )
             )
     private def resourceRoutes: HttpRoutes[IO] =
-        val indexRoute = HttpRoutes.of[IO] {
-            case request @ GET -> Root =>
-                StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
+        val indexRoute = HttpRoutes.of[IO] { case request @ GET -> Root =>
+            StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
         }
         indexRoute <+> resourceServiceBuilder[IO]("/public").toRoutes
 
