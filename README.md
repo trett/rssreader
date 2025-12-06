@@ -95,56 +95,12 @@ This setup is for actively developing the application.
 
 ## Metrics and Monitoring
 
-The application includes built-in observability features powered by OpenTelemetry:
+The application includes OpenTelemetry metrics collection with Prometheus and Grafana support.
 
-### JVM Runtime Metrics
-
-The server automatically collects and exposes JVM runtime metrics including:
-- **Memory**: Heap and non-heap memory usage, memory pools
-- **Garbage Collection**: GC duration and frequency
-- **Threads**: Thread count and state
-- **CPU**: Process CPU usage
-- **Classes**: Loaded and unloaded class counts
-- **Buffer Pools**: Direct and mapped buffer pool statistics
-
-### Accessing Metrics
-
-Metrics are exposed in Prometheus format at:
-```
-http://localhost:9464/metrics
-```
-
-### Prometheus and Grafana
-
-When running with Docker Compose, the stack includes:
-
-- **Prometheus**: Scrapes metrics from the server every 15 seconds
-  - Access at: `http://localhost:9090`
-  - Pre-configured to scrape the server metrics endpoint
-
-- **Grafana**: Visualizes metrics with dashboards
-  - Access at: `http://localhost:3000`
-  - Default credentials: `admin/admin`
-  - To view metrics, add Prometheus as a data source:
-    1. Go to Configuration → Data Sources
-    2. Add Prometheus with URL: `http://prometheus:9090`
-    3. Create dashboards to visualize JVM metrics
-
-### Example Prometheus Queries
-
-```promql
-# JVM Memory Usage
-process_runtime_jvm_memory_usage{type="heap"}
-
-# GC Duration
-process_runtime_jvm_gc_duration_sum
-
-# Thread Count
-process_runtime_jvm_threads_count
-
-# CPU Usage
-process_runtime_jvm_cpu_utilization
-```
+When running with Docker Compose:
+- **Prometheus**: `http://localhost:9090`
+- **Grafana**: `http://localhost:3000` (admin/admin)
+- **Metrics endpoint**: `http://localhost:9464/metrics`
 
 
 ## Configuration
@@ -162,7 +118,6 @@ The application is configured using environment variables.
 | `SERVER_URL`      | The public URL of the server. Used for OAuth redirect URI.                               | `https://localhost`            | No                 |
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
 | `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
-| `METRICS_PORT`    | The port for OpenTelemetry metrics endpoint (Prometheus format).                         | `9464`                         | No                 |
 | `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |
 
 ## Deployment

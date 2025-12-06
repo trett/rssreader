@@ -40,6 +40,8 @@ services:
       CLIENT_ID: ${CLIENT_ID}
       CLIENT_SECRET: ${CLIENT_SECRET}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      OTEL_EXPORTER_PROMETHEUS_PORT: 9464
+      OTEL_METRICS_EXPORTER: prometheus
 
   prometheus:
     image: prom/prometheus:latest
