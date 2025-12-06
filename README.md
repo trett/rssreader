@@ -12,6 +12,7 @@ A modern, web-based RSS reader application built with Scala, Scala.js, and Lamin
 -   **AI-Powered Summaries**: Generate summaries of all your unread articles using Google's Generative AI.
 -   **Secure Authentication**: Authentication is handled securely via Google OAuth2.
 -   **Responsive Design**: The application is designed to work on both desktop and mobile browsers.
+-   **Observability**: Built-in metrics collection with OpenTelemetry, exportable to Prometheus and visualizable in Grafana.
 
 ## Tech Stack
 
@@ -24,6 +25,9 @@ A modern, web-based RSS reader application built with Scala, Scala.js, and Lamin
 -   [Flyway](https://flywaydb.org/): For database migrations.
 -   [circe](https://circe.github.io/circe/): For JSON manipulation.
 -   [PureConfig](https://pureconfig.github.io/): For loading configuration.
+-   [OpenTelemetry](https://opentelemetry.io/): For metrics collection and observability.
+-   [Prometheus](https://prometheus.io/): For metrics storage and querying.
+-   [Grafana](https://grafana.com/): For metrics visualization and dashboards.
 
 ### Frontend
 
@@ -64,7 +68,11 @@ This is the easiest way to run the application.
     ```bash
     docker-compose -f scripts/local-docker/docker-compose.yml up
     ```
-    The application will be available at `http://localhost`.
+    The application will be available at:
+    - Main app: `http://localhost`
+    - Prometheus: `http://localhost:9090`
+    - Grafana: `http://localhost:3000` (default credentials: admin/admin)
+    - Metrics endpoint: `http://localhost:9464/metrics`
 
 ### Local Development
 
@@ -83,7 +91,6 @@ This setup is for actively developing the application.
     sbt server/run
     ```
     The server will be running on `http://localhost`.
-
 
 ## Configuration
 

@@ -4,12 +4,13 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.2.9"
+lazy val projectVersion = "2.3.0"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
 lazy val htt4sVersion = "1.0.0-M39"
 lazy val logs4catVersion = "2.7.1"
+lazy val otel4sVersion = "0.14.0"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
 lazy val buildClientDist = taskKey[File]("Build client optimized package")
@@ -95,6 +96,14 @@ lazy val server = project
             "org.typelevel" %% "log4cats-core",
             "org.typelevel" %% "log4cats-slf4j"
         ).map(_ % logs4catVersion),
+        libraryDependencies ++= Seq(
+            "org.typelevel" %% "otel4s-oteljava",
+            "org.typelevel" %% "otel4s-instrumentation-metrics"
+        ).map(_ % otel4sVersion),
+        libraryDependencies ++= Seq(
+            "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % "2.22.0-alpha",
+            "io.opentelemetry" % "opentelemetry-exporter-prometheus" % "1.45.0-alpha"
+        ),
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
             "io.circe" %%% "circe-generic",

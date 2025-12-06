@@ -9,6 +9,16 @@ The project uses a hybrid build system:
 - **npm/Vite** is used for the frontend development workflow. `package.json` in the `client` directory defines frontend dependencies and scripts. Vite is used for the development server and for bundling frontend assets for production.
 - building the frontend is integrated into the sbt build process using the `@scala-js/vite-plugin-scalajs` plugin. `sbt client/fullOptJS`command uses to build the optimized frontend assets.
 - there are Scalafmt and Scalastyle configurations for code formatting and style checking.
+
+## Language
+
+The project uses **Scala 3**. Always use Scala 3 syntax and keywords:
+- Use `given` instead of `implicit` for implicit values and conversions
+- Use `using` instead of `implicit` for context parameters
+- Use the new control structure syntax (optional braces when appropriate)
+- Use `extension` methods instead of implicit classes
+- Prefer end markers for better readability in longer code blocks
+
 ## Frameworks & Libraries
 
 ### Backend (Server)
