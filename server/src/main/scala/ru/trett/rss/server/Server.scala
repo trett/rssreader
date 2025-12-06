@@ -62,11 +62,11 @@ object Server extends IOApp:
             println(logEvent.sql)
         }
 
-    private def initializeOpenTelemetry: Resource[IO, Unit] =
-        Resource.eval(IO {
+    private def initializeOpenTelemetry(metricsPort: Int): Resource[IO, OpenTelemetrySdk] =
+        Resource.make(IO {
             val prometheusServer = PrometheusHttpServer
                 .builder()
-                .setPort(9464)
+                .setPort(metricsPort)
                 .build()
 
             val meterProvider = SdkMeterProvider
@@ -81,7 +81,13 @@ object Server extends IOApp:
 
             // Register all JVM runtime metrics
             RuntimeMetrics.builder(openTelemetry).enableAllFeatures().build()
-        })
+
+            openTelemetry
+        })(otel =>
+            IO {
+                otel.close()
+            }
+        )
 
     override def run(args: List[String]): IO[ExitCode] =
         val appConfig = loadConfig match {
@@ -91,7 +97,7 @@ object Server extends IOApp:
                 return IO.pure(ExitCode.Error)
         }
 
-        initializeOpenTelemetry.use { _ =>
+        initializeOpenTelemetry(appConfig.metrics.port).use { _ =>
             val client = EmberClientBuilder
                 .default[IO]
                 .build
@@ -99,7 +105,9 @@ object Server extends IOApp:
                 client.use { client =>
                     for {
                         _ <- FlywayMigration.migrate(appConfig.db)
-                        _ <- logger.info("OpenTelemetry metrics initialized on port 9464")
+                        _ <- logger.info(
+                            s"OpenTelemetry metrics initialized on port ${appConfig.metrics.port}"
+                        )
                         corsPolicy = createCorsPolicy(appConfig.cors)
                         sessionManager <- SessionManager[IO]
                         channelRepository = ChannelRepository(xa)
