@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.3.0"
+lazy val projectVersion = "2.3.1"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
@@ -77,7 +77,8 @@ lazy val server = project
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         watchSources ++= (client / Compile / watchSources).value,
-        Compile / compile := ((Compile / compile) dependsOn (client / Compile / fastLinkJS)).value,
+        Compile / compile := ((Compile / compile).dependsOn(client / Compile / fastLinkJS)).value,
+        javaOptions += "-Dotel.java.global-autoconfigure.enabled=true",
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
@@ -101,8 +102,11 @@ lazy val server = project
             "org.typelevel" %% "otel4s-instrumentation-metrics"
         ).map(_ % otel4sVersion),
         libraryDependencies ++= Seq(
+            "org.typelevel" %% "otel4s-oteljava" % "0.14.0",
             "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % "2.22.0-alpha",
-            "io.opentelemetry" % "opentelemetry-exporter-prometheus" % "1.45.0-alpha"
+            "io.opentelemetry" % "opentelemetry-exporter-prometheus" % "1.45.0-alpha",
+            "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.56.0" % Runtime,
+            "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % "1.56.0" % Runtime
         ),
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
