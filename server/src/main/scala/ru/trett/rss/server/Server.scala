@@ -3,8 +3,6 @@ package ru.trett.rss.server
 import cats.data.OptionT
 import cats.effect.*
 import cats.implicits.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
@@ -79,6 +77,7 @@ object Server extends IOApp:
         OtelJava
             .autoConfigured[IO]()
             .flatTap(otel4s => registerRuntimeMetrics(otel4s.underlying))
+            .evalTap(_ => logger.info("OpenTelemetry metrics initialized"))
             .use { _ =>
                 val client = EmberClientBuilder
                     .default[IO]
@@ -87,7 +86,6 @@ object Server extends IOApp:
                     client.use { client =>
                         for {
                             _ <- FlywayMigration.migrate(appConfig.db)
-                            _ <- logger.info("OpenTelemetry metrics initialized")
                             corsPolicy = createCorsPolicy(appConfig.cors)
                             sessionManager <- SessionManager[IO]
                             channelRepository = ChannelRepository(xa)
