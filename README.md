@@ -162,6 +162,7 @@ The application is configured using environment variables.
 | `SERVER_URL`      | The public URL of the server. Used for OAuth redirect URI.                               | `https://localhost`            | No                 |
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
 | `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
+| `METRICS_PORT`    | The port for OpenTelemetry metrics endpoint (Prometheus format).                         | `9464`                         | No                 |
 | `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |
 
 ## Deployment
