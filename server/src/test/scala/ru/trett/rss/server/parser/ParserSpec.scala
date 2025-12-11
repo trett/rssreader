@@ -147,6 +147,42 @@ class ParserSpec extends AnyFunSuite with Matchers {
         thirdItem.pubDate shouldBe defined
     }
 
+    test("Parser should parse Atom 1.0 feed third version)") {
+        val inputStream = Option(getClass.getResourceAsStream("/atom_1_0_3.xml"))
+            .getOrElse(fail("Resource file atom_1_0_3.xml should exist"))
+
+        val result: Option[Channel] =
+            Parser.parseRss(inputStream, "https://www.reddit.com/r/java/.rss")
+
+        result shouldBe defined
+
+        val channel = result.get
+
+        channel.title shouldBe "Java News/Tech/Discussion/etc. No programming help, no learning Java"
+        channel.link shouldBe "https://www.reddit.com/r/java/.rss"
+        channel.feedItems should not be empty
+        channel.feedItems.length shouldBe 25
+
+        val firstItem = channel.feedItems.head
+        firstItem.title should include("[PSA]/r/java is not for programming help")
+        firstItem.link shouldBe "https://www.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/"
+        firstItem.description should include("Learning related questions")
+
+        val expectedDate =
+            OffsetDateTime.ofInstant(Instant.parse("2020-10-08T17:21:51+00:00"), ZoneId.of("UTC"))
+        firstItem.pubDate shouldBe Some(expectedDate)
+
+        val secondItem = channel.feedItems(1)
+        secondItem.title should include("Pure Java LLaMA Transformers Compilied")
+        secondItem.link shouldBe "https://www.reddit.com/r/java/comments/1pjwsxt/gpullama3java_release_v030_pure_java_llama/"
+        secondItem.description should include("Source the project-specific environment paths")
+
+        val lastItem = channel.feedItems.last
+        lastItem.title shouldBe "Jetbrains IDE Debugger MCP Server - Let Claude autonomously use IntelliJ debugger"
+        lastItem.link shouldBe "https://www.reddit.com/r/java/comments/1peoil3/jetbrains_ide_debugger_mcp_server_let_claude/"
+        lastItem.description should include("JetBrains")
+    }
+
     test("Parser should return None for invalid XML") {
         val invalidXml = "not an xml".getBytes()
         val inputStream = new java.io.ByteArrayInputStream(invalidXml)
