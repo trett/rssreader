@@ -1,46 +1,40 @@
-package ru.trett.server.rss.parser
+package ru.trett.rss.server.parser
 
 import java.io.InputStream
 import javax.xml.stream.XMLInputFactory
+import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.StartElement
 import ru.trett.rss.server.models.Channel
-import javax.xml.stream.XMLEventReader
 
+import scala.annotation.tailrec
 
 trait Parser(val root: String):
-    def parse(eventReader: XMLEventReader): Option[Channel]
+    def parse(eventReader: XMLEventReader, link: String): Option[Channel]
 
 object Parser:
 
     def getParser(root: String): Option[Parser] =
         root match
-            case Rss_2_0_Parser.root   => Some(Rss_2_0_Parser)
-            case Atom_1_0_Parser.root  => Some(Atom_1_0_Parser)
-            case _                     => None
+            case Rss_2_0_Parser.root  => Some(Rss_2_0_Parser)
+            case Atom_1_0_Parser.root => Some(Atom_1_0_Parser)
+            case _                    => None
 
-    def parseRss(input: InputStream): Option[Channel] =
+    def parseRss(input: InputStream, link: String): Option[Channel] =
         val factory = XMLInputFactory.newInstance()
         val eventReader = factory.createXMLEventReader(input)
 
-        // Skip to the first StartElement
-        var rootElement: Option[StartElement] = None
-        while (eventReader.hasNext && rootElement.isEmpty) {
-            val event = eventReader.peek()
-            event match {
-                case startElement: StartElement =>
-                    rootElement = Some(startElement)
-                case _ =>
-                    eventReader.nextEvent() // Skip non-StartElement events
-            }
-        }
+        @tailrec
+        def findRootElement(): Option[StartElement] =
+            if (!eventReader.hasNext) None
+            else
+                eventReader.peek() match {
+                    case startElement: StartElement => Some(startElement)
+                    case _ =>
+                        eventReader.nextEvent()
+                        findRootElement()
+                }
 
-        val parser = rootElement match {
-            case Some(startElement) =>
-                val root = startElement.getName().getLocalPart()
-                getParser(root)
-            case None =>
-                println("No root element found")
-                None
+        val parser = findRootElement().flatMap { startElement =>
+            getParser(startElement.getName().getLocalPart())
         }
-        parser.map(_.parse(eventReader)).getOrElse(None)
-        
+        parser.flatMap(_.parse(eventReader, link))
