@@ -6,7 +6,7 @@ import com.raquo.laminar.api.L.*
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
-@js.native @JSImport("/images/background.png", JSImport.Default)
+@js.native @JSImport("/images/background.webp", JSImport.Default)
 val backgroundImage: String = js.native
 
 object LoginPage {
