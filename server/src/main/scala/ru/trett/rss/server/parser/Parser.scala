@@ -11,10 +11,21 @@ import cats.effect.Resource
 import cats.effect.Sync
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.Logger
-import java.io.InputStream
 
-trait Parser[F[_]](val root: String):
+trait Parser[F[_]]:
     def parse(eventReader: XMLEventReader, link: String): F[Option[Channel]]
+
+enum ParserType(val rootElement: String):
+    case Rss20 extends ParserType("rss")
+    case Atom10 extends ParserType("feed")
+
+    def createParser[F[_]: Sync: Logger]: Parser[F] = this match
+        case Rss20  => new Rss_2_0_Parser[F]
+        case Atom10 => new Atom_1_0_Parser[F]
+
+object ParserType:
+    def fromRoot(root: String): Option[ParserType] =
+        ParserType.values.find(_.rootElement == root)
 
 object Parser:
 
@@ -24,11 +35,8 @@ object Parser:
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
         factory
 
-    private def availableParsers[F[_]: Sync: Logger]: List[Parser[F]] =
-        List(new Rss_2_0_Parser[F], new Atom_1_0_Parser[F])
-
     def apply[F[_]: Sync: Logger](root: String): Option[Parser[F]] =
-        availableParsers[F].find(_.root == root)
+        ParserType.fromRoot(root).map(_.createParser[F])
 
     def parseRss(input: fs2.Stream[IO, Byte], link: String)(using
         loggerFactory: LoggerFactory[IO]
@@ -45,31 +53,31 @@ object Parser:
                         findRootElement(eventReader)
                 }
 
-        def createResources(is: InputStream): Resource[IO, XMLEventReader] =
-            Resource.make(IO.blocking(xmlInputFactory.createXMLEventReader(is)))(reader =>
-                IO.blocking(reader.close()).handleErrorWith(_ => IO.unit)
-            )
-
         input
             .through(fs2.io.toInputStream)
             .evalMap { is =>
                 Resource
-                    .make(IO.pure(is))(inputStream =>
-                        IO.blocking(inputStream.close()).handleErrorWith(_ => IO.unit)
-                    )
-                    .flatMap(createResources)
-                    .use { eventReader =>
-                        for {
-                            startElement <- IO.interruptible(findRootElement(eventReader))
-                            channel <- startElement match
-                                case Some(el) =>
-                                    given Logger[IO] = LoggerFactory[IO].getLogger
-                                    val parserOpt = Parser[IO](el.getName().getLocalPart())
-                                    parserOpt match
-                                        case Some(parser) => parser.parse(eventReader, link)
-                                        case None         => IO.pure(None)
-                                case None => IO.pure(None)
-                        } yield channel
+                    .fromAutoCloseable(IO.blocking(is))
+                    .use { inputStream =>
+                        Resource
+                            .make(
+                                IO.interruptible(xmlInputFactory.createXMLEventReader(inputStream))
+                            )(reader =>
+                                IO.interruptible(reader.close()).handleErrorWith(_ => IO.unit)
+                            )
+                            .use { eventReader =>
+                                for {
+                                    startElement <- IO.interruptible(findRootElement(eventReader))
+                                    channel <- startElement match
+                                        case Some(el) =>
+                                            given Logger[IO] = LoggerFactory[IO].getLogger
+                                            val parserOpt = Parser[IO](el.getName().getLocalPart())
+                                            parserOpt match
+                                                case Some(parser) => parser.parse(eventReader, link)
+                                                case None         => IO.pure(None)
+                                        case None => IO.pure(None)
+                                } yield channel
+                            }
                     }
             }
             .compile

@@ -17,7 +17,7 @@ import cats.effect.Sync
 import cats.syntax.all.*
 import scala.collection.mutable.ListBuffer
 
-class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]("rss"):
+class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
 
     private lazy val dateFormatter: DateTimeFormatter = DateTimeFormatter.RFC_1123_DATE_TIME
 

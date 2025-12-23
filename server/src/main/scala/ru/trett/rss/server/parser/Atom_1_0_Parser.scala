@@ -19,7 +19,7 @@ import cats.effect.Sync
 import cats.syntax.all.*
 import scala.collection.mutable.ListBuffer
 
-class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]("feed"):
+class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
 
     private lazy val formatRfc3339: DateTimeFormatter = new DateTimeFormatterBuilder()
         .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
