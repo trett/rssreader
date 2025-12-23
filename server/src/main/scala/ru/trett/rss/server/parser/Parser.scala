@@ -38,6 +38,8 @@ object Parser:
                 }
 
         val factory = XMLInputFactory.newInstance()
+        factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+        factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         input
             .through(fs2.io.toInputStream)
             .evalMap { is =>
