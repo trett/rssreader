@@ -17,6 +17,7 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax.*
 import cats.effect.Sync
 import cats.syntax.all.*
+import scala.collection.mutable.ListBuffer
 
 class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]("feed"):
 
@@ -29,7 +30,7 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]("feed"):
     private case class FeedState(
         title: String = "",
         hasFeed: Boolean = false,
-        entries: List[Feed] = Nil
+        entries: ListBuffer[Feed] = ListBuffer.empty
     )
 
     private case class EntryState(
@@ -51,7 +52,8 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]("feed"):
                         el.getName().getLocalPart() match {
                             case "feed" => loop(state.copy(hasFeed = true))
                             case "entry" =>
-                                loop(state.copy(entries = state.entries :+ parseEntry(eventReader)))
+                                state.entries += parseEntry(eventReader)
+                                loop(state)
                             case "title" => loop(state.copy(title = readElementText(eventReader)))
                             case _       => loop(state)
                         }
@@ -60,9 +62,9 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]("feed"):
 
         for
             _ <- info"Starting to parse Atom 1.0 feed from link: $link"
-            finalState <- Sync[F].delay(loop(FeedState()))
+            finalState <- Sync[F].interruptible(loop(FeedState()))
             result = Option.when(finalState.hasFeed)(
-                Channel(0L, finalState.title, link, finalState.entries)
+                Channel(0L, finalState.title, link, finalState.entries.toList)
             )
         yield result
 

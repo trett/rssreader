@@ -11,6 +11,7 @@ import cats.effect.Resource
 import cats.effect.Sync
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.Logger
+import java.io.InputStream
 
 trait Parser[F[_]](val root: String):
     def parse(eventReader: XMLEventReader, link: String): F[Option[Channel]]
@@ -44,16 +45,22 @@ object Parser:
                         findRootElement(eventReader)
                 }
 
+        def createResources(is: InputStream): Resource[IO, XMLEventReader] =
+            Resource.make(IO.blocking(xmlInputFactory.createXMLEventReader(is)))(reader =>
+                IO.blocking(reader.close()).handleErrorWith(_ => IO.unit)
+            )
+
         input
             .through(fs2.io.toInputStream)
             .evalMap { is =>
                 Resource
-                    .make(IO(xmlInputFactory.createXMLEventReader(is)))(reader =>
-                        IO(reader.close())
+                    .make(IO.pure(is))(inputStream =>
+                        IO.blocking(inputStream.close()).handleErrorWith(_ => IO.unit)
                     )
+                    .flatMap(createResources)
                     .use { eventReader =>
                         for {
-                            startElement <- IO(findRootElement(eventReader))
+                            startElement <- IO.interruptible(findRootElement(eventReader))
                             channel <- startElement match
                                 case Some(el) =>
                                     given Logger[IO] = LoggerFactory[IO].getLogger

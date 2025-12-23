@@ -15,6 +15,7 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax.*
 import cats.effect.Sync
 import cats.syntax.all.*
+import scala.collection.mutable.ListBuffer
 
 class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]("rss"):
 
@@ -23,7 +24,7 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]("rss"):
     private case class ChannelState(
         title: String = "",
         hasChannel: Boolean = false,
-        items: List[Feed] = Nil
+        items: ListBuffer[Feed] = ListBuffer.empty
     )
 
     private case class ItemState(
@@ -43,9 +44,8 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]("rss"):
                         el.getName().getLocalPart() match {
                             case "channel" => loop(state.copy(hasChannel = true))
                             case "item" =>
-                                loop(
-                                    state.copy(items = state.items :+ parseItemElement(eventReader))
-                                )
+                                state.items += parseItemElement(eventReader)
+                                loop(state)
                             case "title" => loop(state.copy(title = parseTitleElement(eventReader)))
                             case _       => loop(state)
                         }
@@ -54,9 +54,9 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]("rss"):
 
         for
             _ <- info"Starting to parse RSS 2.0 feed from link: $link"
-            finalState <- Sync[F].delay(loop(ChannelState()))
+            finalState <- Sync[F].interruptible(loop(ChannelState()))
             result = Option.when(finalState.hasChannel)(
-                Channel(0L, finalState.title, link, finalState.items)
+                Channel(0L, finalState.title, link, finalState.items.toList)
             )
         yield result
 
