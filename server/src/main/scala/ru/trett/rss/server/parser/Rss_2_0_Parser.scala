@@ -13,8 +13,10 @@ import scala.annotation.tailrec
 import scala.util.Try
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax.*
+import cats.effect.Sync
+import cats.syntax.all.*
 
-class Rss_2_0_Parser[F[_]: Logger] extends Parser("rss"):
+class Rss_2_0_Parser[F[_]: Sync: Logger] extends Parser[F]("rss"):
 
     private lazy val dateFormatter: DateTimeFormatter = DateTimeFormatter.RFC_1123_DATE_TIME
 
@@ -31,8 +33,7 @@ class Rss_2_0_Parser[F[_]: Logger] extends Parser("rss"):
         pubDate: Option[OffsetDateTime] = None
     )
 
-    def parse(eventReader: XMLEventReader, link: String): Option[Channel] =
-        info"Starting to parse RSS 2.0 feed from link: $link"
+    def parse(eventReader: XMLEventReader, link: String): F[Option[Channel]] =
         @tailrec
         def loop(state: ChannelState): ChannelState =
             if (!eventReader.hasNext) state
@@ -51,8 +52,13 @@ class Rss_2_0_Parser[F[_]: Logger] extends Parser("rss"):
                     case _ => loop(state)
                 }
 
-        val finalState = loop(ChannelState())
-        Option.when(finalState.hasChannel)(Channel(0L, finalState.title, link, finalState.items))
+        for
+            _ <- info"Starting to parse RSS 2.0 feed from link: $link"
+            finalState <- Sync[F].delay(loop(ChannelState()))
+            result = Option.when(finalState.hasChannel)(
+                Channel(0L, finalState.title, link, finalState.items)
+            )
+        yield result
 
     private def parseTitleElement(eventReader: XMLEventReader): String =
         val event = eventReader.nextEvent()

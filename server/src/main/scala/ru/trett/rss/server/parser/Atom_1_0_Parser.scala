@@ -15,8 +15,10 @@ import scala.annotation.tailrec
 import scala.util.Try
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax.*
+import cats.effect.Sync
+import cats.syntax.all.*
 
-class Atom_1_0_Parser[F[_]: Logger] extends Parser("feed"):
+class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]("feed"):
 
     private lazy val formatRfc3339: DateTimeFormatter = new DateTimeFormatterBuilder()
         .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
@@ -39,8 +41,7 @@ class Atom_1_0_Parser[F[_]: Logger] extends Parser("feed"):
         published: Option[OffsetDateTime] = None
     )
 
-    def parse(eventReader: XMLEventReader, link: String): Option[Channel] =
-        info"Starting to parse Atom 1.0 feed from link: $link"
+    def parse(eventReader: XMLEventReader, link: String): F[Option[Channel]] =
         @tailrec
         def loop(state: FeedState): FeedState =
             if (!eventReader.hasNext) state
@@ -57,8 +58,13 @@ class Atom_1_0_Parser[F[_]: Logger] extends Parser("feed"):
                     case _ => loop(state)
                 }
 
-        val finalState = loop(FeedState())
-        Option.when(finalState.hasFeed)(Channel(0L, finalState.title, link, finalState.entries))
+        for
+            _ <- info"Starting to parse Atom 1.0 feed from link: $link"
+            finalState <- Sync[F].delay(loop(FeedState()))
+            result = Option.when(finalState.hasFeed)(
+                Channel(0L, finalState.title, link, finalState.entries)
+            )
+        yield result
 
     private def parseEntry(eventReader: XMLEventReader): Feed =
         @tailrec
