@@ -72,7 +72,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             channel <-
                 client
                     .get[Option[Channel]](url) {
-                        case Status.Successful(r) => Parser.parseRss(r.bodyText, link)
+                        case Status.Successful(r) => Parser.parseRss(r.body, link)
                         case r =>
                             r.as[String]
                                 .map(b =>

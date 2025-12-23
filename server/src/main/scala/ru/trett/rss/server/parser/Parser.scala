@@ -8,7 +8,6 @@ import ru.trett.rss.server.models.Channel
 import scala.annotation.tailrec
 import cats.effect.IO
 import cats.effect.Resource
-import fs2.text
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.Logger
 
@@ -23,7 +22,7 @@ object Parser:
     def apply[F[_]: Logger](root: String): Option[Parser] =
         availableParsers[F].find(_.root == root)
 
-    def parseRss(input: fs2.Stream[IO, String], link: String)(using
+    def parseRss(input: fs2.Stream[IO, Byte], link: String)(using
         loggerFactory: LoggerFactory[IO]
     ): IO[Option[Channel]] =
 
@@ -40,7 +39,6 @@ object Parser:
 
         val factory = XMLInputFactory.newInstance()
         input
-            .through(text.utf8.encode)
             .through(fs2.io.toInputStream)
             .evalMap { is =>
                 Resource

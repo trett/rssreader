@@ -26,9 +26,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
 
     given LoggerFactory[IO] = NoOpFactory[IO]
 
-    private def streamFromInputStream(is: java.io.InputStream): fs2.Stream[IO, String] =
+    private def streamFromInputStream(is: java.io.InputStream): fs2.Stream[IO, Byte] =
         readInputStream(IO(is), 4096)
-            .through(fs2.text.utf8.decode)
 
     test("Parser should parse RSS 2.0 feed first version") {
         val inputStream = Option(getClass.getResourceAsStream("/rss_2_0_1.xml"))
