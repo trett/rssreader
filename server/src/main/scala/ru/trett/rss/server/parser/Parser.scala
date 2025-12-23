@@ -16,6 +16,12 @@ trait Parser(val root: String):
 
 object Parser:
 
+    private val xmlInputFactory: XMLInputFactory =
+        val factory = XMLInputFactory.newInstance()
+        factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
+        factory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
+        factory
+
     private def availableParsers[F[_]: Logger]: List[Parser] =
         List(new Rss_2_0_Parser[F], new Atom_1_0_Parser[F])
 
@@ -37,14 +43,13 @@ object Parser:
                         findRootElement(eventReader)
                 }
 
-        val factory = XMLInputFactory.newInstance()
-        factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
-        factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         input
             .through(fs2.io.toInputStream)
             .evalMap { is =>
                 Resource
-                    .make(IO(factory.createXMLEventReader(is)))(reader => IO(reader.close()))
+                    .make(IO(xmlInputFactory.createXMLEventReader(is)))(reader =>
+                        IO(reader.close())
+                    )
                     .use { eventReader =>
                         IO {
                             for {
