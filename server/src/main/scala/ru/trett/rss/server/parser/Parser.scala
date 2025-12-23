@@ -52,6 +52,7 @@ object Parser:
                         eventReader.nextEvent()
                         findRootElement(eventReader)
                 }
+        val logger = LoggerFactory[IO].getLogger
 
         input
             .through(fs2.io.toInputStream)
@@ -60,17 +61,16 @@ object Parser:
                     .fromAutoCloseable(IO.blocking(is))
                     .use { inputStream =>
                         Resource
-                            .make(
-                                IO.blocking(xmlInputFactory.createXMLEventReader(inputStream))
-                            )(reader => IO.blocking(reader.close()).handleErrorWith(_ => IO.unit))
+                            .make(IO.blocking(xmlInputFactory.createXMLEventReader(inputStream)))(
+                                reader => IO.blocking(reader.close()).handleErrorWith(_ => IO.unit)
+                            )
                             .use { eventReader =>
                                 for {
                                     startElement <- IO.blocking(findRootElement(eventReader))
                                     channel <- startElement match
                                         case Some(el) =>
                                             given Logger[IO] = LoggerFactory[IO].getLogger
-                                            val parserOpt = Parser[IO](el.getName().getLocalPart())
-                                            parserOpt match
+                                            Parser[IO](el.getName().getLocalPart()) match
                                                 case Some(parser) => parser.parse(eventReader, link)
                                                 case None         => IO.pure(None)
                                         case None => IO.pure(None)
