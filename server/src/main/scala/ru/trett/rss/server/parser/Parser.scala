@@ -61,13 +61,11 @@ object Parser:
                     .use { inputStream =>
                         Resource
                             .make(
-                                IO.interruptible(xmlInputFactory.createXMLEventReader(inputStream))
-                            )(reader =>
-                                IO.interruptible(reader.close()).handleErrorWith(_ => IO.unit)
-                            )
+                                IO.blocking(xmlInputFactory.createXMLEventReader(inputStream))
+                            )(reader => IO.blocking(reader.close()).handleErrorWith(_ => IO.unit))
                             .use { eventReader =>
                                 for {
-                                    startElement <- IO.interruptible(findRootElement(eventReader))
+                                    startElement <- IO.blocking(findRootElement(eventReader))
                                     channel <- startElement match
                                         case Some(el) =>
                                             given Logger[IO] = LoggerFactory[IO].getLogger
