@@ -1,7 +1,6 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
-import cats.effect.kernel.Resource
 import cats.syntax.all.*
 import com.rometools.rome.feed.synd.SyndEntry
 import com.rometools.rome.io.SyndFeedInput
@@ -20,6 +19,8 @@ import ru.trett.rss.server.repositories.ChannelRepository
 import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.*
+import ru.trett.rss.server.parser.Parser
+import org.http4s.Status
 
 class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
     loggerFactory: LoggerFactory[IO]
@@ -70,23 +71,15 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             }
             channel <-
                 client
-                    .get(url) { response =>
-                        response.body.compile.to(Array).flatMap { bytes =>
-                            Resource
-                                .fromAutoCloseable(
-                                    IO(new XmlReader(new java.io.ByteArrayInputStream(bytes)))
-                                )
-                                .use { reader =>
-                                    parse(reader, link).handleErrorWith { error =>
-                                        logger.error(error)(
-                                            s"Failed to parse the feed: $link"
-                                        ) *> IO.none
-                                    }
-                                }
-                        }
-                    }
-                    .handleErrorWith { error =>
-                        logger.error(error)(s"Failed to get channel: $link") *> IO.none
+                    .get[Option[Channel]](url) {
+                        case Status.Successful(r) => Parser.parseRss(r.bodyText, link)
+                        case r =>
+                            r.as[String]
+                                .map(b =>
+                                    logger.error(
+                                        s"Request failed with status ${r.status.code} and body $b"
+                                    )
+                                ) *> IO.pure(None)
                     }
         } yield channel
 

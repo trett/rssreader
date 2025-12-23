@@ -13,8 +13,10 @@ import javax.xml.stream.events.StartElement
 
 import scala.annotation.tailrec
 import scala.util.Try
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.syntax.*
 
-object Atom_1_0_Parser extends Parser("feed"):
+class Atom_1_0_Parser[F[_]: Logger] extends Parser("feed"):
 
     private lazy val formatRfc3339: DateTimeFormatter = new DateTimeFormatterBuilder()
         .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
@@ -38,6 +40,7 @@ object Atom_1_0_Parser extends Parser("feed"):
     )
 
     def parse(eventReader: XMLEventReader, link: String): Option[Channel] =
+        info"Starting to parse Atom 1.0 feed from link: $link"
         @tailrec
         def loop(state: FeedState): FeedState =
             if (!eventReader.hasNext) state

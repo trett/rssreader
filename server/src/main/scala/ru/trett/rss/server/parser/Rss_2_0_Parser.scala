@@ -11,8 +11,10 @@ import javax.xml.stream.events.StartElement
 
 import scala.annotation.tailrec
 import scala.util.Try
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.syntax.*
 
-object Rss_2_0_Parser extends Parser("rss"):
+class Rss_2_0_Parser[F[_]: Logger] extends Parser("rss"):
 
     private lazy val dateFormatter: DateTimeFormatter = DateTimeFormatter.RFC_1123_DATE_TIME
 
@@ -30,6 +32,7 @@ object Rss_2_0_Parser extends Parser("rss"):
     )
 
     def parse(eventReader: XMLEventReader, link: String): Option[Channel] =
+        info"Starting to parse RSS 2.0 feed from link: $link"
         @tailrec
         def loop(state: ChannelState): ChannelState =
             if (!eventReader.hasNext) state
