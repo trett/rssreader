@@ -85,7 +85,6 @@ lazy val server = project
             "ch.qos.logback" % "logback-classic" % "1.5.21",
             "org.flywaydb" % "flyway-core" % "11.17.2",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
-            "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
             "com.rometools" % "rome" % "2.1.0"
         ),
         libraryDependencies ++= Seq(
