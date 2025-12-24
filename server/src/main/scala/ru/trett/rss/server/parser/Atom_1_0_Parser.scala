@@ -63,6 +63,8 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
         for
             _ <- info"Starting to parse Atom 1.0 feed from link: $link"
             finalState <- Sync[F].interruptible(loop(FeedState()))
+            _ <-
+                info"Parsed ${finalState.entries.length} entries from Atom 1.0 feed: ${finalState.title}"
             result = Option.when(finalState.hasFeed)(
                 Channel(0L, finalState.title, link, finalState.entries.toList)
             )

@@ -481,4 +481,30 @@ class ParserSpec extends AnyFunSuite with Matchers {
         customChannel.feedItems.length shouldBe syndChannel.feedItems.length
         customChannel.feedItems.head.title shouldBe syndChannel.feedItems.head.title
     }
+
+    test("Parser should handle HTML entities in RSS 2.0 feed (021.xml)") {
+        val inputStream = Option(getClass.getResourceAsStream("/021.xml"))
+            .getOrElse(fail("Resource file 021.xml should exist"))
+
+        val result: Option[Channel] = Parser
+            .parseRss(streamFromInputStream(inputStream), "https://www.021.rs/rss/all")
+            .unsafeRunSync()
+
+        result shouldBe defined
+
+        val channel = result.get
+
+        channel.title shouldBe "Najnovije"
+        channel.link shouldBe "https://www.021.rs/rss/all"
+        channel.feedItems should not be empty
+
+        val itemWithQuotes = channel.feedItems.find(_.title.contains("Predsednikova izjava"))
+        itemWithQuotes shouldBe defined
+
+        val item = itemWithQuotes.get
+        item.title should include("\"laž godine\"")
+        item.title should include("\"Hoćete izbore")
+        item.description should include("\"Laž godine 2025\"")
+        item.description should include("\"Hoćete izbore - dobićete ih kad god hoćete\"")
+    }
 }
