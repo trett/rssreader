@@ -24,7 +24,7 @@ services:
       - host.docker.internal:host-gateway
 
   server:
-    image: server:2.3.2
+    image: server:2.3.3
     container_name: rss_server
     restart: always
     depends_on:

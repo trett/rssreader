@@ -1,0 +1,742 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <category term="java" label="r/java" />
+  <updated>2025-12-11T16:43:15+00:00</updated>
+  <icon>https://www.redditstatic.com/icon.png/</icon>
+  <id>/r/java/.rss</id>
+  <link rel="self" href="https://www.reddit.com/r/java/.rss" type="application/atom+xml" />
+  <link rel="alternate" href="https://www.reddit.com/r/java/" type="text/html" />
+  <logo>https://c.thumbs.redditmedia.com/gCMzcSXDxoDQ4e62.png</logo>
+  <subtitle>News, Technical discussions, research papers and assorted things of interest related to
+    the Java programming language NO programming help, NO learning Java related questions, NO
+    installing or downloading Java questions, NO JVM languages - Exclusively Java</subtitle>
+  <title>Java News/Tech/Discussion/etc. No programming help, no learning Java</title>
+  <entry>
+    <author>
+      <name>/u/desrtfx</name>
+      <uri>https://www.reddit.com/user/desrtfx</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;h1&gt;&lt;a
+      href=&quot;/r/java&quot;&gt;/r/java&lt;/a&gt; is not for programming help or learning
+      Java&lt;/h1&gt; &lt;ul&gt; &lt;li&gt;&lt;strong&gt;Programming related
+      questions&lt;/strong&gt; do not belong here. They belong in &lt;strong&gt;&lt;a
+      href=&quot;/r/javahelp&quot;&gt;/r/javahelp&lt;/a&gt;&lt;/strong&gt;. &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Learning related questions&lt;/strong&gt; belong in
+      &lt;strong&gt;&lt;a
+      href=&quot;/r/learnjava&quot;&gt;/r/learnjava&lt;/a&gt;&lt;/strong&gt;&lt;/li&gt; &lt;/ul&gt;
+      &lt;p&gt;Such posts will be removed.&lt;/p&gt; &lt;p&gt;&lt;strong&gt;To the community willing
+      to help:&lt;/strong&gt;&lt;/p&gt; &lt;p&gt;Instead of immediately jumping in and helping,
+      please &lt;strong&gt;direct the poster to the appropriate subreddit&lt;/strong&gt; and
+      &lt;strong&gt;report the post&lt;/strong&gt;.&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt;
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/desrtfx&quot;&gt; /u/desrtfx &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_j7h9er</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/" />
+    <updated>2020-10-08T17:21:51+00:00</updated>
+    <published>2020-10-08T17:21:51+00:00</published>
+    <title>[PSA]/r/java is not for programming help, learning questions, or installing Java
+      questions</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/mikebmx1</name>
+      <uri>https://www.reddit.com/user/mikebmx1</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;We just
+      released our latest version for our Java to GPU inference library. Now apart of Langchain4j is
+      also integrated with Quarkus as model engine. All transformers are written in java and
+      compilied to OpenCL and PTX.&lt;/p&gt; &lt;p&gt;Also it much easier to run it
+      locally:&lt;/p&gt; &lt;pre&gt;&lt;code&gt;wget
+      https://github.com/beehive-lab/TornadoVM/releases/download/v2.1.0/tornadovm-2.1.0-opencl-linux-amd64.zip
+      unzip tornadovm-2.1.0-opencl-linux-amd64.zip # Replace &amp;lt;path-to-sdk&amp;gt; manually
+      with the absolute path of the extracted folder export
+      TORNADO_SDK=&amp;quot;&amp;lt;path-to-sdk&amp;gt;/tornadovm-2.1.0-opencl&amp;quot; export
+      PATH=$TORNADO_SDK/bin:$PATH tornado --devices tornado --version # Navigate to the project
+      directory cd GPULlama3.java # Source the project-specific environment paths -&amp;gt; this
+      will ensure the source set_paths # Build the project using Maven (skip tests for faster build)
+      # mvn clean package -DskipTests or just make make # Run the model (make sure you have
+      downloaded the model file first - see below) ./llama-tornado --gpu --verbose-init --opencl
+      --model beehive-llama-3.2-1b-instruct-fp16.gguf --prompt &amp;quot;tell me a joke&amp;quot;
+      &lt;/code&gt;&lt;/pre&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32;
+      &lt;a href=&quot;https://www.reddit.com/user/mikebmx1&quot;&gt; /u/mikebmx1 &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://github.com/beehive-lab/GPULlama3.java&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pjwsxt/gpullama3java_release_v030_pure_java_llama/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pjwsxt</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pjwsxt/gpullama3java_release_v030_pure_java_llama/" />
+    <updated>2025-12-11T12:54:52+00:00</updated>
+    <published>2025-12-11T12:54:52+00:00</published>
+    <title>[GPULlama3.java release v0.3.0] Pure Java LLaMA Transformers Compilied to PTX/OpenCL now
+      integrated in Quarkus &amp; LangChain4j</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/vladmihalceacom</name>
+      <uri>https://www.reddit.com/user/vladmihalceacom</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/vladmihalceacom&quot;&gt; /u/vladmihalceacom &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.youtube.com/watch?v=AzfhxgkBL9s&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pjyydf/modern_bytecode_instrumentation_with_bytebuddy/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pjyydf</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pjyydf/modern_bytecode_instrumentation_with_bytebuddy/" />
+    <updated>2025-12-11T14:32:19+00:00</updated>
+    <published>2025-12-11T14:32:19+00:00</published>
+    <title>Modern Bytecode Instrumentation with ByteBuddy – Rafael Winterhalter | The Marco Show</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/Joram2</name>
+      <uri>https://www.reddit.com/user/Joram2</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/Joram2&quot;&gt; /u/Joram2 &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://x.com/Payara_Fish/status/1998882921940242775&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pjomk2/azul_acquires_payara/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pjomk2</id>
+    <link href="https://www.reddit.com/r/java/comments/1pjomk2/azul_acquires_payara/" />
+    <updated>2025-12-11T04:37:33+00:00</updated>
+    <published>2025-12-11T04:37:33+00:00</published>
+    <title>Azul acquires Payara</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/SmushyTaco</name>
+      <uri>https://www.reddit.com/user/SmushyTaco</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;I&amp;#39;ve
+      created a lightweight, high-performance event-driven library for JVM! It works perfectly for
+      Java but it&amp;#39;s written in Kotlin.&lt;/p&gt; &lt;p&gt;I originally built this for a
+      Minecraft modding project, but it turned out to be flexible enough to be a general-purpose
+      library instead. It focuses on zero boilerplate, automatic handler discovery, structured
+      exception handling, and fast invocation using LambdaMetafactory, with reflective fallback when
+      needed.&lt;/p&gt; &lt;p&gt;The concept is simple:&lt;br/&gt; 1. Create an event
+      &lt;code&gt;Bus&lt;/code&gt;.&lt;br/&gt; 2. Create a class that inherits Event. Add whatever
+      you want to the class.&lt;br/&gt; 3. Create functions annotated with
+      &lt;code&gt;@EventHandler&lt;/code&gt; to process the events.&lt;br/&gt; 4. Create functions
+      annotated with &lt;code&gt;@ExceptionHandler&lt;/code&gt; to handle any exceptions.&lt;br/&gt;
+      5. Register the classes that contain these &lt;code&gt;@EventHandler&lt;/code&gt; and
+      &lt;code&gt;@ExceptionHandler&lt;/code&gt; classes with &lt;code&gt;subscribe&lt;/code&gt; on
+      the &lt;code&gt;Bus&lt;/code&gt; you made.&lt;br/&gt; 6. Call &lt;code&gt;post&lt;/code&gt; on
+      the &lt;code&gt;Bus&lt;/code&gt; you made and pass as instance of the event you
+      created.&lt;/p&gt; &lt;p&gt;It supports:&lt;br/&gt; 1. Handler methods of all visibilities
+      (even private).&lt;br/&gt; 2. Handler prioritization (A handle with a priority of 10 will run
+      earlier than a handler with a priority of 0).&lt;br/&gt; 3. Cancelable events - If an event is
+      cancelable, &lt;code&gt;@EventHandler&lt;/code&gt;s can mark it as canceled. How cancellation
+      affects remaining handlers depends on the &lt;code&gt;CancelMode&lt;/code&gt; used when
+      calling &lt;code&gt;post&lt;/code&gt;: in &lt;code&gt;IGNORE&lt;/code&gt; mode all handlers
+      run, in &lt;code&gt;RESPECT&lt;/code&gt; mode only handlers with &lt;code&gt;runIfCanceled =
+      true&lt;/code&gt; continue running, and in &lt;code&gt;ENFORCE&lt;/code&gt; mode no further
+      handlers run once the event is canceled. 4. Modifiable events - Events can be marked as
+      modified. This simply indicates the event was modified in some way.&lt;/p&gt;
+      &lt;p&gt;Here&amp;#39;s a simple example: ```java // 1. Define an event. // Java
+      doesn&amp;#39;t support delegation like Kotlin, so we just extend helpers. public class
+      MessageEvent implements Event, Cancelable, Modifiable { private final String text; private
+      boolean canceled = false; private boolean modified = false;&lt;/p&gt;
+      &lt;pre&gt;&lt;code&gt;public MessageEvent(String text) { this.text = text; } public String
+      getText() { return text; } // Cancelable implementation @Override public boolean isCanceled()
+      { return canceled; } @Override public void markCanceled() { this.canceled = true; } //
+      Modifiable implementation @Override public boolean isModified() { return modified; } @Override
+      public void markModified() { this.modified = true; } &lt;/code&gt;&lt;/pre&gt;
+      &lt;p&gt;}&lt;/p&gt; &lt;p&gt;// 2. Create a subscriber with event handlers and exception
+      handlers. public class MessageSubscriber {&lt;/p&gt; &lt;pre&gt;&lt;code&gt;// High-priority
+      handler (runs first) @EventHandler(priority = 10) private void onMessage(MessageEvent event) {
+      System.out.println(&amp;quot;Handling: &amp;quot; + event.getText()); String text =
+      event.getText().toLowerCase(); if (text.contains(&amp;quot;stop&amp;quot;)) {
+      event.markCanceled(); return; } if (text.contains(&amp;quot;boom&amp;quot;)) { throw new
+      IllegalStateException(&amp;quot;Boom!&amp;quot;); } event.markModified(); } // Lower-priority
+      handler (runs only if not canceled, unless runIfCanceled=true) @EventHandler(priority = 0)
+      private void afterMessage(MessageEvent event) { System.out.println(&amp;quot;After handler:
+      &amp;quot; + event.getText()); } // Exception handler for specific event + throwable type
+      @ExceptionHandler(priority = 5) private void onMessageFailure(MessageEvent event,
+      IllegalStateException t) { System.out.println(&amp;quot;Message failed: &amp;quot; +
+      t.getMessage()); } // Fallback exception handler for any exception on this event type
+      @ExceptionHandler private void onAnyMessageFailure(MessageEvent event) {
+      System.out.println(&amp;quot;A MessageEvent failed with some exception.&amp;quot;); }
+      &lt;/code&gt;&lt;/pre&gt; &lt;p&gt;}&lt;/p&gt; &lt;p&gt;// 3. Wire everything together. public
+      class Main { public static void main(String[] args) { Bus bus = Bus.create(); // Create the
+      event bus MessageSubscriber sub = new MessageSubscriber();&lt;/p&gt; &lt;pre&gt;&lt;code&gt;
+      bus.subscribe(sub); // Register subscriber MessageEvent event = new
+      MessageEvent(&amp;quot;Hello, boom world&amp;quot;); bus.post(event); // Dispatch event
+      System.out.println(&amp;quot;Canceled? &amp;quot; + event.isCanceled());
+      System.out.println(&amp;quot;Modified? &amp;quot; + event.isModified()); }
+      &lt;/code&gt;&lt;/pre&gt; &lt;p&gt;}&lt;/p&gt; &lt;p&gt;```&lt;/p&gt; &lt;p&gt;Check out the
+      project&amp;#39;s README.md for more detailed information and let me know what you
+      think!&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/SmushyTaco&quot;&gt; /u/SmushyTaco &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://github.com/SmushyTaco/Event-Library&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pi2pmb/event_library_a_lightweight_zero_boilerplate_high/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pi2pmb</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pi2pmb/event_library_a_lightweight_zero_boilerplate_high/" />
+    <updated>2025-12-09T08:58:11+00:00</updated>
+    <published>2025-12-09T08:58:11+00:00</published>
+    <title>Event Library - A lightweight, zero boilerplate, high performance event bus for JVM</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/tanin47</name>
+      <uri>https://www.reddit.com/user/tanin47</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;The showcase
+      app is &lt;a
+      href=&quot;https://apps.apple.com/us/app/backdoor-database-tool/id6755612631?mt=12&quot;&gt;Backdoor&lt;/a&gt;,
+      which is a database tool. It can be used as a desktop app, which is great for personal use. Or
+      it can be self-hosted, which reduces the need for admin dashboard and is great for team use.
+      It supports Postgres, SQLite, and ClickHouse.&lt;/p&gt; &lt;p&gt;Since &lt;a
+      href=&quot;https://github.com/tanin47/backdoor&quot;&gt;Backdoor&lt;/a&gt; is based &lt;a
+      href=&quot;https://github.com/tanin47/java-electron&quot;&gt;Java Electron&lt;/a&gt; (which
+      enables me to build frontend with JS), the desktop and self-hostable version shares
+      &amp;gt;90% of the code.&lt;/p&gt; &lt;p&gt;Here&amp;#39;s the blog post: &lt;a
+      href=&quot;https://tanin.nanakorn.com/publishing-a-java-based-database-tool-on-mac-app-store-mas/&quot;&gt;Publishing
+      a Java-based database tool on Mac App Store (MAS)&lt;/a&gt;&lt;/p&gt; &lt;/div&gt;&lt;!--
+      SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/tanin47&quot;&gt; /u/tanin47 &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pi24xp/publishing_a_javabased_database_tool_on_mac_app/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pi24xp/publishing_a_javabased_database_tool_on_mac_app/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pi24xp</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pi24xp/publishing_a_javabased_database_tool_on_mac_app/" />
+    <updated>2025-12-09T08:17:50+00:00</updated>
+    <published>2025-12-09T08:17:50+00:00</published>
+    <title>Publishing a Java-based database tool on Mac App Store</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/brunocborges</name>
+      <uri>https://www.reddit.com/user/brunocborges</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/brunocborges&quot;&gt; /u/brunocborges &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.the-main-thread.com/p/quarkus-java-jaz-auto-tuning-container-memory&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pij9lk/supercharge_your_quarkus_containers_autotune_jvm/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pij9lk</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pij9lk/supercharge_your_quarkus_containers_autotune_jvm/" />
+    <updated>2025-12-09T21:04:46+00:00</updated>
+    <published>2025-12-09T21:04:46+00:00</published>
+    <title>Supercharge Your Quarkus Containers: Auto-Tune JVM Memory with Microsoft JAZ</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/greenrobot_de</name>
+      <uri>https://www.reddit.com/user/greenrobot_de</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/greenrobot_de&quot;&gt; /u/greenrobot_de &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://blog.jetbrains.com/idea/2025/12/intellij-idea-2025-3/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phdy84/intellij_idea_20253_is_out_now/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1phdy84</id>
+    <link href="https://www.reddit.com/r/java/comments/1phdy84/intellij_idea_20253_is_out_now/" />
+    <updated>2025-12-08T14:36:22+00:00</updated>
+    <published>2025-12-08T14:36:22+00:00</published>
+    <title>IntelliJ IDEA 2025.3 Is Out Now!</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/piotr_minkowski</name>
+      <uri>https://www.reddit.com/user/piotr_minkowski</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/piotr_minkowski&quot;&gt; /u/piotr_minkowski &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://piotrminkowski.com/2025/12/08/a-book-hands-on-java-with-kubernetes/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phre58/a_book_handson_java_with_kubernetes_piotrs/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1phre58</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1phre58/a_book_handson_java_with_kubernetes_piotrs/" />
+    <updated>2025-12-08T23:06:38+00:00</updated>
+    <published>2025-12-08T23:06:38+00:00</published>
+    <title>A Book: Hands-On Java with Kubernetes - Piotr's TechBlog</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/FullCry1021</name>
+      <uri>https://www.reddit.com/user/FullCry1021</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;Change logs:
+      &lt;a
+      href=&quot;https://github.com/oracle/javavscode/releases&quot;&gt;https://github.com/oracle/javavscode/releases&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;Marketplace: &lt;a
+      href=&quot;https://marketplace.visualstudio.com/items/?itemName=Oracle.oracle-java&quot;&gt;https://marketplace.visualstudio.com/items/?itemName=Oracle.oracle-java&lt;/a&gt;&lt;/p&gt;
+      &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/FullCry1021&quot;&gt; /u/FullCry1021 &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phbh1w/oracle_java_extension_for_vscode_v25_released/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phbh1w/oracle_java_extension_for_vscode_v25_released/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1phbh1w</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1phbh1w/oracle_java_extension_for_vscode_v25_released/" />
+    <updated>2025-12-08T12:44:49+00:00</updated>
+    <published>2025-12-08T12:44:49+00:00</published>
+    <title>Oracle Java Extension for VSCode v25 released (Full JDK 25 support)</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/TeaVMFan</name>
+      <uri>https://www.reddit.com/user/TeaVMFan</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;Applets are
+      officially, completely removed from Java 26, coming in March of 2026. This brings to an
+      official end the era of applets, which began in 1996. However, for years it has been possible
+      to build modern, interactive web pages in Java without needing applets or plugins. TeaVM
+      (&lt;a href=&quot;https://teavm.org&quot;&gt;https://teavm.org&lt;/a&gt;) provides fast,
+      performant, and lightweight tooling to transpile Java to run natively in the browser. And for
+      a full front-end toolkit with templates, routing, components, and more, Flavour (&lt;a
+      href=&quot;https://flavour.sf.net&quot;&gt;https://flavour.sf.net&lt;/a&gt;) lets you build
+      your modern single-page app using 100% Java. Get the full story at &lt;a
+      href=&quot;https://frequal.com/java/AppletsGoneButJavaInTheBrowserBetterThanEver.html&quot;&gt;https://frequal.com/java/AppletsGoneButJavaInTheBrowserBetterThanEver.html&lt;/a&gt;&lt;/p&gt;
+      &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/TeaVMFan&quot;&gt; /u/TeaVMFan &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pgue47/applets_are_officially_gone_but_java_in_the/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pgue47/applets_are_officially_gone_but_java_in_the/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pgue47</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pgue47/applets_are_officially_gone_but_java_in_the/" />
+    <updated>2025-12-07T21:38:33+00:00</updated>
+    <published>2025-12-07T21:38:33+00:00</published>
+    <title>Applets Are Officially Gone, But Java In The Browser Is Better Than Ever</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/NP_Ex</name>
+      <uri>https://www.reddit.com/user/NP_Ex</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;I&amp;#39;m
+      seeing recurring claims about exceptional JVM performance, especially when contrasted with
+      languages like Go, and I&amp;#39;ve been trying to understand how these narratives form in the
+      community.&lt;/p&gt; &lt;p&gt;In many public benchmarks, Go comes out ahead in certain
+      categories, despite the JVM’s reputation for aggressive optimization and mature JIT
+      technology. On the other hand, Java dominates in long-running, throughput-heavy workloads. The
+      contrast between reputation and published results seems worth examining.&lt;/p&gt; &lt;p&gt;A
+      recurring question is how much weight different benchmarks should have when evaluating these
+      systems. Some emphasize microbenchmarks, others highlight real-world workloads, and some argue
+      that the JVM only shows its strengths under specific conditions such as long warm-up phases or
+      complex allocation patterns.&lt;/p&gt; &lt;p&gt;Rather than asking for tutorials or
+      explanations, I’m interested in opening a discussion about &lt;strong&gt;how the Java
+      community evaluates performance claims today&lt;/strong&gt; — e.g., which benchmark suites are
+      generally regarded as meaningful, what workloads best showcase JVM characteristics, and how
+      people interpret comparisons with languages like Go.&lt;/p&gt; &lt;p&gt;Curious how others in
+      the ecosystem view these considerations and what trends you’ve observed in recent
+      years.&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/NP_Ex&quot;&gt; /u/NP_Ex &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pi3waq/java_performance_vs_go/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pi3waq/java_performance_vs_go/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pi3waq</id>
+    <link href="https://www.reddit.com/r/java/comments/1pi3waq/java_performance_vs_go/" />
+    <updated>2025-12-09T10:15:57+00:00</updated>
+    <published>2025-12-09T10:15:57+00:00</published>
+    <title>Java performance vs go</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/brunocborges</name>
+      <uri>https://www.reddit.com/user/brunocborges</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/brunocborges&quot;&gt; /u/brunocborges &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://devblogs.microsoft.com/java/from-complexity-to-simplicity-intelligent-jvm-optimizations-on-azure/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phj5z1/from_complexity_to_simplicity_intelligent_jvm/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1phj5z1</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1phj5z1/from_complexity_to_simplicity_intelligent_jvm/" />
+    <updated>2025-12-08T17:53:51+00:00</updated>
+    <published>2025-12-08T17:53:51+00:00</published>
+    <title>From Complexity to Simplicity: Intelligent JVM Optimizations on Azure</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/AcanthisittaEmpty985</name>
+      <uri>https://www.reddit.com/user/AcanthisittaEmpty985</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;A
+      synchronization primitives server with various connection interfaces (like gRPC, Java RMI,
+      REST), developed in Java and ready to use.&lt;/p&gt; &lt;p&gt;The accesible primitives are
+      lock, semaphore, countdownlatch, rrate limiters (see &lt;a
+      href=&quot;https://bucket4j.com/&quot;&gt;bucket4j&lt;/a&gt;) and more&lt;/p&gt; &lt;p&gt;So
+      various processes/applications/threads can access the same primitive by using any connection
+      method (the connections share the primitives caches ). A synchronization primitive will be
+      automatically erased from the cache unless it is in use (particular for every type).&lt;/p&gt;
+      &lt;p&gt;You can activate or deactivate each type of primitive and also each type of
+      connection. ( but no fine grained control)&lt;/p&gt; &lt;ul&gt; &lt;li&gt;The core submodule
+      has the common elements for other parts. &lt;/li&gt; &lt;li&gt;The server submodule implemets
+      the primitives, and exposes the interfaces to connect. It can run stand-alone or embedded in
+      other aplication.&lt;/li&gt; &lt;li&gt;The client submodule gives you some ready-to-go java
+      clients to connect to the server.&lt;/li&gt; &lt;li&gt;The integration submodule serves as
+      testing with a real server and real clients to test all the proyect.&lt;/li&gt; &lt;/ul&gt;
+      &lt;p&gt;There are more than 500 tests to ensure a working project.&lt;/p&gt;
+      &lt;p&gt;Affiliation: I&amp;#39;m the creator and maintaner of the project.&lt;/p&gt;
+      &lt;p&gt;&lt;a
+      href=&quot;https://github.com/oscar-besga-panel/LockFactoryServer&quot;&gt;https://github.com/oscar-besga-panel/LockFactoryServer&lt;/a&gt;
+      &lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/AcanthisittaEmpty985&quot;&gt; /u/AcanthisittaEmpty985
+      &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phc12t/lockfactoryserver_synchronization_primitives/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phc12t/lockfactoryserver_synchronization_primitives/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1phc12t</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1phc12t/lockfactoryserver_synchronization_primitives/" />
+    <updated>2025-12-08T13:11:32+00:00</updated>
+    <published>2025-12-08T13:11:32+00:00</published>
+    <title>LockFactoryServer, synchronization primitives server with various connection interfaces</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/atomichbts</name>
+      <uri>https://www.reddit.com/user/atomichbts</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;Hi guys. I
+      built a simple CLI tool to automatically annotate Java types with a set of specified Java
+      annotations.&lt;/p&gt; &lt;p&gt;&lt;a
+      href=&quot;https://github.com/vtramo/java-annotator&quot;&gt;https://github.com/vtramo/java-annotator&lt;/a&gt;&lt;/p&gt;
+      &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/atomichbts&quot;&gt; /u/atomichbts &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phkjvl/java_annotator_cli/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1phkjvl/java_annotator_cli/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1phkjvl</id>
+    <link href="https://www.reddit.com/r/java/comments/1phkjvl/java_annotator_cli/" />
+    <updated>2025-12-08T18:45:06+00:00</updated>
+    <published>2025-12-08T18:45:06+00:00</published>
+    <title>Java Annotator CLI</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/henk53</name>
+      <uri>https://www.reddit.com/user/henk53</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/henk53&quot;&gt; /u/henk53 &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://github.com/eclipse-ee4j/glassfish/releases/tag/7.1.0&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pgi5z5/glassfish_710_released/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pgi5z5</id>
+    <link href="https://www.reddit.com/r/java/comments/1pgi5z5/glassfish_710_released/" />
+    <updated>2025-12-07T13:18:21+00:00</updated>
+    <published>2025-12-07T13:18:21+00:00</published>
+    <title>GlassFish 7.1.0 released!</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/Hakky54</name>
+      <uri>https://www.reddit.com/user/Hakky54</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;ul&gt;
+      &lt;li&gt;Added support for: &lt;ul&gt; &lt;li&gt;wss (WebSocket Secure)&lt;/li&gt;
+      &lt;li&gt;ftps (File Transfer Protocol Secure)&lt;/li&gt; &lt;li&gt;smtps (Simple Mail
+      Transfer Protocol Secure)&lt;/li&gt; &lt;li&gt;imaps (Internet Message Access Protocol
+      Secure)&lt;/li&gt; &lt;/ul&gt;&lt;/li&gt; &lt;li&gt;Bumped dependencies&lt;/li&gt;
+      &lt;li&gt;Added filtering option (leaf, intermediate, root)&lt;/li&gt; &lt;li&gt;Added Java
+      DSL&lt;/li&gt; &lt;li&gt;Support for Cyrillic characters on Windows&lt;/li&gt; &lt;/ul&gt;
+      &lt;p&gt;You can find/view the tool here: &lt;a
+      href=&quot;https://github.com/Hakky54/certificate-ripper&quot;&gt;GitHub - Certificate
+      Ripper&lt;/a&gt;&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32;
+      &lt;a href=&quot;https://www.reddit.com/user/Hakky54&quot;&gt; /u/Hakky54 &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://i.redd.it/7mh06v403r5g1.gif&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pge9ez/certificate_ripper_v260_released_tool_to_extract/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pge9ez</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pge9ez/certificate_ripper_v260_released_tool_to_extract/" />
+    <updated>2025-12-07T09:25:31+00:00</updated>
+    <published>2025-12-07T09:25:31+00:00</published>
+    <title>Certificate Ripper v2.6.0 released - tool to extract server certificates</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/davidalayachew</name>
+      <uri>https://www.reddit.com/user/davidalayachew</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/davidalayachew&quot;&gt; /u/davidalayachew &lt;/a&gt;
+      &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://garciat.com/posts/java-type-classes/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pg21yb/full_haskelllike_type_class_resolution_in_java/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pg21yb</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pg21yb/full_haskelllike_type_class_resolution_in_java/" />
+    <updated>2025-12-06T22:35:13+00:00</updated>
+    <published>2025-12-06T22:35:13+00:00</published>
+    <title>Full Haskell-like Type Class resolution in Java</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/mlangc</name>
+      <uri>https://www.reddit.com/user/mlangc</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/mlangc&quot;&gt; /u/mlangc &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://mlangc.github.io/java/concurrency/2025/11/21/scheduled-executor-stress.html&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pfxw0f/scheduledexecutorservice_under_stress/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pfxw0f</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pfxw0f/scheduledexecutorservice_under_stress/" />
+    <updated>2025-12-06T19:35:18+00:00</updated>
+    <published>2025-12-06T19:35:18+00:00</published>
+    <title>ScheduledExecutorService under Stress</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/adamw1pl</name>
+      <uri>https://www.reddit.com/user/adamw1pl</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/adamw1pl&quot;&gt; /u/adamw1pl &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://softwaremill.com/introduction-to-jvm-method-profiling/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pfvlrv/introduction_to_jvm_method_profiling/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pfvlrv</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pfvlrv/introduction_to_jvm_method_profiling/" />
+    <updated>2025-12-06T18:02:02+00:00</updated>
+    <published>2025-12-06T18:02:02+00:00</published>
+    <title>Introduction to JVM Method Profiling</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/Initial_Inflation182</name>
+      <uri>https://www.reddit.com/user/Initial_Inflation182</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;I like
+      programming in Java but am often tempted to use golang that promises comparable performance
+      with lower memory usage.&lt;/p&gt; &lt;p&gt;It also looks like all new tools in cloud
+      computing are being made in golang.&lt;/p&gt; &lt;p&gt;I did make an application in golang but
+      was really disappointed by the developer experience I had in it. Spring boot while bloated
+      allows me to just focus on my problem statement, while in golang I often feel like I am
+      reinventing a framework.&lt;/p&gt; &lt;p&gt;So now I am conflicted, which language should I
+      use.&lt;/p&gt; &lt;p&gt;Is the high memory usage not an issue for you? Where do you prefer
+      Java over other languages? &lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by
+      &amp;#32; &lt;a href=&quot;https://www.reddit.com/user/Initial_Inflation182&quot;&gt;
+      /u/Initial_Inflation182 &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pfi3o5/is_the_high_memory_usage_of_java_applications_not/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pfi3o5/is_the_high_memory_usage_of_java_applications_not/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pfi3o5</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pfi3o5/is_the_high_memory_usage_of_java_applications_not/" />
+    <updated>2025-12-06T06:10:08+00:00</updated>
+    <published>2025-12-06T06:10:08+00:00</published>
+    <title>Is the high memory usage of java applications not a problem for you?</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/Environmental-Log215</name>
+      <uri>https://www.reddit.com/user/Environmental-Log215</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;Today
+      I&amp;#39;ve made the core repositories public! This is my first major open source project and
+      would appreciate any feedback, suggestions and some love.&lt;/p&gt; &lt;p&gt;A quick intro,
+      why, what &amp;amp; how &lt;strong&gt;-&lt;/strong&gt; &lt;a
+      href=&quot;https://www.roray.dev/blog/myra-stack/&quot;&gt;roray.dev • MYRA stack - modern
+      JAVA FFM based libraries&lt;/a&gt;&lt;/p&gt; &lt;p&gt;For more details and documentation,
+      please visit the project website:&lt;/p&gt; &lt;ul&gt; &lt;li&gt;[&lt;strong&gt;&lt;a
+      href=&quot;https://www.mvp.express/&quot;&gt;https://www.mvp.express/&lt;/a&gt;&lt;/strong&gt;](vscode-file://vscode-app/c:/Users/rohan/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)&lt;/li&gt;
+      &lt;li&gt;Github: &lt;a href=&quot;https://github.com/mvp-express/&quot;&gt;MYRA |
+      MVP.Express&lt;/a&gt;&lt;/li&gt; &lt;/ul&gt; &lt;p&gt;This is still an early-stage project,
+      and I&amp;#39;m looking for all the feedback I can get. &lt;/p&gt; &lt;p&gt;Thanks for taking
+      a look!&lt;/p&gt; &lt;p&gt;Happy Holidays!&lt;/p&gt; &lt;p&gt;-Rohan&lt;/p&gt;
+      &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/Environmental-Log215&quot;&gt; /u/Environmental-Log215
+      &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.mvp.express/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt; &amp;#32;
+      &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pf8n3h/myra_stack_modern_java_ffm_based_libraries_is_now/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pf8n3h</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pf8n3h/myra_stack_modern_java_ffm_based_libraries_is_now/" />
+    <updated>2025-12-05T22:25:24+00:00</updated>
+    <published>2025-12-05T22:25:24+00:00</published>
+    <title>MYRA Stack [modern Java FFM based libraries] is now Open Source!</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/jjlauer</name>
+      <uri>https://www.reddit.com/user/jjlauer</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;If
+      you&amp;#39;re looking for a pure Java solution to synchronizing files/directories either
+      locally or to/from a remote system, the Jsync library is a new solution. Works across all
+      platforms that Java can run on, including Windows. Does not need rsync installed on either
+      system, as it leverages SSH/SFTP under-the-hood.&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt;
+      &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/jjlauer&quot;&gt; /u/jjlauer &lt;/a&gt; &lt;br/&gt;
+      &lt;span&gt;&lt;a
+      href=&quot;https://github.com/fizzed/jsync&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt; &amp;#32;
+      &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1pf0jxq/jsync_pure_java_rsynclike_library_for_local/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1pf0jxq</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1pf0jxq/jsync_pure_java_rsynclike_library_for_local/" />
+    <updated>2025-12-05T17:06:44+00:00</updated>
+    <published>2025-12-05T17:06:44+00:00</published>
+    <title>Jsync: Pure Java rsync-like library for local to/from remote ssh/sftp</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/yetanotherhooman</name>
+      <uri>https://www.reddit.com/user/yetanotherhooman</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div class=&quot;md&quot;&gt;&lt;p&gt;Using FFI,
+      it’s now possible to execute raw machine code purely from Java without relying on a C/C++
+      toolchian.&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32; submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/yetanotherhooman&quot;&gt; /u/yetanotherhooman
+      &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://github.com/devsh0/HelloMachine&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1peqpzz/i_cant_think_of_an_application_of_this_but_it/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1peqpzz</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1peqpzz/i_cant_think_of_an_application_of_this_but_it/" />
+    <updated>2025-12-05T09:25:37+00:00</updated>
+    <published>2025-12-05T09:25:37+00:00</published>
+    <title>I can’t think of an application of this but it looks pretty cool.</title>
+  </entry>
+  <entry>
+    <author>
+      <name>/u/Used-Acanthisitta590</name>
+      <uri>https://www.reddit.com/user/Used-Acanthisitta590</uri>
+    </author>
+    <category term="java" label="r/java" />
+    <content type="html">
+      &lt;!-- SC_OFF --&gt;&lt;div
+      class=&quot;md&quot;&gt;&lt;p&gt;&lt;strong&gt;Hi!&lt;/strong&gt;&lt;/p&gt; &lt;p&gt;I built a
+      plugin that exposes &lt;strong&gt;JetBrains IDE code intelligence&lt;/strong&gt; through
+      &lt;strong&gt;MCP&lt;/strong&gt;, allowing AI assistants like &lt;strong&gt;Claude
+      Code&lt;/strong&gt;, &lt;strong&gt;Cursor&lt;/strong&gt;, and
+      &lt;strong&gt;Windsurf&lt;/strong&gt; to access the same deep semantic understanding your IDE
+      already uses.&lt;/p&gt; &lt;h1&gt;What the Plugin Provides&lt;/h1&gt; &lt;p&gt;The plugin runs
+      an &lt;strong&gt;MCP server&lt;/strong&gt; inside your IDE and gives AI assistants access to
+      real JetBrains semantic features, including:&lt;/p&gt; &lt;ul&gt; &lt;li&gt;&lt;strong&gt;Find
+      References / Go to Definition&lt;/strong&gt; - powered by the full semantic graph (not
+      regex)&lt;/li&gt; &lt;li&gt;&lt;strong&gt;Type Hierarchy&lt;/strong&gt; - browse inheritance
+      and subtype relationships&lt;/li&gt; &lt;li&gt;&lt;strong&gt;Call Hierarchy&lt;/strong&gt; -
+      see callers/callees across modules&lt;/li&gt; &lt;li&gt;&lt;strong&gt;Find
+      Implementations&lt;/strong&gt; - all concrete classes, not just text matches&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Symbol Search&lt;/strong&gt; - fuzzy search + CamelCase matching with
+      IDE indexes&lt;/li&gt; &lt;li&gt;&lt;strong&gt;Find Super Methods&lt;/strong&gt; - understand
+      override chains&lt;/li&gt; &lt;li&gt;&lt;strong&gt;Refactoring&lt;/strong&gt; - rename /
+      safe-delete with correct reference updates &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Diagnostics&lt;/strong&gt; - inspections, warnings, quick-fixes, and
+      more&lt;/li&gt; &lt;/ul&gt; &lt;h1&gt;Before vs. After&lt;/h1&gt; &lt;h1&gt;Rename
+      Operations&lt;/h1&gt; &lt;p&gt;🔴 &lt;strong&gt;Before:&lt;/strong&gt; “Rename
+      &lt;code&gt;getUserData()&lt;/code&gt; to &lt;code&gt;fetchUserProfile()&lt;/code&gt;”
+      -&amp;gt; Updates 15 files… &lt;strong&gt;misses 3 interface calls&lt;/strong&gt; -&amp;gt;
+      build breaks.&lt;br/&gt; 🟢 &lt;strong&gt;After:&lt;/strong&gt; “Renamed
+      &lt;code&gt;getUserData()&lt;/code&gt; to &lt;code&gt;fetchUserProfile()&lt;/code&gt; -
+      updated &lt;strong&gt;47 references across 18 files&lt;/strong&gt;, including interface
+      calls.” Build passes. Undo works.&lt;/p&gt; &lt;h1&gt;Finding Callers&lt;/h1&gt; &lt;p&gt;🔴
+      &lt;strong&gt;Before:&lt;/strong&gt; “Where is &lt;code&gt;process()&lt;/code&gt; called?” →
+      &lt;strong&gt;200+ grep matches&lt;/strong&gt;, including comments and strings.&lt;br/&gt; 🟢
+      &lt;strong&gt;After:&lt;/strong&gt; “Found &lt;strong&gt;12 callers&lt;/strong&gt; of
+      &lt;code&gt;OrderService.process()&lt;/code&gt; - 8 direct calls, 3 via
+      &lt;code&gt;Processor&lt;/code&gt; interface, 1 in test.”&lt;/p&gt; &lt;h1&gt;Finding
+      Implementations&lt;/h1&gt; &lt;p&gt;🔴 &lt;strong&gt;Before:&lt;/strong&gt; “Find all
+      implementations of &lt;code&gt;Repository.save()&lt;/code&gt;” -&amp;gt; AI misses
+      half.&lt;br/&gt; 🟢 &lt;strong&gt;After:&lt;/strong&gt; “Found &lt;strong&gt;6
+      implementations&lt;/strong&gt; -&lt;code&gt;JpaUserRepository&lt;/code&gt;,
+      &lt;code&gt;InMemoryOrderRepository&lt;/code&gt;,
+      &lt;code&gt;CachedProductRepository&lt;/code&gt;…” (with exact file:line locations).&lt;/p&gt;
+      &lt;p&gt;LINK: &lt;a
+      href=&quot;https://plugins.jetbrains.com/plugin/29174-ide-index-mcp-server&quot;&gt;https://plugins.jetbrains.com/plugin/29174-ide-index-mcp-server&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;P.S: Checkout my &lt;a
+      href=&quot;https://www.reddit.com/r/ClaudeAI/comments/1pdfu6o/jetbrains_ide_debugger_mcp_server_let_claude/&quot;&gt;other&lt;/a&gt;
+      jetbrain plugin mcp server to &lt;strong&gt;give your agent fully autonomously use the
+      IntelliJ Debugger&lt;/strong&gt;&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt; &amp;#32;
+      submitted by &amp;#32; &lt;a
+      href=&quot;https://www.reddit.com/user/Used-Acanthisitta590&quot;&gt; /u/Used-Acanthisitta590
+      &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1peoil3/jetbrains_ide_debugger_mcp_server_let_claude/&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt;
+      &amp;#32; &lt;span&gt;&lt;a
+      href=&quot;https://www.reddit.com/r/java/comments/1peoil3/jetbrains_ide_debugger_mcp_server_let_claude/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt;</content>
+    <id>t3_1peoil3</id>
+    <link
+      href="https://www.reddit.com/r/java/comments/1peoil3/jetbrains_ide_debugger_mcp_server_let_claude/" />
+    <updated>2025-12-05T07:01:36+00:00</updated>
+    <published>2025-12-05T07:01:36+00:00</published>
+    <title>Jetbrains IDE Debugger MCP Server - Let Claude autonomously use IntelliJ debugger</title>
+  </entry>
+</feed>
