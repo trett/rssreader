@@ -170,7 +170,7 @@ class ParserSpec extends AnyFunSuite with Matchers {
         thirdItem.pubDate shouldBe defined
     }
 
-    test("Parser should parse Atom 1.0 feed third version)") {
+    test("Parser should parse Atom 1.0 feed third version") {
         val inputStream = Option(getClass.getResourceAsStream("/atom_1_0_3.xml"))
             .getOrElse(fail("Resource file atom_1_0_3.xml should exist"))
 
