@@ -20,6 +20,7 @@ import ru.trett.rss.server.repositories.ChannelRepository
 import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.*
+import org.http4s.Status
 
 class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
     loggerFactory: LoggerFactory[IO]
@@ -70,23 +71,26 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             }
             channel <-
                 client
-                    .get(url) { response =>
-                        response.body.compile.to(Array).flatMap { bytes =>
-                            Resource
-                                .fromAutoCloseable(
-                                    IO(new XmlReader(new java.io.ByteArrayInputStream(bytes)))
-                                )
-                                .use { reader =>
-                                    parse(reader, link).handleErrorWith { error =>
-                                        logger.error(error)(
-                                            s"Failed to parse the feed: $link"
-                                        ) *> IO.none
-                                    }
-                                }
+                    .get[Option[Channel]](url) {
+                        case Status.Successful(r) => {
+                            r.body
+                                .through(fs2.io.toInputStream)
+                                .evalMap(is => {
+                                    Resource
+                                        .fromAutoCloseable(IO.blocking(new XmlReader(is)))
+                                        .use { reader => parse(reader, link) }
+                                })
+                                .compile
+                                .last
+                                .map(_.flatten)
                         }
-                    }
-                    .handleErrorWith { error =>
-                        logger.error(error)(s"Failed to get channel: $link") *> IO.none
+                        case r =>
+                            r.as[String]
+                                .map(b =>
+                                    logger.error(
+                                        s"Request failed with status ${r.status.code} and body $b"
+                                    )
+                                ) *> IO.pure(None)
                     }
         } yield channel
 
