@@ -1,6 +1,7 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
+import cats.effect.kernel.Resource
 import cats.syntax.all.*
 import com.rometools.rome.feed.synd.SyndEntry
 import com.rometools.rome.io.SyndFeedInput
@@ -19,7 +20,6 @@ import ru.trett.rss.server.repositories.ChannelRepository
 import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.*
-import ru.trett.rss.server.parser.Parser
 import org.http4s.Status
 
 class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
@@ -72,7 +72,18 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             channel <-
                 client
                     .get[Option[Channel]](url) {
-                        case Status.Successful(r) => Parser.parseRss(r.body, link)
+                        case Status.Successful(r) => {
+                            r.body
+                                .through(fs2.io.toInputStream)
+                                .evalMap(is => {
+                                    Resource
+                                        .fromAutoCloseable(IO.blocking(new XmlReader(is)))
+                                        .use { reader => parse(reader, link) }
+                                })
+                                .compile
+                                .last
+                                .map(_.flatten)
+                        }
                         case r =>
                             r.as[String]
                                 .map(b =>
