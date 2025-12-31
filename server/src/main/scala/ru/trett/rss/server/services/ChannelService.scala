@@ -1,11 +1,7 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
-import cats.effect.kernel.Resource
 import cats.syntax.all.*
-import com.rometools.rome.feed.synd.SyndEntry
-import com.rometools.rome.io.SyndFeedInput
-import com.rometools.rome.io.XmlReader
 import org.http4s.Uri
 import org.http4s.client.Client
 import org.typelevel.log4cats.Logger
@@ -13,13 +9,13 @@ import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.models.ChannelData
 import ru.trett.rss.models.FeedItemData
 import ru.trett.rss.server.models.Channel
-import ru.trett.rss.server.models.Feed
 import ru.trett.rss.server.models.User
+import ru.trett.rss.server.parser.FeedParserRegistry
+import ru.trett.rss.server.parser.Parser
 import ru.trett.rss.server.repositories.ChannelRepository
 
 import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
-import scala.jdk.CollectionConverters.*
 import org.http4s.Status
 
 class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
@@ -27,7 +23,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
 ):
 
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
-    private val zoneId = java.time.ZoneId.systemDefault()
+    given Logger[IO] = logger
+    given FeedParserRegistry[IO] = FeedParserRegistry.default[IO]
 
     def createChannel(link: String, user: User): IO[Long] =
         for {
@@ -72,18 +69,7 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             channel <-
                 client
                     .get[Option[Channel]](url) {
-                        case Status.Successful(r) => {
-                            r.body
-                                .through(fs2.io.toInputStream)
-                                .evalMap(is => {
-                                    Resource
-                                        .fromAutoCloseable(IO.blocking(new XmlReader(is)))
-                                        .use { reader => parse(reader, link) }
-                                })
-                                .compile
-                                .last
-                                .map(_.flatten)
-                        }
+                        case Status.Successful(r) => Parser.parseRss(r.body, link)
                         case r =>
                             r.as[String]
                                 .map(b =>
@@ -93,47 +79,6 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                                 ) *> IO.pure(None)
                     }
         } yield channel
-
-    private def parse(reader: XmlReader, link: String): IO[Option[Channel]] = {
-        for {
-            _ <- logger.info(s"Starting to parse RSS feed: $link")
-            input = new SyndFeedInput()
-            syndFeed <- IO.interruptible(input.build(reader))
-            title = syndFeed.getTitle
-            _ <- logger.info(s"Parsing the channel: title '$title', type '${syndFeed.getFeedType}'")
-
-            feedItems = syndFeed.getEntries.asScala.map { entry =>
-                Feed(
-                    link = entry.getLink,
-                    userId = "", // Will be set when inserted
-                    channelId = 0L, // This will be set after channel creation
-                    title = entry.getTitle,
-                    description = extractDescription(entry),
-                    pubDate = extractDate(entry)
-                )
-            }.toList
-
-            channel = Channel(id = 0L, title = title, link = link, feedItems = feedItems)
-
-            _ <- logger.info(s"Parsed ${feedItems.size} items")
-            _ <- logger.info("End of parsing the channel")
-        } yield Some(channel)
-    }
-
-    private def extractDescription(entry: SyndEntry): String =
-        Option(entry.getDescription)
-            .orElse {
-                Option(entry.getContents)
-                    .filter(_.size > 0)
-                    .map(_.get(0))
-            }
-            .map(_.getValue)
-            .getOrElse("")
-
-    private def extractDate(entry: SyndEntry): Option[OffsetDateTime] =
-        Option(entry.getPublishedDate)
-            .orElse(Option(entry.getUpdatedDate))
-            .map(t => OffsetDateTime.ofInstant(t.toInstant, zoneId))
 
     def getChannels(user: User): IO[List[ChannelData]] =
         channelRepository.findUserChannelsWithHighlight(user).flatMap {

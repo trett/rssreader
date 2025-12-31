@@ -1,83 +1,91 @@
 package ru.trett.rss.server.parser
 
-import javax.xml.stream.XMLInputFactory
-import javax.xml.stream.XMLEventReader
+import javax.xml.stream.{XMLInputFactory, XMLEventReader}
 import javax.xml.stream.events.StartElement
-import ru.trett.rss.server.models.Channel
-
-import scala.annotation.tailrec
-import cats.effect.IO
-import cats.effect.Resource
-import cats.effect.Sync
-import org.typelevel.log4cats.LoggerFactory
+import cats.effect.{Async, Resource}
+import cats.syntax.all._
+import fs2.Stream
 import org.typelevel.log4cats.Logger
+import ru.trett.rss.server.models.Channel
+import scala.annotation.tailrec
+import java.io.InputStream
 
-trait Parser[F[_]]:
-    def parse(eventReader: XMLEventReader, link: String): F[Option[Channel]]
-
-enum ParserType(val rootElement: String):
-    case Rss20 extends ParserType("rss")
-    case Atom10 extends ParserType("feed")
-
-    def createParser[F[_]: Sync: Logger]: Parser[F] = this match
-        case Rss20  => new Rss_2_0_Parser[F]
-        case Atom10 => new Atom_1_0_Parser[F]
-
-object ParserType:
-    def fromRoot(root: String): Option[ParserType] =
-        ParserType.values.find(_.rootElement == root)
-
-object Parser:
-
-    private val xmlInputFactory: XMLInputFactory =
+object Parser {
+    private val xmlInputFactory: XMLInputFactory = {
         val factory = XMLInputFactory.newInstance()
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
         factory
+    }
 
-    def apply[F[_]: Sync: Logger](root: String): Option[Parser[F]] =
-        ParserType.fromRoot(root).map(_.createParser[F])
-
-    def parseRss(input: fs2.Stream[IO, Byte], link: String)(using
-        loggerFactory: LoggerFactory[IO]
-    ): IO[Option[Channel]] =
-
-        @tailrec
-        def findRootElement(eventReader: XMLEventReader): Option[StartElement] =
-            if (!eventReader.hasNext) None
-            else
-                eventReader.peek() match {
-                    case startElement: StartElement => Some(startElement)
-                    case _ =>
-                        eventReader.nextEvent()
-                        findRootElement(eventReader)
+    def parseRssEither[F[_]: Async](input: Stream[F, Byte], link: String)(using
+        logger: Logger[F],
+        registry: FeedParserRegistry[F]
+    ): F[Either[ParserError, Channel]] = {
+        def findRootElement(reader: XMLEventReader): Option[StartElement] = {
+            @tailrec
+            def loop(): Option[StartElement] = {
+                if (!reader.hasNext) None
+                else {
+                    reader.peek() match {
+                        case start: StartElement => Some(start)
+                        case _ =>
+                            reader.nextEvent()
+                            loop()
+                    }
                 }
-        val logger = LoggerFactory[IO].getLogger
+            }
+            loop()
+        }
+
+        def createReader(inputStream: InputStream): Resource[F, XMLEventReader] =
+            Resource.make(Async[F].blocking(xmlInputFactory.createXMLEventReader(inputStream)))(
+                reader => Async[F].blocking(reader.close()).handleError(_ => ())
+            )
 
         input
             .through(fs2.io.toInputStream)
             .evalMap { is =>
                 Resource
-                    .fromAutoCloseable(IO.blocking(is))
+                    .fromAutoCloseable(Async[F].blocking(is))
                     .use { inputStream =>
-                        Resource
-                            .make(IO.blocking(xmlInputFactory.createXMLEventReader(inputStream)))(
-                                reader => IO.blocking(reader.close()).handleErrorWith(_ => IO.unit)
-                            )
-                            .use { eventReader =>
-                                for {
-                                    startElement <- IO.blocking(findRootElement(eventReader))
-                                    channel <- startElement match
-                                        case Some(el) =>
-                                            given Logger[IO] = LoggerFactory[IO].getLogger
-                                            Parser[IO](el.getName().getLocalPart()) match
-                                                case Some(parser) => parser.parse(eventReader, link)
-                                                case None         => IO.pure(None)
-                                        case None => IO.pure(None)
-                                } yield channel
+                        createReader(inputStream).use { reader =>
+                            Async[F].blocking(findRootElement(reader)).flatMap {
+                                case Some(el) =>
+                                    val rootName = el.getName.getLocalPart
+                                    ParserType.fromRoot(rootName) match {
+                                        case Some(parserType) =>
+                                            registry.get(parserType) match {
+                                                case Some(parser) =>
+                                                    parser.parse(reader, link).handleError { e =>
+                                                        Left(ParserError.ParseFailure(e))
+                                                    }
+                                                case None =>
+                                                    Async[F].pure(
+                                                        Left(
+                                                            ParserError.UnsupportedFormat(rootName)
+                                                        )
+                                                    )
+                                            }
+                                        case None =>
+                                            Async[F].pure(
+                                                Left(ParserError.UnsupportedFormat(rootName))
+                                            )
+                                    }
+                                case None =>
+                                    Async[F].pure(Left(ParserError.NoRootElement))
                             }
+                        }
                     }
             }
             .compile
             .last
-            .map(_.flatten)
+            .map(_.getOrElse(Left(ParserError.EmptyFeed)))
+    }
+
+    def parseRss[F[_]: Async](input: Stream[F, Byte], link: String)(using
+        logger: Logger[F],
+        registry: FeedParserRegistry[F]
+    ): F[Option[Channel]] =
+        parseRssEither(input, link).map(_.toOption)
+}

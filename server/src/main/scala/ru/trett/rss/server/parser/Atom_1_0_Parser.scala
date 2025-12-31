@@ -19,7 +19,7 @@ import cats.effect.Sync
 import cats.syntax.all.*
 import scala.collection.mutable.ListBuffer
 
-class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
+class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
 
     private lazy val formatRfc3339: DateTimeFormatter = new DateTimeFormatterBuilder()
         .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
@@ -42,7 +42,7 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
         published: Option[OffsetDateTime] = None
     )
 
-    def parse(eventReader: XMLEventReader, link: String): F[Option[Channel]] =
+    def parse(eventReader: XMLEventReader, link: String): F[Either[ParserError, Channel]] =
         @tailrec
         def loop(state: FeedState): FeedState =
             if (!eventReader.hasNext) state
@@ -65,9 +65,10 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
             finalState <- Sync[F].interruptible(loop(FeedState()))
             _ <-
                 info"Parsed ${finalState.entries.length} entries from Atom 1.0 feed: ${finalState.title}"
-            result = Option.when(finalState.hasFeed)(
-                Channel(0L, finalState.title, link, finalState.entries.toList)
-            )
+            result =
+                if (finalState.hasFeed)
+                    Right(Channel(0L, finalState.title, link, finalState.entries.toList))
+                else Left(ParserError.InvalidFeed("Missing <feed> element"))
         yield result
 
     private def parseEntry(eventReader: XMLEventReader): Feed =
@@ -178,3 +179,7 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends Parser[F]:
             Try(OffsetDateTime.parse(dateStr, formatRfc3339))
                 .orElse(Try(OffsetDateTime.parse(dateStr)))
                 .toOption
+
+object Atom_1_0_Parser:
+    def make[F[_]: Sync: Logger]: FeedParser[F, XMLEventReader] =
+        new Atom_1_0_Parser[F]

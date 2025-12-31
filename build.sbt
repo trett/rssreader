@@ -84,8 +84,7 @@ lazy val server = project
             "org.slf4j" % "slf4j-api" % "2.0.17",
             "ch.qos.logback" % "logback-classic" % "1.5.21",
             "org.flywaydb" % "flyway-core" % "11.17.2",
-            "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
-            "com.rometools" % "rome" % "2.1.0"
+            "com.github.pureconfig" %% "pureconfig-core" % "0.17.9"
         ),
         libraryDependencies ++= Seq(
             "org.http4s" %% "http4s-ember-server",
