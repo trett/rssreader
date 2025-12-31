@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.3.2"
+lazy val projectVersion = "2.3.3"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
@@ -77,15 +77,14 @@ lazy val server = project
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         watchSources ++= (client / Compile / watchSources).value,
-        Compile / compile := ((Compile / compile).dependsOn(client / Compile / fastLinkJS)).value,
+        Compile / compile := (Compile / compile).dependsOn(client / Compile / fastLinkJS).value,
         javaOptions += "-Dotel.java.global-autoconfigure.enabled=true",
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
             "ch.qos.logback" % "logback-classic" % "1.5.21",
             "org.flywaydb" % "flyway-core" % "11.17.2",
-            "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
-            "com.rometools" % "rome" % "2.1.0"
+            "com.github.pureconfig" %% "pureconfig-core" % "0.17.9"
         ),
         libraryDependencies ++= Seq(
             "org.http4s" %% "http4s-ember-server",

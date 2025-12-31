@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Feed</title>
+  <link href="http://example.org/"/>
+  <link rel="self" href="http://example.org/feed.atom"/>
+  <updated>2025-12-07T18:30:02Z</updated>
+  <author>
+    <name>John Doe</name>
+  </author>
+  <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+
+  <entry>
+    <title>Atom-Powered Robots Run Amok</title>
+    <link href="http://example.org/2025/12/07/atom"/>
+    <link rel="alternate" type="text/html" href="http://example.org/2025/12/07/atom"/>
+    <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+    <updated>2025-12-07T18:30:02Z</updated>
+    <published>2025-12-07T10:15:00Z</published>
+    <summary>Some interesting information about Atom-powered robots.</summary>
+    <content>Detailed content about Atom-powered robots running amok in the city.</content>
+  </entry>
+
+  <entry>
+    <title>Second Entry Example</title>
+    <link rel="alternate" href="http://example.org/2025/12/06/second"/>
+    <id>urn:uuid:2225c695-cfb8-4ebb-aaaa-80da344efa6b</id>
+    <updated>2025-12-06T15:20:00Z</updated>
+    <published>2025-12-06T12:00:00Z</published>
+    <summary>Summary of the second entry</summary>
+  </entry>
+
+  <entry>
+    <title>Third Entry with Only Updated Date</title>
+    <link href="http://example.org/2025/12/05/third"/>
+    <id>urn:uuid:3225c695-cfb8-4ebb-aaaa-80da344efa6c</id>
+    <updated>2025-12-05T09:45:00Z</updated>
+    <content>This entry has HTML content instead of summary.</content>
+  </entry>
+</feed>
