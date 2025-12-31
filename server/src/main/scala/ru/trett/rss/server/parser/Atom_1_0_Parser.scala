@@ -42,7 +42,10 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
         published: Option[OffsetDateTime] = None
     )
 
-    def parse(eventReader: XMLEventReader, link: String): F[Either[ParserError, Channel]] =
+    private[parser] def parse(
+        eventReader: XMLEventReader,
+        link: String
+    ): F[Either[ParserError, Channel]] =
         @tailrec
         def loop(state: FeedState): FeedState =
             if (!eventReader.hasNext) state
@@ -147,8 +150,8 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
                 eventReader.nextEvent() match {
                     case _: StartElement => loop(depth + 1, textBuffer)
                     case _: EndElement   => loop(depth - 1, textBuffer)
-                    case el if el.isCharacters() =>
-                        val text = el.asCharacters().getData()
+                    case el if el.isCharacters =>
+                        val text = el.asCharacters().getData
                         if (depth == 1 && text.trim().nonEmpty) loop(depth, textBuffer.append(text))
                         else loop(depth, textBuffer)
                     case _ => loop(depth, textBuffer)
@@ -157,16 +160,16 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
         loop(1, new StringBuilder())
 
     private def extractLinkAttributes(startElement: StartElement): (String, String) =
-        val attributes = startElement.getAttributes()
+        val attributes = startElement.getAttributes
 
         @tailrec
         def loop(href: String, rel: String): (String, String) =
-            if (!attributes.hasNext()) (href, rel)
+            if (!attributes.hasNext) (href, rel)
             else {
                 val attr = attributes.next()
-                attr.getName().getLocalPart() match {
-                    case "href" => loop(attr.getValue(), rel)
-                    case "rel"  => loop(href, attr.getValue())
+                attr.getName.getLocalPart match {
+                    case "href" => loop(attr.getValue, rel)
+                    case "rel"  => loop(href, attr.getValue)
                     case _      => loop(href, rel)
                 }
             }

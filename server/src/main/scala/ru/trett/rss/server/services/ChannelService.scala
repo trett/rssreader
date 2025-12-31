@@ -69,7 +69,15 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             channel <-
                 client
                     .get[Option[Channel]](url) {
-                        case Status.Successful(r) => Parser.parseRss(r.body, link)
+                        case Status.Successful(r) =>
+                            Parser
+                                .parse(r.body, link)
+                                .flatMap {
+                                    case Right(channel) => IO.pure(Some(channel))
+                                    case Left(error) =>
+                                        logger.error(error)(s"Failed to parse feed: $link") *> IO
+                                            .pure(None)
+                                }
                         case r =>
                             r.as[String]
                                 .map(b =>

@@ -6,18 +6,7 @@ import org.typelevel.log4cats.Logger
 import ru.trett.rss.server.models.Channel
 
 trait FeedParser[F[_], -A] {
-    def parse(reader: A, link: String): F[Either[ParserError, Channel]]
-}
-
-object FeedParser {
-    def apply[F[_], A](using instance: FeedParser[F, A]): FeedParser[F, A] = instance
-
-    def instance[F[_], A](f: (A, String) => F[Either[ParserError, Channel]]): FeedParser[F, A] =
-        (reader: A, link: String) => f(reader, link)
-
-    extension [F[_], A](reader: A)
-        def parse(link: String)(using parser: FeedParser[F, A]): F[Either[ParserError, Channel]] =
-            parser.parse(reader, link)
+    private[parser] def parse(reader: A, link: String): F[Either[ParserError, Channel]]
 }
 
 trait FeedParserRegistry[F[_]]:

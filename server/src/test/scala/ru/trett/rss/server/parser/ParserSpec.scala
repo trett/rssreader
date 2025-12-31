@@ -32,7 +32,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
             .getOrElse(fail("Resource file rss_2_0_1.xml should exist"))
 
         val result: Option[Channel] = Parser
-            .parseRss(streamFromInputStream(inputStream), "https://www.linux.org.ru/")
+            .parse(streamFromInputStream(inputStream), "https://www.linux.org.ru/")
+            .map(_.toOption)
             .unsafeRunSync()
 
         result shouldBe defined
@@ -66,7 +67,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
             .getOrElse(fail("Resource file rss_2_0_2.xml should exist"))
 
         val result: Option[Channel] = Parser
-            .parseRss(streamFromInputStream(inputStream), "https://github.blog/changelog/")
+            .parse(streamFromInputStream(inputStream), "https://github.blog/changelog/")
+            .map(_.toOption)
             .unsafeRunSync()
 
         result shouldBe defined
@@ -103,7 +105,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
 
         val result: Option[Channel] =
             Parser
-                .parseRss(streamFromInputStream(inputStream), "https://v3spec.msn.com/myfeed.xml")
+                .parse(streamFromInputStream(inputStream), "https://v3spec.msn.com/myfeed.xml")
+                .map(_.toOption)
                 .unsafeRunSync()
 
         result shouldBe defined
@@ -131,7 +134,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
             .getOrElse(fail("Resource file atom_1_0_2.xml should exist"))
 
         val result: Option[Channel] = Parser
-            .parseRss(streamFromInputStream(inputStream), "http://example.org/")
+            .parse(streamFromInputStream(inputStream), "http://example.org/")
+            .map(_.toOption)
             .unsafeRunSync()
 
         result shouldBe defined
@@ -174,7 +178,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
 
         val result: Option[Channel] =
             Parser
-                .parseRss(streamFromInputStream(inputStream), "https://www.reddit.com/r/java/.rss")
+                .parse(streamFromInputStream(inputStream), "https://www.reddit.com/r/java/.rss")
+                .map(_.toOption)
                 .unsafeRunSync()
 
         result shouldBe defined
@@ -210,16 +215,12 @@ class ParserSpec extends AnyFunSuite with Matchers {
         val invalidXml = "not an xml".getBytes()
         val inputStream = new java.io.ByteArrayInputStream(invalidXml)
 
-        val result =
-            try {
-                Parser
-                    .parseRss(streamFromInputStream(inputStream), "http://example.com/")
-                    .unsafeRunSync()
-            } catch {
-                case _: Exception => None
-            }
+        val result: Either[ParserError, Channel] =
+            Parser
+                .parse(streamFromInputStream(inputStream), "http://example.com/")
+                .unsafeRunSync()
 
-        result shouldBe None
+        result.isLeft shouldBe true
     }
 
     test("Parser should handle HTML entities in RSS 2.0 feed (021.xml)") {
@@ -227,7 +228,8 @@ class ParserSpec extends AnyFunSuite with Matchers {
             .getOrElse(fail("Resource file 021.xml should exist"))
 
         val result: Option[Channel] = Parser
-            .parseRss(streamFromInputStream(inputStream), "https://www.021.rs/rss/all")
+            .parse(streamFromInputStream(inputStream), "https://www.021.rs/rss/all")
+            .map(_.toOption)
             .unsafeRunSync()
 
         result shouldBe defined

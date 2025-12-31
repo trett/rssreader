@@ -31,7 +31,10 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader] {
         pubDate: Option[OffsetDateTime] = None
     )
 
-    def parse(reader: XMLEventReader, link: String): F[Either[ParserError, Channel]] = {
+    private[parser] def parse(
+        reader: XMLEventReader,
+        link: String
+    ): F[Either[ParserError, Channel]] = {
         @tailrec
         def loop(state: FeedState): FeedState = {
             if (!reader.hasNext) state
@@ -94,15 +97,7 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader] {
         }
 
         val finalState = loop(EntryState())
-        Feed(
-            finalState.link,
-            "",
-            0L,
-            finalState.title,
-            finalState.description,
-            finalState.pubDate,
-            false
-        )
+        Feed(finalState.link, "", 0L, finalState.title, finalState.description, finalState.pubDate)
     }
 
     private def readElementText(reader: XMLEventReader): String = {
@@ -110,9 +105,9 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader] {
         def loop(builder: StringBuilder): String = {
             if (!reader.hasNext) builder.toString()
             else {
-                val event = reader.nextEvent()
+                val event = reader.nextEvent
                 if (event.isCharacters) {
-                    loop(builder.append(event.asCharacters().getData))
+                    loop(builder.append(event.asCharacters.getData))
                 } else if (event.isEndElement) {
                     builder.toString()
                 } else {
