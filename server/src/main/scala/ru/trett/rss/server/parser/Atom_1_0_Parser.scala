@@ -49,7 +49,7 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
             else
                 eventReader.nextEvent() match {
                     case el: StartElement =>
-                        el.getName().getLocalPart() match {
+                        el.getName.getLocalPart match {
                             case "feed" => loop(state.copy(hasFeed = true))
                             case "entry" =>
                                 state.entries += parseEntry(eventReader)
@@ -78,7 +78,7 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
             else
                 eventReader.nextEvent() match {
                     case el: StartElement =>
-                        val namespace = el.getName().getNamespaceURI()
+                        val namespace = el.getName.getNamespaceURI
                         val isAtomNamespace =
                             namespace == "http://www.w3.org/2005/Atom" || namespace == ""
 
@@ -86,7 +86,7 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
                             skipElement(eventReader)
                             loop(state)
                         } else {
-                            el.getName().getLocalPart() match {
+                            el.getName.getLocalPart match {
                                 case "title" if state.title.isEmpty =>
                                     loop(state.copy(title = readElementText(eventReader)))
                                 case "link" =>
@@ -116,8 +116,8 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
                                     loop(state)
                             }
                         }
-                    case el: EndElement if el.getName().getLocalPart() == "entry" => state
-                    case _                                                        => loop(state)
+                    case el: EndElement if el.getName.getLocalPart == "entry" => state
+                    case _                                                    => loop(state)
                 }
 
         val finalState = loop(EntryState())

@@ -77,7 +77,7 @@ lazy val server = project
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         watchSources ++= (client / Compile / watchSources).value,
-        Compile / compile := ((Compile / compile).dependsOn(client / Compile / fastLinkJS)).value,
+        Compile / compile := (Compile / compile).dependsOn(client / Compile / fastLinkJS).value,
         javaOptions += "-Dotel.java.global-autoconfigure.enabled=true",
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",

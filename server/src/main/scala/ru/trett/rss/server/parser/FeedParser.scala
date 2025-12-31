@@ -13,9 +13,7 @@ object FeedParser {
     def apply[F[_], A](using instance: FeedParser[F, A]): FeedParser[F, A] = instance
 
     def instance[F[_], A](f: (A, String) => F[Either[ParserError, Channel]]): FeedParser[F, A] =
-        new FeedParser[F, A] {
-            def parse(reader: A, link: String): F[Either[ParserError, Channel]] = f(reader, link)
-        }
+        (reader: A, link: String) => f(reader, link)
 
     extension [F[_], A](reader: A)
         def parse(link: String)(using parser: FeedParser[F, A]): F[Either[ParserError, Channel]] =
@@ -26,7 +24,7 @@ trait FeedParserRegistry[F[_]]:
     def get(parserType: ParserType): Option[FeedParser[F, XMLEventReader]]
 
 object FeedParserRegistry:
-    given default[F[_]: Sync: Logger]: FeedParserRegistry[F] with
+    given default[F[_]](using Sync[F], Logger[F]): FeedParserRegistry[F] with
         override def get(parserType: ParserType): Option[FeedParser[F, XMLEventReader]] =
             parserType match
                 case ParserType.Rss20  => Some(Rss_2_0_Parser.make[F])
