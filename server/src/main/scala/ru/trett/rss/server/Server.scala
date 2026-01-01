@@ -108,13 +108,31 @@ object Server extends IOApp:
                                     _ <- logger.info(
                                         "Starting server on port: " + appConfig.server.port
                                     )
+                                    authFilter <- AuthFilter[IO]
+                                    jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
+                                    appRoutes <-
+                                        corsPolicy(
+                                            jarRoutes <+>
+                                            routes(
+                                                sessionManager,
+                                                channelService,
+                                                userService,
+                                                feedService,
+                                                appConfig.oauth,
+                                                authFilter,
+                                                client,
+                                                summarizeService,
+                                                new LogoutController[IO](
+                                                    sessionManager
+                                                )
+                                            )
+                                        )
                                     exitCode <- UpdateTask(
                                         channelService,
                                         userService
                                     ).background.void
                                         .surround {
                                             for {
-                                                authFilter <- AuthFilter[IO]
                                                 server <- EmberServerBuilder
                                                     .default[IO]
                                                     .withHost(ipv4"0.0.0.0")
@@ -122,23 +140,7 @@ object Server extends IOApp:
                                                         Port.fromInt(appConfig.server.port).get
                                                     )
                                                     .withHttpApp(
-                                                        withErrorLogging(
-                                                            corsPolicy(
-                                                                routes(
-                                                                    sessionManager,
-                                                                    channelService,
-                                                                    userService,
-                                                                    feedService,
-                                                                    appConfig.oauth,
-                                                                    authFilter,
-                                                                    client,
-                                                                    summarizeService,
-                                                                    new LogoutController[IO](
-                                                                        sessionManager
-                                                                    )
-                                                                )
-                                                            )
-                                                        ).orNotFound
+                                                        withErrorLogging(appRoutes).orNotFound
                                                     )
                                                     .build
                                                     .use(_ => IO.never)
@@ -204,11 +206,11 @@ object Server extends IOApp:
                     logoutController
                 )
             )
-    private def resourceRoutes: HttpRoutes[IO] =
-        val indexRoute = HttpRoutes.of[IO] { case request @ GET -> Root =>
+
+    private def indexRoute: HttpRoutes[IO] =
+        HttpRoutes.of[IO] { case request @ GET -> Root =>
             StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
         }
-        indexRoute <+> resourceServiceBuilder[IO]("/public").toRoutes
 
     private def unprotectedRoutes(
         sessionManager: SessionManager[IO],
@@ -216,7 +218,7 @@ object Server extends IOApp:
         userService: UserService,
         client: Client[IO]
     ): HttpRoutes[IO] =
-        LoginController.routes(sessionManager, oauthConfig, userService, client) <+> resourceRoutes
+        LoginController.routes(sessionManager, oauthConfig, userService, client) <+> indexRoute
 
     private def authedRoutes(
         channelService: ChannelService,
