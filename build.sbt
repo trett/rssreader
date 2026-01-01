@@ -8,7 +8,7 @@ lazy val projectVersion = "2.3.3"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
-lazy val htt4sVersion = "1.0.0-M39"
+lazy val htt4sVersion = "1.0.0-M46"
 lazy val logs4catVersion = "2.7.1"
 lazy val otel4sVersion = "0.14.0"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
@@ -117,7 +117,7 @@ lazy val server = project
             "org.tpolecat" %% "doobie-hikari",
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
-        ).map(_ % "1.0.0-RC5"),
+        ).map(_ % "1.0.0-RC11"),
         libraryDependencies += "org.jsoup" % "jsoup" % "1.21.2",
         libraryDependencies += "com.github.blemale" %% "scaffeine" % "5.3.0",
         libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.17.2" % "runtime",

@@ -115,6 +115,18 @@ object Server extends IOApp:
                                         .surround {
                                             for {
                                                 authFilter <- AuthFilter[IO]
+                                                appRoutes <- routes(
+                                                    sessionManager,
+                                                    channelService,
+                                                    userService,
+                                                    feedService,
+                                                    appConfig.oauth,
+                                                    authFilter,
+                                                    client,
+                                                    summarizeService,
+                                                    new LogoutController[IO](sessionManager)
+                                                )
+                                                corsedRoutes <- corsPolicy(appRoutes)
                                                 server <- EmberServerBuilder
                                                     .default[IO]
                                                     .withHost(ipv4"0.0.0.0")
@@ -122,23 +134,7 @@ object Server extends IOApp:
                                                         Port.fromInt(appConfig.server.port).get
                                                     )
                                                     .withHttpApp(
-                                                        withErrorLogging(
-                                                            corsPolicy(
-                                                                routes(
-                                                                    sessionManager,
-                                                                    channelService,
-                                                                    userService,
-                                                                    feedService,
-                                                                    appConfig.oauth,
-                                                                    authFilter,
-                                                                    client,
-                                                                    summarizeService,
-                                                                    new LogoutController[IO](
-                                                                        sessionManager
-                                                                    )
-                                                                )
-                                                            )
-                                                        ).orNotFound
+                                                        withErrorLogging(corsedRoutes).orNotFound
                                                     )
                                                     .build
                                                     .use(_ => IO.never)
@@ -192,31 +188,35 @@ object Server extends IOApp:
         client: Client[IO],
         summarizeService: SummarizeService,
         logoutController: LogoutController[IO]
-    ): HttpRoutes[IO] =
-        unprotectedRoutes(sessionManager, oauthConfig, userService, client) <+>
-            authFilter.middleware(sessionManager, userService)(
-                authedRoutes(
-                    channelService,
-                    userService,
-                    feedService,
-                    summarizeService,
-                    user => authFilter.updateCache(user),
-                    logoutController
+    ): IO[HttpRoutes[IO]] =
+        unprotectedRoutes(sessionManager, oauthConfig, userService, client).map(
+            _ <+>
+                authFilter.middleware(sessionManager, userService)(
+                    authedRoutes(
+                        channelService,
+                        userService,
+                        feedService,
+                        summarizeService,
+                        user => authFilter.updateCache(user),
+                        logoutController
+                    )
                 )
-            )
-    private def resourceRoutes: HttpRoutes[IO] =
+        )
+    private def resourceRoutes: IO[HttpRoutes[IO]] =
         val indexRoute = HttpRoutes.of[IO] { case request @ GET -> Root =>
             StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
         }
-        indexRoute <+> resourceServiceBuilder[IO]("/public").toRoutes
+        resourceServiceBuilder[IO]("/public").toRoutes.map(indexRoute <+> _)
 
     private def unprotectedRoutes(
         sessionManager: SessionManager[IO],
         oauthConfig: OAuthConfig,
         userService: UserService,
         client: Client[IO]
-    ): HttpRoutes[IO] =
-        LoginController.routes(sessionManager, oauthConfig, userService, client) <+> resourceRoutes
+    ): IO[HttpRoutes[IO]] =
+        resourceRoutes.map(
+            LoginController.routes(sessionManager, oauthConfig, userService, client) <+> _
+        )
 
     private def authedRoutes(
         channelService: ChannelService,
