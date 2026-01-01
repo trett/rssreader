@@ -42,7 +42,7 @@ A modern, web-based RSS reader application built with Scala, Scala.js, and Lamin
 
 -   [Java 17+](https://www.oracle.com/java/technologies/downloads/)
 -   [sbt](https://www.scala-sbt.org/)
--   [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
+-   [Node.js 20](https://nodejs.org/) and [npm](https://www.npmjs.com/) (version specified in `.nvmrc`)
 -   [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
 
 ### Running with Docker (Recommended)
