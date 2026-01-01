@@ -113,19 +113,17 @@ object Server extends IOApp:
                                     appRoutes <-
                                         corsPolicy(
                                             jarRoutes <+>
-                                            routes(
-                                                sessionManager,
-                                                channelService,
-                                                userService,
-                                                feedService,
-                                                appConfig.oauth,
-                                                authFilter,
-                                                client,
-                                                summarizeService,
-                                                new LogoutController[IO](
-                                                    sessionManager
+                                                routes(
+                                                    sessionManager,
+                                                    channelService,
+                                                    userService,
+                                                    feedService,
+                                                    appConfig.oauth,
+                                                    authFilter,
+                                                    client,
+                                                    summarizeService,
+                                                    new LogoutController[IO](sessionManager)
                                                 )
-                                            )
                                         )
                                     exitCode <- UpdateTask(
                                         channelService,
