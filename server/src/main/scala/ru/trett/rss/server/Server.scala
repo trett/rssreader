@@ -189,8 +189,8 @@ object Server extends IOApp:
         summarizeService: SummarizeService,
         logoutController: LogoutController[IO]
     ): IO[HttpRoutes[IO]] =
-        unprotectedRoutes(sessionManager, oauthConfig, userService, client).map(
-            _ <+>
+        unprotectedRoutes(sessionManager, oauthConfig, userService, client).map { unprotected =>
+            unprotected <+>
                 authFilter.middleware(sessionManager, userService)(
                     authedRoutes(
                         channelService,
@@ -201,7 +201,7 @@ object Server extends IOApp:
                         logoutController
                     )
                 )
-        )
+        }
     private def resourceRoutes: IO[HttpRoutes[IO]] =
         val indexRoute = HttpRoutes.of[IO] { case request @ GET -> Root =>
             StaticFile.fromResource("/public/index.html", Some(request)).getOrElseF(NotFound())
@@ -214,9 +214,9 @@ object Server extends IOApp:
         userService: UserService,
         client: Client[IO]
     ): IO[HttpRoutes[IO]] =
-        resourceRoutes.map(
-            LoginController.routes(sessionManager, oauthConfig, userService, client) <+> _
-        )
+        resourceRoutes.map { resources =>
+            LoginController.routes(sessionManager, oauthConfig, userService, client) <+> resources
+        }
 
     private def authedRoutes(
         channelService: ChannelService,
