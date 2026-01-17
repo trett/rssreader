@@ -94,7 +94,7 @@ object SummaryPage:
                 div(
                     padding.px := 16,
                     fontFamily := "var(--sapFontFamily)",
-                    fontSize := "15px !important",
+                    fontSize.px := 15,
                     color := "var(--sapContent_LabelColor)",
                     lineHeight := "1.5",
                     child <-- stateSignal.map { state =>
