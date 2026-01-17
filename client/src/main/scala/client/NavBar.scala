@@ -25,19 +25,20 @@ object NavBar {
         cls := "sticky-navbar",
         ShellBar(
             _.primaryTitle := "RSS Reader",
-            _.notificationsCount <-- unreadCountSignal.map(count =>
-                if (count > 0) count.toString else ""
-            ),
-            _.showNotifications <-- unreadCountSignal.map(_ > 0),
+            _.notificationsCount <-- unreadCountSignal.combineWith(settingsSignal).map {
+                case (count, settings) =>
+                    val isRegularMode = settings.flatMap(_.aiMode).contains(false)
+                    if (isRegularMode && count > 0) count.toString else ""
+            },
+            _.showNotifications <-- unreadCountSignal.combineWith(settingsSignal).map {
+                case (count, settings) =>
+                    val isRegularMode = settings.flatMap(_.aiMode).contains(false)
+                    isRegularMode && count > 0
+            },
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
-            _.item(
-                _.icon := IconName.ai,
-                _.text := "Summary",
-                onClick.mapTo(()) --> { Router.currentPageVar.set(SummaryRoute) }
-            ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
-            _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) },
+            _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(SummaryRoute) },
             _.events.onNotificationsClick.mapTo(()) --> {
                 EventBus.emit(Home.markAllAsReadBus -> ())
             }

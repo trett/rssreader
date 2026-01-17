@@ -69,8 +69,9 @@ object SettingsPage {
                 Link(
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
-                    _.events.onClick.mapTo(HomeRoute) --> {
-                        Router.currentPageVar.set
+                    _.events.onClick.mapTo(settingsSignal.now()) --> { settings =>
+                        val isRegularMode = settings.flatMap(_.aiMode).contains(false)
+                        Router.currentPageVar.set(if (isRegularMode) HomeRoute else SummaryRoute)
                     },
                     marginBottom.px := 20
                 ),
@@ -114,6 +115,37 @@ object SettingsPage {
                                     ),
                                     lang.displayName
                                 )
+                            )
+                        )
+                    ),
+                    div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label(
+                            "App mode",
+                            _.forId := "app-mode-cmb",
+                            _.showColon := true,
+                            _.wrappingType := WrappingType.None,
+                            paddingRight.px := 20
+                        ),
+                        Select(
+                            _.id := "app-mode-cmb",
+                            _.events.onChange
+                                .map(_.detail.selectedOption.textContent) --> settingsVar
+                                .updater[String]((a, b) =>
+                                    a.map(x => x.copy(aiMode = Some(b == "AI Mode")))
+                                ),
+                            Select.option(
+                                _.selected <-- settingsSignal.map(x =>
+                                    !x.flatMap(_.aiMode).contains(false)
+                                ),
+                                "AI Mode"
+                            ),
+                            Select.option(
+                                _.selected <-- settingsSignal.map(x =>
+                                    x.flatMap(_.aiMode).contains(false)
+                                ),
+                                "Regular Mode"
                             )
                         )
                     ),

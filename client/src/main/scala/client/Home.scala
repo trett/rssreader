@@ -8,7 +8,7 @@ import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
-import ru.trett.rss.models.{ChannelData, FeedItemData}
+import ru.trett.rss.models.{ChannelData, FeedItemData, UserSettings}
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset}
@@ -29,6 +29,7 @@ object Home:
 
     given Decoder[FeedItemData] = deriveDecoder
     given Decoder[ChannelData] = deriveDecoder
+    given Decoder[UserSettings] = deriveDecoder
     given Conversion[LocalDateTime, String] with {
         def apply(date: LocalDateTime): String = dateTimeFormatter.format(date)
     }
@@ -52,8 +53,14 @@ object Home:
         case Failure(err)   => handleError(err)
     }
 
-    def render: Element = div(
+    def render: Element =
+        // Fetch settings on mount
+        val settingsFetch = model.ensureSettingsLoaded()
+
+        div(
         cls := "cards main-content",
+        // Wire settings fetch to settings var
+        settingsFetch.collectSuccess --> settingsVar.writer,
         div(
             onMountBind(ctx =>
                 refreshFeedsBus --> { page =>

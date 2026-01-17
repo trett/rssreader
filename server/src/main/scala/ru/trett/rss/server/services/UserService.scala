@@ -25,7 +25,12 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
             .findUserById(id)
             .map(
                 _.map(user =>
-                    UserSettings(user.name, user.settings.hideRead, user.settings.summaryLanguage)
+                    UserSettings(
+                        user.name,
+                        user.settings.hideRead,
+                        user.settings.summaryLanguage,
+                        user.settings.aiMode
+                    )
                 )
             )
 

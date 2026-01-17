@@ -1,3 +1,8 @@
 package ru.trett.rss.models
 
-final case class UserSettings(name: String, hideRead: Boolean, summaryLanguage: Option[String])
+final case class UserSettings(
+    name: String,
+    hideRead: Boolean,
+    summaryLanguage: Option[String],
+    aiMode: Option[Boolean] = None
+)

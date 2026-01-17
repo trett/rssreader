@@ -1,7 +1,6 @@
 package client
 
 import be.doeraene.webcomponents.ui5.Text
-import com.raquo
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom
@@ -20,7 +19,8 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-    val currentPageVar: Var[Route] = Var[Route](HomeRoute)
+    val currentPageVar: Var[Route] = Var[Route](SummaryRoute)
+    private val initialRouteSetVar: Var[Boolean] = Var(false)
 
     private def login = LoginPage.render
     private def navbar = NavBar.render
@@ -38,7 +38,21 @@ object Router:
             case ErrorRoute    => div(Text("An error occured"))
             case NotFoundRoute => div(Text("Not Found"))
         },
-        className := "app-container"
+        className := "app-container",
+        AppState.model.settingsSignal --> { settings =>
+            if (!initialRouteSetVar.now() && settings.isDefined) {
+                val isRegularMode = settings.flatMap(_.aiMode).contains(false)
+                val currentRoute = currentPageVar.now()
+                // Only redirect if we're still on the default route
+                if (currentRoute == SummaryRoute && isRegularMode) {
+                    currentPageVar.set(HomeRoute)
+                } else if (currentRoute == LoginRoute) {
+                    // After login, navigate to the appropriate page
+                    currentPageVar.set(if (isRegularMode) HomeRoute else SummaryRoute)
+                }
+                initialRouteSetVar.set(true)
+            }
+        }
     )
 
     def appElement(): Element = div(root)
