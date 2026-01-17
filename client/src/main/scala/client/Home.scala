@@ -8,7 +8,7 @@ import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
-import ru.trett.rss.models.{ChannelData, FeedItemData, UserSettings}
+import ru.trett.rss.models.{ChannelData, FeedItemData}
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset}
@@ -29,7 +29,6 @@ object Home:
 
     given Decoder[FeedItemData] = deriveDecoder
     given Decoder[ChannelData] = deriveDecoder
-    given Decoder[UserSettings] = deriveDecoder
     given Conversion[LocalDateTime, String] with {
         def apply(date: LocalDateTime): String = dateTimeFormatter.format(date)
     }

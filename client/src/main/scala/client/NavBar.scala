@@ -27,13 +27,11 @@ object NavBar {
             _.primaryTitle := "RSS Reader",
             _.notificationsCount <-- unreadCountSignal.combineWith(settingsSignal).map {
                 case (count, settings) =>
-                    val isRegularMode = settings.flatMap(_.aiMode).contains(false)
-                    if (isRegularMode && count > 0) count.toString else ""
+                    val showNotifications = settings.exists(!_.isAiMode) && count > 0
+                    if showNotifications then count.toString else ""
             },
             _.showNotifications <-- unreadCountSignal.combineWith(settingsSignal).map {
-                case (count, settings) =>
-                    val isRegularMode = settings.flatMap(_.aiMode).contains(false)
-                    isRegularMode && count > 0
+                case (count, settings) => settings.exists(!_.isAiMode) && count > 0
             },
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),

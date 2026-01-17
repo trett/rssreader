@@ -41,14 +41,14 @@ object Router:
         className := "app-container",
         AppState.model.settingsSignal --> { settings =>
             if (!initialRouteSetVar.now() && settings.isDefined) {
-                val isRegularMode = settings.flatMap(_.aiMode).contains(false)
+                val isAiMode = settings.exists(_.isAiMode)
                 val currentRoute = currentPageVar.now()
                 // Only redirect if we're still on the default route
-                if (currentRoute == SummaryRoute && isRegularMode) {
+                if (currentRoute == SummaryRoute && !isAiMode) {
                     currentPageVar.set(HomeRoute)
                 } else if (currentRoute == LoginRoute) {
                     // After login, navigate to the appropriate page
-                    currentPageVar.set(if (isRegularMode) HomeRoute else SummaryRoute)
+                    currentPageVar.set(if isAiMode then SummaryRoute else HomeRoute)
                 }
                 initialRouteSetVar.set(true)
             }

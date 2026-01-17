@@ -76,10 +76,8 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                             .getOrElse(SummaryLanguage.English)
                         summaryResult <- summarize(strippedText, validatedLanguage.displayName)
                         // Mark feeds as read after successful summarization (only in AI mode)
-                        isAiMode = !user.settings.aiMode.contains(false)
-                        isSummarySuccess = summaryResult.isInstanceOf[SummarySuccess]
                         _ <-
-                            if isAiMode && isSummarySuccess then
+                            if user.settings.isAiMode && summaryResult.isInstanceOf[SummarySuccess] then
                                 feedRepository.markFeedAsRead(feeds.map(_.link), user)
                             else IO.unit
                         remainingAfterThis = totalUnread - offset - feeds.size
@@ -184,11 +182,10 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                 response.candidates.headOption
                     .flatMap(_.content.parts.flatMap(_.headOption))
                     .map(_.text)
-                    .map(text =>
-                        text.startsWith("```html") match
-                            case true  => text.stripPrefix("```html").stripSuffix("```").trim
-                            case false => text.trim
-                    ) match
+                    .map { text =>
+                        if text.startsWith("```html") then text.stripPrefix("```html").stripSuffix("```").trim
+                        else text.trim
+                    } match
                     case Some(html) if html.nonEmpty => SummarySuccess(html)
                     case _ => SummaryError("Could not extract summary from response.")
             }

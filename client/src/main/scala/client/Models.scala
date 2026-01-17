@@ -11,8 +11,22 @@ import scala.util.{Try, Success, Failure}
 type ChannelList = List[ChannelData]
 type FeedItemList = List[FeedItemData]
 
-final class Model:
+/** Centralized decoders for shared models to avoid duplication across pages */
+object Decoders:
     given Decoder[UserSettings] = deriveDecoder
+    given Decoder[SummarySuccess] = deriveDecoder
+    given Decoder[SummaryError] = deriveDecoder
+    given Decoder[SummaryResult] = Decoder.instance { cursor =>
+        cursor.downField("type").as[String].flatMap {
+            case "success" => cursor.as[SummarySuccess]
+            case "error"   => cursor.as[SummaryError]
+            case other     => Left(io.circe.DecodingFailure(s"Unknown SummaryResult type: $other", cursor.history))
+        }
+    }
+    given Decoder[SummaryResponse] = deriveDecoder
+
+final class Model:
+    import Decoders.given
 
     val feedVar: Var[FeedItemList] = Var(List())
     val channelVar: Var[ChannelList] = Var(List())

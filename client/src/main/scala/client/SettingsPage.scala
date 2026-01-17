@@ -40,13 +40,10 @@ object SettingsPage {
         case Failure(err) => handleError(err)
     }
 
-    given feedItemDecoder: Decoder[FeedItemData] = deriveDecoder
-
-    given channelDecoder: Decoder[ChannelData] = deriveDecoder
-
-    given settingsDecoder: Decoder[UserSettings] = deriveDecoder
-
-    given settingsEncoder: Encoder[UserSettings] = deriveEncoder
+    import Decoders.given
+    given Decoder[FeedItemData] = deriveDecoder
+    given Decoder[ChannelData] = deriveDecoder
+    given Encoder[UserSettings] = deriveEncoder
 
     def render: Element = div(
         cls := "cards main-content",
@@ -70,8 +67,8 @@ object SettingsPage {
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
                     _.events.onClick.mapTo(settingsSignal.now()) --> { settings =>
-                        val isRegularMode = settings.flatMap(_.aiMode).contains(false)
-                        Router.currentPageVar.set(if (isRegularMode) HomeRoute else SummaryRoute)
+                        val isAiMode = settings.exists(_.isAiMode)
+                        Router.currentPageVar.set(if isAiMode then SummaryRoute else HomeRoute)
                     },
                     marginBottom.px := 20
                 ),
@@ -136,15 +133,11 @@ object SettingsPage {
                                     a.map(x => x.copy(aiMode = Some(b == "AI Mode")))
                                 ),
                             Select.option(
-                                _.selected <-- settingsSignal.map(x =>
-                                    !x.flatMap(_.aiMode).contains(false)
-                                ),
+                                _.selected <-- settingsSignal.map(_.exists(_.isAiMode)),
                                 "AI Mode"
                             ),
                             Select.option(
-                                _.selected <-- settingsSignal.map(x =>
-                                    x.flatMap(_.aiMode).contains(false)
-                                ),
+                                _.selected <-- settingsSignal.map(_.exists(!_.isAiMode)),
                                 "Regular Mode"
                             )
                         )

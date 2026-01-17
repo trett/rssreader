@@ -4,55 +4,32 @@ import be.doeraene.webcomponents.ui5.*
 import be.doeraene.webcomponents.ui5.configkeys.*
 import client.NetworkUtils.*
 import com.raquo.laminar.api.L.*
-import io.circe.Decoder
-import io.circe.generic.semiauto.*
-import ru.trett.rss.models.{SummaryResponse, SummaryResult, SummarySuccess, SummaryError, UserSettings}
+import ru.trett.rss.models.{SummaryResponse, SummarySuccess, SummaryError}
 
 import scala.util.{Failure, Success, Try}
 
 object SummaryPage:
 
-    given Decoder[SummarySuccess] = deriveDecoder
-    given Decoder[SummaryError] = deriveDecoder
-
-    given Decoder[SummaryResult] =
-        Decoder.instance { cursor =>
-            cursor.downField("type").as[String].flatMap {
-                case "success" => cursor.as[SummarySuccess]
-                case "error" => cursor.as[SummaryError]
-                case other => Left(io.circe.DecodingFailure(s"Unknown SummaryResult type: $other", cursor.history))
-            }
-        }
-
-    given Decoder[SummaryResponse] = deriveDecoder
-    given Decoder[UserSettings] = deriveDecoder
+    import Decoders.given
 
     private val model = AppState.model
     import model.*
 
-    private val summariesVar: Var[List[String]] = Var(List())
-    private val summariesSignal = summariesVar.signal
-    private val isLoadingVar: Var[Boolean] = Var(true)
-    private val isLoadingSignal = isLoadingVar.signal
-    private val totalProcessedVar: Var[Int] = Var(0)
-    private val noFeedsVar: Var[Boolean] = Var(false)
-    private val noFeedsSignal = noFeedsVar.signal
-    private val hasMoreVar: Var[Boolean] = Var(false)
-    private val hasMoreSignal = hasMoreVar.signal
-    private val funFactVar: Var[Option[String]] = Var(None)
-    private val funFactSignal = funFactVar.signal
-    private val hasErrorVar: Var[Boolean] = Var(false)
-    private val hasErrorSignal = hasErrorVar.signal
+    private case class PageState(
+        summaries: List[String] = List(),
+        isLoading: Boolean = true,
+        totalProcessed: Int = 0,
+        noFeeds: Boolean = false,
+        hasMore: Boolean = false,
+        funFact: Option[String] = None,
+        hasError: Boolean = false
+    )
+
+    private val stateVar: Var[PageState] = Var(PageState())
+    private val stateSignal = stateVar.signal
     private val loadMoreBus: EventBus[Unit] = new EventBus
 
-    private def resetState(): Unit =
-        summariesVar.set(List())
-        isLoadingVar.set(true)
-        totalProcessedVar.set(0)
-        noFeedsVar.set(false)
-        hasMoreVar.set(false)
-        funFactVar.set(None)
-        hasErrorVar.set(false)
+    private def resetState(): Unit = stateVar.set(PageState())
 
     private def fetchSummaryBatch(): EventStream[Try[SummaryResponse]] =
         FetchStream
@@ -66,37 +43,33 @@ object SummaryPage:
 
     private val batchObserver: Observer[Try[SummaryResponse]] = Observer {
         case Success(response) =>
-            isLoadingVar.set(false)
-
             if response.noFeeds then
-                // No feeds available
-                noFeedsVar.set(true)
-                hasMoreVar.set(false)
-                funFactVar.set(response.funFact)
+                stateVar.update(_.copy(
+                    isLoading = false,
+                    noFeeds = true,
+                    hasMore = false,
+                    funFact = response.funFact
+                ))
             else if response.feedsProcessed > 0 then
-                response.result match
-                    case SummarySuccess(html) =>
-                        hasErrorVar.set(false)
-                        summariesVar.update(_ :+ html)
-                    case SummaryError(message) =>
-                        hasErrorVar.set(true)
-                        summariesVar.update(_ :+ message)
+                val (newContent, isError) = response.result match
+                    case SummarySuccess(html)  => (html, false)
+                    case SummaryError(message) => (message, true)
 
-                totalProcessedVar.update(_ + response.feedsProcessed)
-                hasMoreVar.set(response.hasMore)
+                stateVar.update(s => s.copy(
+                    isLoading = false,
+                    summaries = s.summaries :+ newContent,
+                    hasError = isError,
+                    totalProcessed = s.totalProcessed + response.feedsProcessed,
+                    hasMore = response.hasMore
+                ))
                 Home.refreshUnreadCountBus.emit(())
+            else
+                stateVar.update(_.copy(isLoading = false))
 
         case Failure(err) =>
-            isLoadingVar.set(false)
-            hasErrorVar.set(true)
+            stateVar.update(_.copy(isLoading = false, hasError = true))
             handleError(err)
     }
-
-    private val busySignal: Signal[(Boolean, List[String])] =
-        isLoadingSignal.combineWith(summariesSignal)
-
-    private val footerSignal: Signal[(Boolean, List[String], Boolean, Boolean, Boolean)] =
-        isLoadingSignal.combineWith(summariesSignal, noFeedsSignal, hasMoreSignal, hasErrorSignal)
 
     def render: Element =
         resetState()
@@ -109,7 +82,7 @@ object SummaryPage:
             settingsFetch.collectSuccess --> settingsVar.writer,
             onMountBind { ctx =>
                 loadMoreBus.events.flatMapSwitch { _ =>
-                    isLoadingVar.set(true)
+                    stateVar.update(_.copy(isLoading = true))
                     fetchSummaryBatch()
                 } --> batchObserver
             },
@@ -124,18 +97,16 @@ object SummaryPage:
                     fontSize := "15px !important",
                     color := "var(--sapContent_LabelColor)",
                     lineHeight := "1.5",
-                    child <-- busySignal.map { case (loading, summaries) =>
-                        if loading && summaries.isEmpty then
+                    // Initial loading indicator
+                    child <-- stateSignal.map { state =>
+                        if state.isLoading && state.summaries.isEmpty then
                             div(
                                 display.flex,
                                 flexDirection.column,
                                 alignItems.center,
                                 justifyContent.center,
                                 padding.px := 60,
-                                BusyIndicator(
-                                    _.active := true,
-                                    _.size := BusyIndicatorSize.L
-                                ),
+                                BusyIndicator(_.active := true, _.size := BusyIndicatorSize.L),
                                 p(
                                     marginTop.px := 20,
                                     color := "var(--sapContent_LabelColor)",
@@ -145,9 +116,10 @@ object SummaryPage:
                             )
                         else emptyNode
                     },
-                    child <-- noFeedsSignal.combineWith(funFactSignal).map {
-                        case (true, funFact) =>
-                            val validFunFact = funFact.filter(f =>
+                    // No feeds message with optional fun fact
+                    child <-- stateSignal.map { state =>
+                        if state.noFeeds then
+                            val validFunFact = state.funFact.filter(f =>
                                 f.nonEmpty && !f.contains("All caught up") && !f.contains("No new feeds")
                             )
                             div(
@@ -174,14 +146,15 @@ object SummaryPage:
                                     )
                                     .getOrElse(emptyNode)
                             )
-                        case _ => emptyNode
+                        else emptyNode
                     },
+                    // Summaries list
                     div(
-                        children <-- summariesSignal.map(summaries =>
-                            summaries.zipWithIndex.map { case (html, index) =>
+                        children <-- stateSignal.map { state =>
+                            state.summaries.zipWithIndex.map { case (html, index) =>
                                 div(
                                     unsafeParseToHtmlFragment(html),
-                                    if index < summaries.length - 1 then
+                                    if index < state.summaries.length - 1 then
                                         hr(
                                             marginTop.px := 20,
                                             marginBottom.px := 20,
@@ -191,10 +164,11 @@ object SummaryPage:
                                     else emptyNode
                                 )
                             }
-                        )
+                        }
                     ),
-                    child <-- busySignal.map { case (loading, summaries) =>
-                        if loading && summaries.nonEmpty then
+                    // Loading more indicator
+                    child <-- stateSignal.map { state =>
+                        if state.isLoading && state.summaries.nonEmpty then
                             div(
                                 display.flex,
                                 alignItems.center,
@@ -206,8 +180,9 @@ object SummaryPage:
                             )
                         else emptyNode
                     },
-                    child <-- footerSignal.map { case (loading, summaries, noFeeds, hasMore, hasError) =>
-                        if !loading && summaries.nonEmpty && !noFeeds then
+                    // Footer with count and load more button
+                    child <-- stateSignal.map { state =>
+                        if !state.isLoading && state.summaries.nonEmpty && !state.noFeeds then
                             div(
                                 paddingTop.px := 20,
                                 display.flex,
@@ -215,10 +190,10 @@ object SummaryPage:
                                 alignItems.center,
                                 gap.px := 16,
                                 Text(
-                                    s"${totalProcessedVar.now()} feeds summarized",
+                                    s"${state.totalProcessed} feeds summarized",
                                     color := "var(--sapContent_LabelColor)"
                                 ),
-                                if hasMore && !hasError then
+                                if state.hasMore && !state.hasError then
                                     Button(
                                         _.design := ButtonDesign.Emphasized,
                                         _.icon := IconName.download,
