@@ -53,12 +53,9 @@ object Home:
     }
 
     def render: Element =
-        // Fetch settings on mount
         val settingsFetch = model.ensureSettingsLoaded()
-
         div(
         cls := "cards main-content",
-        // Wire settings fetch to settings var
         settingsFetch.collectSuccess --> settingsVar.writer,
         div(
             onMountBind(ctx =>

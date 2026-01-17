@@ -97,7 +97,6 @@ object SummaryPage:
                     fontSize := "15px !important",
                     color := "var(--sapContent_LabelColor)",
                     lineHeight := "1.5",
-                    // Initial loading indicator
                     child <-- stateSignal.map { state =>
                         if state.isLoading && state.summaries.isEmpty then
                             div(
@@ -116,7 +115,6 @@ object SummaryPage:
                             )
                         else emptyNode
                     },
-                    // No feeds message with optional fun fact
                     child <-- stateSignal.map { state =>
                         if state.noFeeds then
                             val validFunFact = state.funFact.filter(f =>
@@ -148,7 +146,6 @@ object SummaryPage:
                             )
                         else emptyNode
                     },
-                    // Summaries list
                     div(
                         children <-- stateSignal.map { state =>
                             state.summaries.zipWithIndex.map { case (html, index) =>
@@ -166,7 +163,6 @@ object SummaryPage:
                             }
                         }
                     ),
-                    // Loading more indicator
                     child <-- stateSignal.map { state =>
                         if state.isLoading && state.summaries.nonEmpty then
                             div(
@@ -180,7 +176,6 @@ object SummaryPage:
                             )
                         else emptyNode
                     },
-                    // Footer with count and load more button
                     child <-- stateSignal.map { state =>
                         if !state.isLoading && state.summaries.nonEmpty && !state.noFeeds then
                             div(

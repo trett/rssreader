@@ -43,11 +43,9 @@ object Router:
             if (!initialRouteSetVar.now() && settings.isDefined) {
                 val isAiMode = settings.exists(_.isAiMode)
                 val currentRoute = currentPageVar.now()
-                // Only redirect if we're still on the default route
                 if (currentRoute == SummaryRoute && !isAiMode) {
                     currentPageVar.set(HomeRoute)
                 } else if (currentRoute == LoginRoute) {
-                    // After login, navigate to the appropriate page
                     currentPageVar.set(if isAiMode then SummaryRoute else HomeRoute)
                 }
                 initialRouteSetVar.set(true)

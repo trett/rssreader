@@ -11,7 +11,6 @@ import scala.util.{Try, Success, Failure}
 type ChannelList = List[ChannelData]
 type FeedItemList = List[FeedItemData]
 
-/** Centralized decoders for shared models to avoid duplication across pages */
 object Decoders:
     given Decoder[UserSettings] = deriveDecoder
     given Decoder[SummarySuccess] = deriveDecoder
@@ -39,7 +38,6 @@ final class Model:
 
     private val settingsLoadingVar: Var[Boolean] = Var(false)
 
-    // Centralized settings fetch - prevents race conditions
     def ensureSettingsLoaded(): EventStream[Try[Option[UserSettings]]] =
         if (settingsVar.now().isDefined || settingsLoadingVar.now()) then
             EventStream.empty
