@@ -27,17 +27,19 @@ object NavBar {
             _.primaryTitle := "RSS Reader",
             _.notificationsCount <-- unreadCountSignal.combineWith(settingsSignal).map {
                 case (count, settings) =>
-                    val showNotifications = settings.exists(!_.isAiMode) && count > 0
-                    if showNotifications then count.toString else ""
+                    val show = !settings.exists(_.isAiMode) && count > 0
+                    if show then count.toString else ""
             },
             _.showNotifications <-- unreadCountSignal.combineWith(settingsSignal).map {
-                case (count, settings) => settings.exists(!_.isAiMode) && count > 0
+                case (count, settings) => !settings.exists(_.isAiMode) && count > 0
             },
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
-            _.events.onLogoClick.mapTo(settingsSignal.now()) --> {
-                _.map(Router.toMainPage(_)).getOrElse(LoginRoute)
+            _.events.onLogoClick.mapTo(()) --> { _ =>
+                settingsSignal.now() match
+                    case Some(settings) => Router.toMainPage(settings)
+                    case None           => Router.currentPageVar.set(LoginRoute)
             },
             _.events.onNotificationsClick.mapTo(()) --> {
                 EventBus.emit(Home.markAllAsReadBus -> ())

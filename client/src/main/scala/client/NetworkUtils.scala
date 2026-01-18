@@ -55,16 +55,11 @@ object NetworkUtils {
 
     import Decoders.given
 
-    def ensureSettingsLoaded(): EventStream[Try[Option[UserSettings]]] =
+    def ensureSettingsLoaded(): EventStream[Try[UserSettings]] =
         FetchStream
-            .withDecoder(responseDecoder[Option[UserSettings]])
+            .withDecoder(responseDecoder[UserSettings])
             .get("/api/user/settings")
-            .map {
-                case Success(Some(value)) => Success(value)
-                case Success(None) =>
-                    Failure(new RuntimeException("Failed to decode settings response"))
-                case Failure(err) => Failure(err)
-            }
+            .collect { case Success(Some(value)) => Success(value) }
 
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())

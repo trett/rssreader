@@ -46,6 +46,16 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             s"https://generativelanguage.googleapis.com/v1beta/models/$modelId:generateContent"
         )
 
+    private def buildGeminiRequest(modelId: String, prompt: String): Request[IO] =
+        Request[IO](
+            method = Method.POST,
+            uri = getEndpoint(modelId),
+            headers = Headers(
+                Header.Raw(ci"X-goog-api-key", apiKey),
+                Header.Raw(ci"Content-Type", "application/json")
+            )
+        ).withEntity(Map("contents" -> List(Map("parts" -> List(Map("text" -> prompt))))).asJson)
+
     def getSummary(user: User, offset: Int): IO[SummaryResponse] =
         val selectedModel = user.settings.summaryModel
             .flatMap(SummaryModel.fromString)
@@ -78,22 +88,22 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         )
                     )
                 else
+                    val text = feeds.map(_.description).mkString("\n")
+                    val strippedText = Jsoup.parse(text).text()
+                    val validatedLanguage = user.settings.summaryLanguage
+                        .flatMap(SummaryLanguage.fromString)
+                        .getOrElse(SummaryLanguage.English)
+
                     for
-                        text <- IO.pure(feeds.map(_.description).mkString("\n"))
-                        strippedText <- IO.pure(Jsoup.parse(text).text())
-                        validatedLanguage = user.settings.summaryLanguage
-                            .flatMap(SummaryLanguage.fromString)
-                            .getOrElse(SummaryLanguage.English)
                         summaryResult <- summarize(
                             strippedText,
                             validatedLanguage.displayName,
                             selectedModel.modelId
                         )
-                        // Mark feeds as read after successful summarization (only in AI mode)
-                        _ <-
-                            if user.settings.isAiMode && summaryResult.isInstanceOf[SummarySuccess]
-                            then feedRepository.markFeedAsRead(feeds.map(_.link), user)
-                            else IO.unit
+                        _ <- summaryResult match
+                            case _: SummarySuccess if user.settings.isAiMode =>
+                                feedRepository.markFeedAsRead(feeds.map(_.link), user)
+                            case _ => IO.unit
                         remainingAfterThis = totalUnread - offset - feeds.size
                     yield SummaryResponse(
                         result = summaryResult,
@@ -109,24 +119,15 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             .flatMap(SummaryLanguage.fromString)
             .getOrElse(SummaryLanguage.English)
 
-        val request = Request[IO](
-            method = Method.POST,
-            uri = getEndpoint(modelId),
-            headers = Headers(
-                Header.Raw(ci"X-goog-api-key", apiKey),
-                Header.Raw(ci"Content-Type", "application/json")
-            )
-        ).withEntity(Map("contents" -> List(Map("parts" -> List(Map("text" -> s"""
-                                    Generate ONE short, interesting and surprising fun fact about technology, science, history, or nature.
-                                    Make it educational and fascinating - something that would make someone say "wow, I didn't know that!"
-                                    Keep it to 1-2 sentences maximum.
-                                    Respond in ${validatedLanguage.displayName}.
-                                    Do not use markdown formatting.
-                                    Do not add any introduction or preamble, just state the fact directly.
-                                """))))).asJson)
+        val prompt = s"""Generate ONE short, interesting and surprising fun fact about technology, science, history, or nature.
+                        |Make it educational and fascinating - something that would make someone say "wow, I didn't know that!"
+                        |Keep it to 1-2 sentences maximum.
+                        |Respond in ${validatedLanguage.displayName}.
+                        |Do not use markdown formatting.
+                        |Do not add any introduction or preamble, just state the fact directly.""".stripMargin
 
         client
-            .expect[GeminiResponse](request)
+            .expect[GeminiResponse](buildGeminiRequest(modelId, prompt))
             .map { response =>
                 response.candidates.headOption
                     .flatMap(_.content.parts.flatMap(_.headOption))
@@ -140,45 +141,24 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             }
 
     private def summarize(text: String, language: String, modelId: String): IO[SummaryResult] =
-        val request = Request[IO](
-            method = Method.POST,
-            uri = getEndpoint(modelId),
-            headers = Headers(
-                Header.Raw(ci"X-goog-api-key", apiKey),
-                Header.Raw(ci"Content-Type", "application/json")
-            )
-        ).withEntity(
-            Map(
-                "contents" -> List(
-                    Map(
-                        "parts" -> List(
-                            Map(
-                                "text" ->
-                                    s"""
-                                You must follow these rules for your response:
-                                    1. Provide only the raw text of the code.
-                                    2. Do NOT use any markdown formatting.
-                                    3. Do NOT wrap the code in backticks (```)
-                                    4. Do NOT add any text, notes, or explanations.
-                                    5. Respond with HTML. Topic headings should be wrapped in <h4> tags, and paragraphs should be wrapped in <p> tags.
-                                    6. Use <ul> and <li> tags for lists.
-                                    7. Use <strong> tags for important text.
-                                    8. Use <em> tags for emphasized text.
-                                    9. Never use <script> tags.
-                                    10. Group the summary by topic/category (e.g., Technology, Politics, Science, Entertainment, etc.).
-                                    11. IMPORTANT: Add a suitable emoji at the beginning of each topic heading (e.g., "💻 Technology", "🏛️ Politics", "🔬 Science", "🎬 Entertainment", "💰 Business", "⚽ Sports", "🌍 World News", etc.).
-                                    12. IMPORTANT: Deduplicate similar stories - if multiple feeds cover the same news event, combine them into a single summary entry.
-                                    13. For each topic, list the key stories with brief summaries.
-                                     Now, following these rules exactly summarize the following text. Answer in $language: $text."""
-                            )
-                        )
-                    )
-                )
-            ).asJson
-        )
+        val prompt = s"""You must follow these rules for your response:
+                        |1. Provide only the raw text of the code.
+                        |2. Do NOT use any markdown formatting.
+                        |3. Do NOT wrap the code in backticks (```)
+                        |4. Do NOT add any text, notes, or explanations.
+                        |5. Respond with HTML. Topic headings should be wrapped in <h4> tags, and paragraphs should be wrapped in <p> tags.
+                        |6. Use <ul> and <li> tags for lists.
+                        |7. Use <strong> tags for important text.
+                        |8. Use <em> tags for emphasized text.
+                        |9. Never use <script> tags.
+                        |10. Group the summary by topic/category (e.g., Technology, Politics, Science, Entertainment, etc.).
+                        |11. IMPORTANT: Add a suitable emoji at the beginning of each topic heading (e.g., "💻 Technology", "🏛️ Politics", "🔬 Science", "🎬 Entertainment", "💰 Business", "⚽ Sports", "🌍 World News", etc.).
+                        |12. IMPORTANT: Deduplicate similar stories - if multiple feeds cover the same news event, combine them into a single summary entry.
+                        |13. For each topic, list the key stories with brief summaries.
+                        |Now, following these rules exactly summarize the following text. Answer in $language: $text.""".stripMargin
 
         client
-            .expect[GeminiResponse](request)
+            .expect[GeminiResponse](buildGeminiRequest(modelId, prompt))
             .map { response =>
                 response.candidates.headOption
                     .flatMap(_.content.parts.flatMap(_.headOption))

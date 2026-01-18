@@ -37,12 +37,9 @@ object Router:
 
     private val root = div(
         NetworkUtils.ensureSettingsLoaded() --> {
-            case Success(settings) => {
-                model.settingsVar.set(settings)
-                settings
-                    .map(toMainPage)
-                    .getOrElse(LoginRoute)
-            }
+            case Success(settings) =>
+                model.settingsVar.set(Some(settings))
+                toMainPage(settings)
             case Failure(err) => NetworkUtils.handleError(err)
         },
         child <-- currentPageVar.signal.map {

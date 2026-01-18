@@ -35,30 +35,27 @@ object SummaryPage:
             .get("/api/summarize")
 
     private val batchObserver: Observer[Try[Option[SummaryResponse]]] = Observer {
-        case Success(response) =>
-            response match
-                case None =>
-                    stateVar.update(_.copy(isLoading = false, hasError = true))
-                case Some(resp) =>
-                    if resp.funFact.isDefined then
-                        stateVar.update(
-                            _.copy(isLoading = false, hasMore = false, funFact = resp.funFact)
-                        )
-                    else if resp.feedsProcessed > 0 then
-                        val (newContent, isError) = resp.result match
-                            case SummarySuccess(html)  => (html, false)
-                            case SummaryError(message) => (message, true)
-                        stateVar.update(s =>
-                            s.copy(
-                                isLoading = false,
-                                summaries = s.summaries :+ newContent,
-                                hasError = isError,
-                                totalProcessed = s.totalProcessed + resp.feedsProcessed,
-                                hasMore = resp.hasMore
-                            )
-                        )
-                        Home.refreshUnreadCountBus.emit(())
-                    else stateVar.update(_.copy(isLoading = false))
+        case Success(Some(resp)) if resp.funFact.isDefined =>
+            stateVar.update(_.copy(isLoading = false, hasMore = false, funFact = resp.funFact))
+
+        case Success(Some(resp)) if resp.feedsProcessed > 0 =>
+            val (newContent, isError) = resp.result match
+                case SummarySuccess(html)  => (html, false)
+                case SummaryError(message) => (message, true)
+            stateVar.update(s =>
+                s.copy(
+                    isLoading = false,
+                    summaries = s.summaries :+ newContent,
+                    hasError = isError,
+                    totalProcessed = s.totalProcessed + resp.feedsProcessed,
+                    hasMore = resp.hasMore
+                )
+            )
+            Home.refreshUnreadCountBus.emit(())
+
+        case Success(_) =>
+            stateVar.update(_.copy(isLoading = false, hasError = true))
+
         case Failure(err) =>
             stateVar.update(_.copy(isLoading = false, hasError = true))
             handleError(err)
@@ -106,37 +103,29 @@ object SummaryPage:
                         else emptyNode
                     },
                     child <-- stateSignal.map { state =>
-                        if state.funFact.isDefined then
-                            val validFunFact = state.funFact.filter(f =>
-                                f.nonEmpty && !f.contains("All caught up") && !f.contains(
-                                    "No new feeds"
-                                )
-                            )
-                            div(
-                                padding.px := 40,
-                                textAlign.center,
-                                Title(_.level := TitleLevel.H3, "All caught up!"),
-                                p(
-                                    marginTop.px := 10,
-                                    marginBottom.px := 20,
-                                    color := "var(--sapContent_LabelColor)",
-                                    "You have no unread feeds."
-                                ),
-                                validFunFact
-                                    .map(fact =>
-                                        div(
-                                            marginTop.px := 20,
-                                            padding.px := 20,
-                                            backgroundColor := "var(--sapBackgroundColor)",
-                                            borderRadius.px := 8,
-                                            border := "1px solid var(--sapContent_ForegroundBorderColor)",
-                                            Title(_.level := TitleLevel.H5, "Did you know?"),
-                                            p(marginTop.px := 10, fact)
-                                        )
+                        state.funFact match
+                            case Some(fact) if fact.nonEmpty =>
+                                div(
+                                    padding.px := 40,
+                                    textAlign.center,
+                                    Title(_.level := TitleLevel.H3, "All caught up!"),
+                                    p(
+                                        marginTop.px := 10,
+                                        marginBottom.px := 20,
+                                        color := "var(--sapContent_LabelColor)",
+                                        "You have no unread feeds."
+                                    ),
+                                    div(
+                                        marginTop.px := 20,
+                                        padding.px := 20,
+                                        backgroundColor := "var(--sapBackgroundColor)",
+                                        borderRadius.px := 8,
+                                        border := "1px solid var(--sapContent_ForegroundBorderColor)",
+                                        Title(_.level := TitleLevel.H5, "Did you know?"),
+                                        p(marginTop.px := 10, fact)
                                     )
-                                    .getOrElse(emptyNode)
-                            )
-                        else emptyNode
+                                )
+                            case _ => emptyNode
                     },
                     div(children <-- stateSignal.map { state =>
                         state.summaries.zipWithIndex.map { case (html, index) =>

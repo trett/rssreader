@@ -66,8 +66,10 @@ object SettingsPage {
                 Link(
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
-                    _.events.onClick.mapTo(settingsSignal.now()) --> {
-                        _.map(Router.toMainPage(_)).getOrElse(LoginRoute)
+                    _.events.onClick.mapTo(()) --> { _ =>
+                        settingsSignal.now() match
+                            case Some(settings) => Router.toMainPage(settings)
+                            case None           => Router.currentPageVar.set(LoginRoute)
                     },
                     marginBottom.px := 20
                 ),
