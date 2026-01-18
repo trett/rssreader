@@ -14,6 +14,7 @@ import org.scalajs.dom
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import ru.trett.rss.models.UserSettings
 
 object NetworkUtils {
 
@@ -51,6 +52,14 @@ object NetworkUtils {
             .filter(_.textContent.nonEmpty)
             .map(foreignHtmlElement)
     )
+
+    import Decoders.given
+
+    def ensureSettingsLoaded(): EventStream[Try[UserSettings]] =
+        FetchStream
+            .withDecoder(responseDecoder[UserSettings])
+            .get("/api/user/settings")
+            .collect { case Success(Some(value)) => Success(value) }
 
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())

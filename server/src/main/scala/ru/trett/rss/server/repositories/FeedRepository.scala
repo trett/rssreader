@@ -42,8 +42,13 @@ class FeedRepository(xa: Transactor[IO]):
     """.query[Int].unique.transact(xa)
 
     def getUnreadFeeds(user: User, limit: Int): IO[List[Feed]] =
+        getUnreadFeeds(user, limit, 0)
+
+    def getUnreadFeeds(user: User, limit: Int, offset: Int): IO[List[Feed]] =
         sql"""
       SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read
       FROM feeds f
-      WHERE f.user_id = ${user.id} AND f.read = false LIMIT $limit
+      WHERE f.user_id = ${user.id} AND f.read = false
+      ORDER BY f.pub_date DESC
+      LIMIT $limit OFFSET $offset
     """.query[Feed].to[List].transact(xa)

@@ -1,10 +1,11 @@
 package client
 
 import be.doeraene.webcomponents.ui5.Text
-import com.raquo
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom
+import ru.trett.rss.models.UserSettings
+import scala.util.{Success, Failure}
 
 @main
 def createApp(): Unit =
@@ -20,7 +21,10 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-    val currentPageVar: Var[Route] = Var[Route](HomeRoute)
+    val currentPageVar: Var[Route] = Var[Route](LoginRoute)
+    def toMainPage(settings: UserSettings): Unit =
+        val mainPage = if settings.isAiMode then SummaryRoute else HomeRoute
+        currentPageVar.set(mainPage)
 
     private def login = LoginPage.render
     private def navbar = NavBar.render
@@ -29,7 +33,15 @@ object Router:
     def settings: Element = SettingsPage.render
     def summary: Element = SummaryPage.render
 
+    private val model = AppState.model
+
     private val root = div(
+        NetworkUtils.ensureSettingsLoaded() --> {
+            case Success(settings) =>
+                model.settingsVar.set(Some(settings))
+                toMainPage(settings)
+            case Failure(err) => NetworkUtils.handleError(err)
+        },
         child <-- currentPageVar.signal.map {
             case LoginRoute    => login
             case HomeRoute     => div(navbar, notifications, home)
