@@ -36,7 +36,9 @@ object NavBar {
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
-            _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(SummaryRoute) },
+            _.events.onLogoClick.mapTo(settingsSignal.now()) --> {
+                _.map(Router.toMainPage(_)).getOrElse(LoginRoute)
+            },
             _.events.onNotificationsClick.mapTo(()) --> {
                 EventBus.emit(Home.markAllAsReadBus -> ())
             }
@@ -58,7 +60,6 @@ object NavBar {
                         "Update feeds",
                         onClick
                             .mapTo(())
-                            // TODO: show loading spinner
                             .flatMap(_ => refreshFeedsRequest()) --> { _ =>
                             EventBus.emit(
                                 Home.refreshFeedsBus -> 1,

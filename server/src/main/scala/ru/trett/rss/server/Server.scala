@@ -88,7 +88,7 @@ object Server extends IOApp:
                     .surround {
                         val client = EmberClientBuilder
                             .default[IO]
-                            .withTimeout(120.seconds)  // Increased timeout for AI API calls
+                            .withTimeout(120.seconds) // Increased timeout for AI API calls
                             .build
                         transactor(appConfig.db).use { xa =>
                             client.use { client =>

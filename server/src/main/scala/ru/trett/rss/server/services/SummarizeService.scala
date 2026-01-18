@@ -16,7 +16,13 @@ import org.http4s.client.Client
 import org.typelevel.ci.*
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.LoggerFactory
-import ru.trett.rss.models.{SummaryLanguage, SummaryResponse, SummaryResult, SummarySuccess, SummaryError}
+import ru.trett.rss.models.{
+    SummaryLanguage,
+    SummaryResponse,
+    SummaryResult,
+    SummarySuccess,
+    SummaryError
+}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.FeedRepository
 import org.jsoup.Jsoup
@@ -50,7 +56,6 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                             hasMore = false,
                             feedsProcessed = 0,
                             totalRemaining = 0,
-                            noFeeds = true,
                             funFact = Some(funFact)
                         )
                     )
@@ -62,12 +67,10 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                             hasMore = false,
                             feedsProcessed = 0,
                             totalRemaining = 0,
-                            noFeeds = false,
                             funFact = None
                         )
                     )
                 else
-                    // Process feeds
                     for
                         text <- IO.pure(feeds.map(_.description).mkString("\n"))
                         strippedText <- IO.pure(Jsoup.parse(text).text())
@@ -77,8 +80,8 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         summaryResult <- summarize(strippedText, validatedLanguage.displayName)
                         // Mark feeds as read after successful summarization (only in AI mode)
                         _ <-
-                            if user.settings.isAiMode && summaryResult.isInstanceOf[SummarySuccess] then
-                                feedRepository.markFeedAsRead(feeds.map(_.link), user)
+                            if user.settings.isAiMode && summaryResult.isInstanceOf[SummarySuccess]
+                            then feedRepository.markFeedAsRead(feeds.map(_.link), user)
                             else IO.unit
                         remainingAfterThis = totalUnread - offset - feeds.size
                     yield SummaryResponse(
@@ -86,7 +89,6 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         hasMore = remainingAfterThis > 0,
                         feedsProcessed = feeds.size,
                         totalRemaining = Math.max(0, remainingAfterThis),
-                        noFeeds = false,
                         funFact = None
                     )
         yield response
@@ -103,26 +105,14 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                 Header.Raw(ci"X-goog-api-key", apiKey),
                 Header.Raw(ci"Content-Type", "application/json")
             )
-        ).withEntity(
-            Map(
-                "contents" -> List(
-                    Map(
-                        "parts" -> List(
-                            Map(
-                                "text" -> s"""
+        ).withEntity(Map("contents" -> List(Map("parts" -> List(Map("text" -> s"""
                                     Generate ONE short, interesting and surprising fun fact about technology, science, history, or nature.
                                     Make it educational and fascinating - something that would make someone say "wow, I didn't know that!"
                                     Keep it to 1-2 sentences maximum.
                                     Respond in ${validatedLanguage.displayName}.
                                     Do not use markdown formatting.
                                     Do not add any introduction or preamble, just state the fact directly.
-                                """
-                            )
-                        )
-                    )
-                )
-            ).asJson
-        )
+                                """))))).asJson)
 
         client
             .expect[GeminiResponse](request)
@@ -183,7 +173,8 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     .flatMap(_.content.parts.flatMap(_.headOption))
                     .map(_.text)
                     .map { text =>
-                        if text.startsWith("```html") then text.stripPrefix("```html").stripSuffix("```").trim
+                        if text.startsWith("```html") then
+                            text.stripPrefix("```html").stripSuffix("```").trim
                         else text.trim
                     } match
                     case Some(html) if html.nonEmpty => SummarySuccess(html)

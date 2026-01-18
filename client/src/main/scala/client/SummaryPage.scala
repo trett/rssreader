@@ -13,13 +13,11 @@ object SummaryPage:
     import Decoders.given
 
     private val model = AppState.model
-    import model.*
 
     private case class PageState(
         summaries: List[String] = List(),
         isLoading: Boolean = true,
         totalProcessed: Int = 0,
-        noFeeds: Boolean = false,
         hasMore: Boolean = false,
         funFact: Option[String] = None,
         hasError: Boolean = false
@@ -31,41 +29,36 @@ object SummaryPage:
 
     private def resetState(): Unit = stateVar.set(PageState())
 
-    private def fetchSummaryBatch(): EventStream[Try[SummaryResponse]] =
+    private def fetchSummaryBatch(): EventStream[Try[Option[SummaryResponse]]] =
         FetchStream
             .withDecoder(responseDecoder[SummaryResponse])
             .get("/api/summarize")
-            .map {
-                case Success(Some(value)) => Success(value)
-                case Success(None) => Failure(new RuntimeException("Failed to decode summary response"))
-                case Failure(err) => Failure(err)
-            }
 
-    private val batchObserver: Observer[Try[SummaryResponse]] = Observer {
+    private val batchObserver: Observer[Try[Option[SummaryResponse]]] = Observer {
         case Success(response) =>
-            if response.noFeeds then
-                stateVar.update(_.copy(
-                    isLoading = false,
-                    noFeeds = true,
-                    hasMore = false,
-                    funFact = response.funFact
-                ))
-            else if response.feedsProcessed > 0 then
-                val (newContent, isError) = response.result match
-                    case SummarySuccess(html)  => (html, false)
-                    case SummaryError(message) => (message, true)
-
-                stateVar.update(s => s.copy(
-                    isLoading = false,
-                    summaries = s.summaries :+ newContent,
-                    hasError = isError,
-                    totalProcessed = s.totalProcessed + response.feedsProcessed,
-                    hasMore = response.hasMore
-                ))
-                Home.refreshUnreadCountBus.emit(())
-            else
-                stateVar.update(_.copy(isLoading = false))
-
+            response match
+                case None =>
+                    stateVar.update(_.copy(isLoading = false, hasError = true))
+                case Some(resp) =>
+                    if resp.funFact.isDefined then
+                        stateVar.update(
+                            _.copy(isLoading = false, hasMore = false, funFact = resp.funFact)
+                        )
+                    else if resp.feedsProcessed > 0 then
+                        val (newContent, isError) = resp.result match
+                            case SummarySuccess(html)  => (html, false)
+                            case SummaryError(message) => (message, true)
+                        stateVar.update(s =>
+                            s.copy(
+                                isLoading = false,
+                                summaries = s.summaries :+ newContent,
+                                hasError = isError,
+                                totalProcessed = s.totalProcessed + resp.feedsProcessed,
+                                hasMore = resp.hasMore
+                            )
+                        )
+                        Home.refreshUnreadCountBus.emit(())
+                    else stateVar.update(_.copy(isLoading = false))
         case Failure(err) =>
             stateVar.update(_.copy(isLoading = false, hasError = true))
             handleError(err)
@@ -74,12 +67,9 @@ object SummaryPage:
     def render: Element =
         resetState()
         val initialFetch = fetchSummaryBatch()
-        val settingsFetch = model.ensureSettingsLoaded()
-
         div(
             cls := "main-content",
             initialFetch --> batchObserver,
-            settingsFetch.collectSuccess --> settingsVar.writer,
             onMountBind { ctx =>
                 loadMoreBus.events.flatMapSwitch { _ =>
                     stateVar.update(_.copy(isLoading = true))
@@ -116,9 +106,11 @@ object SummaryPage:
                         else emptyNode
                     },
                     child <-- stateSignal.map { state =>
-                        if state.noFeeds then
+                        if state.funFact.isDefined then
                             val validFunFact = state.funFact.filter(f =>
-                                f.nonEmpty && !f.contains("All caught up") && !f.contains("No new feeds")
+                                f.nonEmpty && !f.contains("All caught up") && !f.contains(
+                                    "No new feeds"
+                                )
                             )
                             div(
                                 padding.px := 40,
@@ -146,23 +138,21 @@ object SummaryPage:
                             )
                         else emptyNode
                     },
-                    div(
-                        children <-- stateSignal.map { state =>
-                            state.summaries.zipWithIndex.map { case (html, index) =>
-                                div(
-                                    unsafeParseToHtmlFragment(html),
-                                    if index < state.summaries.length - 1 then
-                                        hr(
-                                            marginTop.px := 20,
-                                            marginBottom.px := 20,
-                                            border := "none",
-                                            borderTop := "1px solid var(--sapContent_ForegroundBorderColor)"
-                                        )
-                                    else emptyNode
-                                )
-                            }
+                    div(children <-- stateSignal.map { state =>
+                        state.summaries.zipWithIndex.map { case (html, index) =>
+                            div(
+                                unsafeParseToHtmlFragment(html),
+                                if index < state.summaries.length - 1 then
+                                    hr(
+                                        marginTop.px := 20,
+                                        marginBottom.px := 20,
+                                        border := "none",
+                                        borderTop := "1px solid var(--sapContent_ForegroundBorderColor)"
+                                    )
+                                else emptyNode
+                            )
                         }
-                    ),
+                    }),
                     child <-- stateSignal.map { state =>
                         if state.isLoading && state.summaries.nonEmpty then
                             div(
@@ -177,7 +167,8 @@ object SummaryPage:
                         else emptyNode
                     },
                     child <-- stateSignal.map { state =>
-                        if !state.isLoading && state.summaries.nonEmpty && !state.noFeeds then
+                        if !state.isLoading && state.summaries.nonEmpty && state.funFact.isEmpty
+                        then
                             div(
                                 paddingTop.px := 20,
                                 display.flex,

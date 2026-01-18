@@ -66,9 +66,8 @@ object SettingsPage {
                 Link(
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
-                    _.events.onClick.mapTo(settingsSignal.now()) --> { settings =>
-                        val isAiMode = settings.exists(_.isAiMode)
-                        Router.currentPageVar.set(if isAiMode then SummaryRoute else HomeRoute)
+                    _.events.onClick.mapTo(settingsSignal.now()) --> {
+                        _.map(Router.toMainPage(_)).getOrElse(LoginRoute)
                     },
                     marginBottom.px := 20
                 ),

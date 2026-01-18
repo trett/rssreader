@@ -35,11 +35,7 @@ object UserController {
                         SummaryLanguage.fromString(lang).map(_.displayName)
                     }
                     updatedUser = user.copy(settings =
-                        User.Settings(
-                            settings.hideRead,
-                            validatedLanguage,
-                            settings.aiMode
-                        )
+                        User.Settings(settings.hideRead, validatedLanguage, settings.aiMode)
                     )
                     result <- userService.updateUserSettings(updatedUser)
                     _ <- logger.info(

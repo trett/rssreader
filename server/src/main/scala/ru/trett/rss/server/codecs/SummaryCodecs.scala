@@ -23,8 +23,12 @@ object SummaryCodecs:
         Decoder.instance { cursor =>
             cursor.downField("type").as[String].flatMap {
                 case "success" => cursor.as[SummarySuccess]
-                case "error" => cursor.as[SummaryError]
-                case other => Left(io.circe.DecodingFailure(s"Unknown SummaryResult type: $other", cursor.history))
+                case "error"   => cursor.as[SummaryError]
+                case other =>
+                    Left(
+                        io.circe
+                            .DecodingFailure(s"Unknown SummaryResult type: $other", cursor.history)
+                    )
             }
         }
 

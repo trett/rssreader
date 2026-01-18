@@ -4,6 +4,8 @@ import be.doeraene.webcomponents.ui5.Text
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom
+import ru.trett.rss.models.UserSettings
+import scala.util.{Success, Failure}
 
 @main
 def createApp(): Unit =
@@ -19,8 +21,10 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-    val currentPageVar: Var[Route] = Var[Route](SummaryRoute)
-    private val initialRouteSetVar: Var[Boolean] = Var(false)
+    val currentPageVar: Var[Route] = Var[Route](LoginRoute)
+    def toMainPage(settings: UserSettings): Unit =
+        val mainPage = if settings.isAiMode then SummaryRoute else HomeRoute
+        currentPageVar.set(mainPage)
 
     private def login = LoginPage.render
     private def navbar = NavBar.render
@@ -29,7 +33,18 @@ object Router:
     def settings: Element = SettingsPage.render
     def summary: Element = SummaryPage.render
 
+    private val model = AppState.model
+
     private val root = div(
+        NetworkUtils.ensureSettingsLoaded() --> {
+            case Success(settings) => {
+                model.settingsVar.set(settings)
+                settings
+                    .map(toMainPage)
+                    .getOrElse(LoginRoute)
+            }
+            case Failure(err) => NetworkUtils.handleError(err)
+        },
         child <-- currentPageVar.signal.map {
             case LoginRoute    => login
             case HomeRoute     => div(navbar, notifications, home)
@@ -38,19 +53,7 @@ object Router:
             case ErrorRoute    => div(Text("An error occured"))
             case NotFoundRoute => div(Text("Not Found"))
         },
-        className := "app-container",
-        AppState.model.settingsSignal --> { settings =>
-            if (!initialRouteSetVar.now() && settings.isDefined) {
-                val isAiMode = settings.exists(_.isAiMode)
-                val currentRoute = currentPageVar.now()
-                if (currentRoute == SummaryRoute && !isAiMode) {
-                    currentPageVar.set(HomeRoute)
-                } else if (currentRoute == LoginRoute) {
-                    currentPageVar.set(if isAiMode then SummaryRoute else HomeRoute)
-                }
-                initialRouteSetVar.set(true)
-            }
-        }
+        className := "app-container"
     )
 
     def appElement(): Element = div(root)
