@@ -29,7 +29,8 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
                         user.name,
                         user.settings.hideRead,
                         user.settings.summaryLanguage,
-                        user.settings.aiMode
+                        user.settings.aiMode,
+                        user.settings.summaryModel
                     )
                 )
             )

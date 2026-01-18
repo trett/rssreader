@@ -142,6 +142,33 @@ object SettingsPage {
                         )
                     ),
                     div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label(
+                            "AI Model",
+                            _.forId := "summary-model-cmb",
+                            _.showColon := true,
+                            _.wrappingType := WrappingType.None,
+                            paddingRight.px := 20
+                        ),
+                        Select(
+                            _.id := "summary-model-cmb",
+                            _.events.onChange
+                                .map(_.detail.selectedOption.textContent) --> settingsVar
+                                .updater[String]((a, b) =>
+                                    a.map(x => x.copy(summaryModel = Some(b)))
+                                ),
+                            SummaryModel.all.map(model =>
+                                Select.option(
+                                    _.selected <-- settingsSignal.map(x =>
+                                        x.flatMap(_.summaryModel).contains(model.displayName)
+                                    ),
+                                    model.displayName
+                                )
+                            )
+                        )
+                    ),
+                    div(
                         paddingTop.px := 10,
                         Button(
                             _.design := ButtonDesign.Emphasized,

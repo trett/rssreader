@@ -4,7 +4,6 @@ import cats.effect.IO
 import io.circe.Decoder
 import io.circe.generic.auto.*
 import io.circe.syntax.*
-import org.http4s.syntax.all.uri
 import org.http4s.Header
 import org.http4s.Headers
 import org.http4s.Method
@@ -18,6 +17,7 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.models.{
     SummaryLanguage,
+    SummaryModel,
     SummaryResponse,
     SummaryResult,
     SummarySuccess,
@@ -39,18 +39,25 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
 
     given Decoder[GeminiResponse] = Decoder.forProduct1("candidates")(GeminiResponse.apply)
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
-    private val endpoint =
-        uri"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
     private val batchSize = 30
 
+    private def getEndpoint(modelId: String): Uri =
+        Uri.unsafeFromString(
+            s"https://generativelanguage.googleapis.com/v1beta/models/$modelId:generateContent"
+        )
+
     def getSummary(user: User, offset: Int): IO[SummaryResponse] =
+        val selectedModel = user.settings.summaryModel
+            .flatMap(SummaryModel.fromString)
+            .getOrElse(SummaryModel.default)
+
         for
             totalUnread <- feedRepository.getTotalUnreadCount(user.id)
             feeds <- feedRepository.getUnreadFeeds(user, batchSize, offset)
             response <-
                 if feeds.isEmpty && offset == 0 then
                     // No feeds at all - generate fun fact
-                    generateFunFact(user).map(funFact =>
+                    generateFunFact(user, selectedModel.modelId).map(funFact =>
                         SummaryResponse(
                             result = SummarySuccess(""),
                             hasMore = false,
@@ -77,7 +84,11 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         validatedLanguage = user.settings.summaryLanguage
                             .flatMap(SummaryLanguage.fromString)
                             .getOrElse(SummaryLanguage.English)
-                        summaryResult <- summarize(strippedText, validatedLanguage.displayName)
+                        summaryResult <- summarize(
+                            strippedText,
+                            validatedLanguage.displayName,
+                            selectedModel.modelId
+                        )
                         // Mark feeds as read after successful summarization (only in AI mode)
                         _ <-
                             if user.settings.isAiMode && summaryResult.isInstanceOf[SummarySuccess]
@@ -93,14 +104,14 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     )
         yield response
 
-    private def generateFunFact(user: User): IO[String] =
+    private def generateFunFact(user: User, modelId: String): IO[String] =
         val validatedLanguage = user.settings.summaryLanguage
             .flatMap(SummaryLanguage.fromString)
             .getOrElse(SummaryLanguage.English)
 
         val request = Request[IO](
             method = Method.POST,
-            uri = endpoint,
+            uri = getEndpoint(modelId),
             headers = Headers(
                 Header.Raw(ci"X-goog-api-key", apiKey),
                 Header.Raw(ci"Content-Type", "application/json")
@@ -128,10 +139,10 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     IO.pure("")
             }
 
-    private def summarize(text: String, language: String): IO[SummaryResult] =
+    private def summarize(text: String, language: String, modelId: String): IO[SummaryResult] =
         val request = Request[IO](
             method = Method.POST,
-            uri = endpoint,
+            uri = getEndpoint(modelId),
             headers = Headers(
                 Header.Raw(ci"X-goog-api-key", apiKey),
                 Header.Raw(ci"Content-Type", "application/json")
