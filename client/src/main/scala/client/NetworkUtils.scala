@@ -37,7 +37,7 @@ object NetworkUtils {
                     )
 
     def handleError(ex: Throwable): Unit = ex.getMessage match
-        case "Unauthorized" | "Session expired" => Router.currentPageVar.set(LoginRoute)
+        case "Unauthorized" | "Session expired" => Router.currentPageVar.set(Some(LoginRoute))
         case _                                  => errorMessage(ex)
 
     AirstreamError.registerUnhandledErrorCallback(err => errorMessage(err))

@@ -39,7 +39,7 @@ object NavBar {
             _.events.onLogoClick.mapTo(()) --> { _ =>
                 settingsSignal.now() match
                     case Some(settings) => Router.toMainPage(settings)
-                    case None           => Router.currentPageVar.set(LoginRoute)
+                    case None           => Router.currentPageVar.set(Some(LoginRoute))
             },
             _.events.onNotificationsClick.mapTo(()) --> {
                 EventBus.emit(Home.markAllAsReadBus -> ())
@@ -55,7 +55,7 @@ object NavBar {
                     _.item(
                         _.icon := IconName.settings,
                         "Settings",
-                        onClick.mapTo(()) --> { Router.currentPageVar.set(SettingsRoute) }
+                        onClick.mapTo(()) --> { Router.currentPageVar.set(Some(SettingsRoute)) }
                     ),
                     _.item(
                         _.icon := IconName.refresh,
@@ -74,7 +74,7 @@ object NavBar {
                         _.icon := IconName.log,
                         "Sign out",
                         onClick.flatMap(_ => NetworkUtils.logout()) --> { _ =>
-                            Router.currentPageVar.set(LoginRoute)
+                            Router.currentPageVar.set(Some(LoginRoute))
                         }
                     )
                 )

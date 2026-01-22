@@ -69,7 +69,7 @@ object SettingsPage {
                     _.events.onClick.mapTo(()) --> { _ =>
                         settingsSignal.now() match
                             case Some(settings) => Router.toMainPage(settings)
-                            case None           => Router.currentPageVar.set(LoginRoute)
+                            case None           => Router.currentPageVar.set(Some(LoginRoute))
                     },
                     marginBottom.px := 20
                 ),

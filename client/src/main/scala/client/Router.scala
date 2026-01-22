@@ -21,10 +21,10 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-    val currentPageVar: Var[Route] = Var[Route](LoginRoute)
+    val currentPageVar: Var[Option[Route]] = Var[Option[Route]](Option.empty)
     def toMainPage(settings: UserSettings): Unit =
         val mainPage = if settings.isAiMode then SummaryRoute else HomeRoute
-        currentPageVar.set(mainPage)
+        currentPageVar.set(Some(mainPage))
 
     private def login = LoginPage.render
     private def navbar = NavBar.render
@@ -43,12 +43,13 @@ object Router:
             case Failure(err) => NetworkUtils.handleError(err)
         },
         child <-- currentPageVar.signal.map {
-            case LoginRoute    => login
-            case HomeRoute     => div(navbar, notifications, home)
-            case SettingsRoute => div(navbar, notifications, settings)
-            case SummaryRoute  => div(navbar, notifications, summary)
-            case ErrorRoute    => div(Text("An error occured"))
-            case NotFoundRoute => div(Text("Not Found"))
+            case None                => div() // Loading state
+            case Some(LoginRoute)    => login
+            case Some(HomeRoute)     => div(navbar, notifications, home)
+            case Some(SettingsRoute) => div(navbar, notifications, settings)
+            case Some(SummaryRoute)  => div(navbar, notifications, summary)
+            case Some(ErrorRoute)    => div(Text("An error occured"))
+            case Some(NotFoundRoute) => div(Text("Not Found"))
         },
         className := "app-container"
     )
