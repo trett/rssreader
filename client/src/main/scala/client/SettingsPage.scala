@@ -40,13 +40,10 @@ object SettingsPage {
         case Failure(err) => handleError(err)
     }
 
-    given feedItemDecoder: Decoder[FeedItemData] = deriveDecoder
-
-    given channelDecoder: Decoder[ChannelData] = deriveDecoder
-
-    given settingsDecoder: Decoder[UserSettings] = deriveDecoder
-
-    given settingsEncoder: Encoder[UserSettings] = deriveEncoder
+    import Decoders.given
+    given Decoder[FeedItemData] = deriveDecoder
+    given Decoder[ChannelData] = deriveDecoder
+    given Encoder[UserSettings] = deriveEncoder
 
     def render: Element = div(
         cls := "cards main-content",
@@ -69,8 +66,10 @@ object SettingsPage {
                 Link(
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
-                    _.events.onClick.mapTo(HomeRoute) --> {
-                        Router.currentPageVar.set
+                    _.events.onClick.mapTo(()) --> { _ =>
+                        settingsSignal.now() match
+                            case Some(settings) => Router.toMainPage(settings)
+                            case None           => Router.currentPageVar.set(Some(LoginRoute))
                     },
                     marginBottom.px := 20
                 ),
@@ -113,6 +112,60 @@ object SettingsPage {
                                         x.flatMap(_.summaryLanguage).contains(lang.displayName)
                                     ),
                                     lang.displayName
+                                )
+                            )
+                        )
+                    ),
+                    div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label(
+                            "App mode",
+                            _.forId := "app-mode-cmb",
+                            _.showColon := true,
+                            _.wrappingType := WrappingType.None,
+                            paddingRight.px := 20
+                        ),
+                        Select(
+                            _.id := "app-mode-cmb",
+                            _.events.onChange
+                                .map(_.detail.selectedOption.textContent) --> settingsVar
+                                .updater[String]((a, b) =>
+                                    a.map(x => x.copy(aiMode = Some(b == "AI Mode")))
+                                ),
+                            Select.option(
+                                _.selected <-- settingsSignal.map(_.exists(_.isAiMode)),
+                                "AI Mode"
+                            ),
+                            Select.option(
+                                _.selected <-- settingsSignal.map(_.exists(!_.isAiMode)),
+                                "Regular Mode"
+                            )
+                        )
+                    ),
+                    div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label(
+                            "AI Model",
+                            _.forId := "summary-model-cmb",
+                            _.showColon := true,
+                            _.wrappingType := WrappingType.None,
+                            paddingRight.px := 20
+                        ),
+                        Select(
+                            _.id := "summary-model-cmb",
+                            _.events.onChange
+                                .map(_.detail.selectedOption.textContent) --> settingsVar
+                                .updater[String]((a, b) =>
+                                    a.map(x => x.copy(summaryModel = Some(b)))
+                                ),
+                            SummaryModel.all.map(model =>
+                                Select.option(
+                                    _.selected <-- settingsSignal.map(x =>
+                                        x.flatMap(_.summaryModel).contains(model.displayName)
+                                    ),
+                                    model.displayName
                                 )
                             )
                         )

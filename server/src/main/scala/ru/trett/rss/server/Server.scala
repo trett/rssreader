@@ -29,6 +29,7 @@ import org.typelevel.log4cats.slf4j.*
 import org.typelevel.otel4s.instrumentation.ce.IORuntimeMetrics
 import org.typelevel.otel4s.oteljava.OtelJava
 import pureconfig.ConfigSource
+import scala.concurrent.duration.*
 import ru.trett.rss.server.authorization.AuthFilter
 import ru.trett.rss.server.authorization.SessionManager
 import ru.trett.rss.server.config.AppConfig
@@ -87,6 +88,7 @@ object Server extends IOApp:
                     .surround {
                         val client = EmberClientBuilder
                             .default[IO]
+                            .withTimeout(120.seconds) // Increased timeout for AI API calls
                             .build
                         transactor(appConfig.db).use { xa =>
                             client.use { client =>

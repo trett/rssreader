@@ -8,7 +8,7 @@ import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
 import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
-import ru.trett.rss.models.{SummaryLanguage, UserSettings}
+import ru.trett.rss.models.{SummaryLanguage, SummaryModel, UserSettings}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
 
@@ -34,13 +34,23 @@ object UserController {
                     validatedLanguage = settings.summaryLanguage.flatMap { lang =>
                         SummaryLanguage.fromString(lang).map(_.displayName)
                     }
+                    validatedModel = settings.summaryModel.flatMap { model =>
+                        SummaryModel.fromString(model).map(_.displayName)
+                    }
                     updatedUser = user.copy(settings =
-                        User.Settings(settings.hideRead, validatedLanguage)
+                        User.Settings(
+                            settings.hideRead,
+                            validatedLanguage,
+                            settings.aiMode,
+                            validatedModel
+                        )
                     )
                     result <- userService.updateUserSettings(updatedUser)
-                    _ <- logger.info(
-                        s"User: ${user.email} was updated with settings: ${user.settings}"
-                    )
+                    _ <- logger.info(s"""User: ${user.email} was updated with settings: 
+                          |hideRead: ${settings.hideRead}, 
+                          |summaryLanguage: $validatedLanguage,
+                          |aiMode: ${settings.aiMode}, 
+                          |summaryModel: $validatedModel""".stripMargin)
                     _ <- cacheUpdater(updatedUser)
                     response <- Ok(s"User created with result: $result")
                 } yield response

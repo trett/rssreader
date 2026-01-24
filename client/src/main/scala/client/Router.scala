@@ -1,10 +1,12 @@
 package client
 
-import be.doeraene.webcomponents.ui5.Text
-import com.raquo
+import be.doeraene.webcomponents.ui5.{Text, BusyIndicator}
+import be.doeraene.webcomponents.ui5.configkeys.BusyIndicatorSize
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom
+import ru.trett.rss.models.UserSettings
+import scala.util.{Success, Failure}
 
 @main
 def createApp(): Unit =
@@ -20,7 +22,10 @@ case object NotFoundRoute extends Route
 
 object Router:
 
-    val currentPageVar: Var[Route] = Var[Route](HomeRoute)
+    val currentPageVar: Var[Option[Route]] = Var[Option[Route]](Option.empty)
+    def toMainPage(settings: UserSettings): Unit =
+        val mainPage = if settings.isAiMode then SummaryRoute else HomeRoute
+        currentPageVar.set(Some(mainPage))
 
     private def login = LoginPage.render
     private def navbar = NavBar.render
@@ -29,14 +34,38 @@ object Router:
     def settings: Element = SettingsPage.render
     def summary: Element = SummaryPage.render
 
+    private val model = AppState.model
+
+    private lazy val loadingComponent = div(
+        display.flex,
+        flexDirection.column,
+        alignItems.center,
+        justifyContent.center,
+        minHeight := "100vh",
+        BusyIndicator(_.active := true, _.size := BusyIndicatorSize.L),
+        div(
+            marginTop.px := 20,
+            color := "var(--sapContent_LabelColor)",
+            fontSize := "var(--sapFontSize)",
+            "Loading application..."
+        )
+    )
+
     private val root = div(
+        NetworkUtils.ensureSettingsLoaded() --> {
+            case Success(settings) =>
+                model.settingsVar.set(Some(settings))
+                toMainPage(settings)
+            case Failure(err) => NetworkUtils.handleError(err)
+        },
         child <-- currentPageVar.signal.map {
-            case LoginRoute    => login
-            case HomeRoute     => div(navbar, notifications, home)
-            case SettingsRoute => div(navbar, notifications, settings)
-            case SummaryRoute  => div(navbar, notifications, summary)
-            case ErrorRoute    => div(Text("An error occured"))
-            case NotFoundRoute => div(Text("Not Found"))
+            case None                => loadingComponent
+            case Some(LoginRoute)    => login
+            case Some(HomeRoute)     => div(navbar, notifications, home)
+            case Some(SettingsRoute) => div(navbar, notifications, settings)
+            case Some(SummaryRoute)  => div(navbar, notifications, summary)
+            case Some(ErrorRoute)    => div(Text("An error occured"))
+            case Some(NotFoundRoute) => div(Text("Not Found"))
         },
         className := "app-container"
     )

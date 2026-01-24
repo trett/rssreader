@@ -13,4 +13,11 @@ object User:
     given Decoder[User.Settings] = deriveDecoder
     given Encoder[User.Settings] = deriveEncoder
 
-    case class Settings(hideRead: Boolean = false, summaryLanguage: Option[String] = None)
+    case class Settings(
+        hideRead: Boolean = false,
+        summaryLanguage: Option[String] = None,
+        aiMode: Option[Boolean] = None,
+        summaryModel: Option[String] = None
+    ):
+        /** AI mode is the default. Returns true unless aiMode is explicitly set to false. */
+        def isAiMode: Boolean = !aiMode.contains(false)

@@ -52,53 +52,54 @@ object Home:
         case Failure(err)   => handleError(err)
     }
 
-    def render: Element = div(
-        cls := "cards main-content",
+    def render: Element =
         div(
-            onMountBind(ctx =>
-                refreshFeedsBus --> { page =>
-                    val response = getChannelsAndFeedsRequest(page)
-                    val data = response.collectSuccess
-                    val errors = response.collectFailure
-                    data.addObserver(feedsObserver)(ctx.owner)
-                    errors.addObserver(errorObserver)(ctx.owner)
-                }
-            ),
+            cls := "cards main-content",
             div(
                 onMountBind(ctx =>
-                    markAllAsReadBus --> { _ =>
-                        val link = feedVar.now().map(_.link)
-                        if (link.nonEmpty) {
-                            val response = updateFeedRequest(link)
-                            response.addObserver(itemClickObserver)(ctx.owner)
+                    refreshFeedsBus --> { page =>
+                        val response = getChannelsAndFeedsRequest(page)
+                        val data = response.collectSuccess
+                        val errors = response.collectFailure
+                        data.addObserver(feedsObserver)(ctx.owner)
+                        errors.addObserver(errorObserver)(ctx.owner)
+                    }
+                ),
+                div(
+                    onMountBind(ctx =>
+                        markAllAsReadBus --> { _ =>
+                            val link = feedVar.now().map(_.link)
+                            if (link.nonEmpty) {
+                                val response = updateFeedRequest(link)
+                                response.addObserver(itemClickObserver)(ctx.owner)
+                            }
                         }
-                    }
+                    )
+                ),
+                div(
+                    onMountBind(ctx =>
+                        refreshUnreadCountBus --> { _ =>
+                            val response = getUnreadCountRequest()
+                            response.addObserver(unreadCountObserver)(ctx.owner)
+                        }
+                    )
                 )
             ),
+            feeds(),
             div(
-                onMountBind(ctx =>
-                    refreshUnreadCountBus --> { _ =>
-                        val response = getUnreadCountRequest()
-                        response.addObserver(unreadCountObserver)(ctx.owner)
-                    }
+                display.flex,
+                justifyContent.center,
+                marginTop.px := 20,
+                marginBottom.px := 20,
+                Button(
+                    _.design := ButtonDesign.Transparent,
+                    _.icon := IconName.download,
+                    "More News",
+                    onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
+                    hidden <-- feedVar.signal.map(xs => xs.isEmpty)
                 )
-            )
-        ),
-        feeds(),
-        div(
-            display.flex,
-            justifyContent.center,
-            marginTop.px := 20,
-            marginBottom.px := 20,
-            Button(
-                _.design := ButtonDesign.Transparent,
-                _.icon := IconName.download,
-                "More News",
-                onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
-                hidden <-- feedVar.signal.map(xs => xs.isEmpty)
             )
         )
-    )
 
     private def feeds(): Element =
         val response = getChannelsAndFeedsRequest(1)

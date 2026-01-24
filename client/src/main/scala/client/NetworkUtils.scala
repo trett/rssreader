@@ -14,6 +14,7 @@ import org.scalajs.dom
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import ru.trett.rss.models.UserSettings
 
 object NetworkUtils {
 
@@ -36,7 +37,7 @@ object NetworkUtils {
                     )
 
     def handleError(ex: Throwable): Unit = ex.getMessage match
-        case "Unauthorized" | "Session expired" => Router.currentPageVar.set(LoginRoute)
+        case "Unauthorized" | "Session expired" => Router.currentPageVar.set(Some(LoginRoute))
         case _                                  => errorMessage(ex)
 
     AirstreamError.registerUnhandledErrorCallback(err => errorMessage(err))
@@ -51,6 +52,19 @@ object NetworkUtils {
             .filter(_.textContent.nonEmpty)
             .map(foreignHtmlElement)
     )
+
+    import Decoders.given
+
+    def ensureSettingsLoaded(): EventStream[Try[UserSettings]] =
+        FetchStream
+            .withDecoder(responseDecoder[UserSettings])
+            .get("/api/user/settings")
+            .map {
+                case Success(Some(value)) => Success(value)
+                case Success(None) =>
+                    Failure(new RuntimeException("Failed to parse settings response"))
+                case Failure(err) => Failure(err)
+            }
 
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())

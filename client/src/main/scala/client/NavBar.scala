@@ -25,19 +25,22 @@ object NavBar {
         cls := "sticky-navbar",
         ShellBar(
             _.primaryTitle := "RSS Reader",
-            _.notificationsCount <-- unreadCountSignal.map(count =>
-                if (count > 0) count.toString else ""
-            ),
-            _.showNotifications <-- unreadCountSignal.map(_ > 0),
+            _.notificationsCount <-- unreadCountSignal.combineWith(settingsSignal).map {
+                case (count, settings) =>
+                    val show = !settings.exists(_.isAiMode) && count > 0
+                    if show then count.toString else ""
+            },
+            _.showNotifications <-- unreadCountSignal.combineWith(settingsSignal).map {
+                case (count, settings) => !settings.exists(_.isAiMode) && count > 0
+            },
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
             _.slots.logo := Icon(_.name := IconName.home),
-            _.item(
-                _.icon := IconName.ai,
-                _.text := "Summary",
-                onClick.mapTo(()) --> { Router.currentPageVar.set(SummaryRoute) }
-            ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
-            _.events.onLogoClick.mapTo(()) --> { Router.currentPageVar.set(HomeRoute) },
+            _.events.onLogoClick.mapTo(()) --> { _ =>
+                settingsSignal.now() match
+                    case Some(settings) => Router.toMainPage(settings)
+                    case None           => Router.currentPageVar.set(Some(LoginRoute))
+            },
             _.events.onNotificationsClick.mapTo(()) --> {
                 EventBus.emit(Home.markAllAsReadBus -> ())
             }
@@ -52,14 +55,13 @@ object NavBar {
                     _.item(
                         _.icon := IconName.settings,
                         "Settings",
-                        onClick.mapTo(()) --> { Router.currentPageVar.set(SettingsRoute) }
+                        onClick.mapTo(()) --> { Router.currentPageVar.set(Some(SettingsRoute)) }
                     ),
                     _.item(
                         _.icon := IconName.refresh,
                         "Update feeds",
                         onClick
                             .mapTo(())
-                            // TODO: show loading spinner
                             .flatMap(_ => refreshFeedsRequest()) --> { _ =>
                             EventBus.emit(
                                 Home.refreshFeedsBus -> 1,
@@ -72,7 +74,7 @@ object NavBar {
                         _.icon := IconName.log,
                         "Sign out",
                         onClick.flatMap(_ => NetworkUtils.logout()) --> { _ =>
-                            Router.currentPageVar.set(LoginRoute)
+                            Router.currentPageVar.set(Some(LoginRoute))
                         }
                     )
                 )

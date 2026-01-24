@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.3.4"
+lazy val projectVersion = "2.4.0"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
@@ -74,7 +74,7 @@ lazy val server = project
         organization := organizationName,
         scalaVersion := scala3Version,
         name := "server",
-        dockerBaseImage := "eclipse-temurin:17-jre-noble",
+        dockerBaseImage := "eclipse-temurin:21-jre-jammy",
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         watchSources ++= (client / Compile / watchSources).value,
