@@ -61,3 +61,4 @@ The project is a multi-module sbt project with the following key directories:
 
 - The main branch for this project is called "main". Never push directly to main; always use feature branches and create pull requests for changes.
 - Commit messages should follow the Conventional Commits specification for clarity and consistency.
+

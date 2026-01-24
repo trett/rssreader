@@ -59,7 +59,12 @@ object NetworkUtils {
         FetchStream
             .withDecoder(responseDecoder[UserSettings])
             .get("/api/user/settings")
-            .collect { case Success(Some(value)) => Success(value) }
+            .map {
+                case Success(Some(value)) => Success(value)
+                case Success(None) =>
+                    Failure(new RuntimeException("Failed to parse settings response"))
+                case Failure(err) => Failure(err)
+            }
 
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())

@@ -1,6 +1,7 @@
 package client
 
-import be.doeraene.webcomponents.ui5.Text
+import be.doeraene.webcomponents.ui5.{Text, BusyIndicator}
+import be.doeraene.webcomponents.ui5.configkeys.BusyIndicatorSize
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom
@@ -35,6 +36,21 @@ object Router:
 
     private val model = AppState.model
 
+    private lazy val loadingComponent = div(
+        display.flex,
+        flexDirection.column,
+        alignItems.center,
+        justifyContent.center,
+        minHeight := "100vh",
+        BusyIndicator(_.active := true, _.size := BusyIndicatorSize.L),
+        div(
+            marginTop.px := 20,
+            color := "var(--sapContent_LabelColor)",
+            fontSize := "var(--sapFontSize)",
+            "Loading application..."
+        )
+    )
+
     private val root = div(
         NetworkUtils.ensureSettingsLoaded() --> {
             case Success(settings) =>
@@ -43,7 +59,7 @@ object Router:
             case Failure(err) => NetworkUtils.handleError(err)
         },
         child <-- currentPageVar.signal.map {
-            case None                => div() // Loading state
+            case None                => loadingComponent
             case Some(LoginRoute)    => login
             case Some(HomeRoute)     => div(navbar, notifications, home)
             case Some(SettingsRoute) => div(navbar, notifications, settings)
