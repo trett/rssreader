@@ -82,7 +82,7 @@ lazy val server = project
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
-            "ch.qos.logback" % "logback-classic" % "1.5.21",
+            "ch.qos.logback" % "logback-classic" % "1.5.25",
             "org.flywaydb" % "flyway-core" % "11.17.2",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9"
         ),
