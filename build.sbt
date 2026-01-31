@@ -4,7 +4,7 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.4.0"
+lazy val projectVersion = "2.4.1"
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
@@ -82,7 +82,7 @@ lazy val server = project
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
-            "ch.qos.logback" % "logback-classic" % "1.5.21",
+            "ch.qos.logback" % "logback-classic" % "1.5.25",
             "org.flywaydb" % "flyway-core" % "11.17.2",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9"
         ),
