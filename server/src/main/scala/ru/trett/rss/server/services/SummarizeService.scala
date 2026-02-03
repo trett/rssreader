@@ -51,23 +51,18 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
         prompt: String,
         temperature: Option[Double] = None
     ): Request[IO] =
-        var config = Json.obj(
+        val baseConfig = Json.obj(
             "contents" -> Json.arr(
                 Json.obj("parts" -> Json.arr(Json.obj("text" -> Json.fromString(prompt))))
             ),
             "thinkingConfig" -> Json.obj("thinkingLevel" -> Json.fromString("LOW"))
         )
 
-        config = temperature match
-            case Some(temp) =>
-                config.mapObject(obj =>
-                    obj.add(
-                        "generationConfig",
-                        Json.obj("temperature" -> Json.fromDoubleOrNull(temp))
-                    )
-                )
-            case None =>
-                config
+        val config = temperature.fold(baseConfig) { temp =>
+            baseConfig.mapObject(
+                _.add("generationConfig", Json.obj("temperature" -> Json.fromDoubleOrNull(temp)))
+            )
+        }
 
         Request[IO](
             method = Method.POST,
