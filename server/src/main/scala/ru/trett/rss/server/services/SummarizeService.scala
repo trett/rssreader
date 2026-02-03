@@ -2,8 +2,8 @@ package ru.trett.rss.server.services
 
 import cats.effect.IO
 import io.circe.Decoder
+import io.circe.Json
 import io.circe.generic.auto.*
-import io.circe.syntax.*
 import org.http4s.Header
 import org.http4s.Headers
 import org.http4s.Method
@@ -46,15 +46,46 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             s"https://generativelanguage.googleapis.com/v1beta/models/$modelId:generateContent"
         )
 
-    private def buildGeminiRequest(modelId: String, prompt: String): Request[IO] =
-        Request[IO](
-            method = Method.POST,
-            uri = getEndpoint(modelId),
-            headers = Headers(
-                Header.Raw(ci"X-goog-api-key", apiKey),
-                Header.Raw(ci"Content-Type", "application/json")
-            )
-        ).withEntity(Map("contents" -> List(Map("parts" -> List(Map("text" -> prompt))))).asJson)
+    private def buildGeminiRequest(
+        modelId: String,
+        prompt: String,
+        temperature: Option[Double] = None
+    ): IO[Request[IO]] =
+        val baseConfig = Json.obj(
+            "contents" -> Json
+                .arr(Json.obj("parts" -> Json.arr(Json.obj("text" -> Json.fromString(prompt)))))
+        )
+
+        // Build model-specific thinking configuration
+        val thinkingConfig =
+            if SummaryModel.usesThinkingLevel(modelId) then
+                Json.obj("thinkingLevel" -> Json.fromString("low"))
+            else if SummaryModel.usesThinkingBudget(modelId) then
+                Json.obj("thinkingBudget" -> Json.fromInt(1024))
+            else Json.obj() // No thinking config for unknown models
+
+        // Build generation config with thinking config and optional temperature
+        val generationConfig = temperature match
+            case Some(temp) =>
+                Json.obj(
+                    "thinkingConfig" -> thinkingConfig,
+                    "temperature" -> Json.fromDoubleOrNull(temp)
+                )
+            case None =>
+                Json.obj("thinkingConfig" -> thinkingConfig)
+
+        val config = baseConfig.mapObject(_.add("generationConfig", generationConfig))
+
+        IO.pure(
+            Request[IO](
+                method = Method.POST,
+                uri = getEndpoint(modelId),
+                headers = Headers(
+                    Header.Raw(ci"X-goog-api-key", apiKey),
+                    Header.Raw(ci"Content-Type", "application/json")
+                )
+            ).withEntity(config)
+        )
 
     def getSummary(user: User, offset: Int): IO[SummaryResponse] =
         val selectedModel = user.settings.summaryModel
@@ -126,19 +157,33 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         |Do not use markdown formatting.
                         |Do not add any introduction or preamble, just state the fact directly.""".stripMargin
 
-        client
-            .expect[GeminiResponse](buildGeminiRequest(modelId, prompt))
-            .map { response =>
-                response.candidates.headOption
-                    .flatMap(_.content.parts.flatMap(_.headOption))
-                    .map(_.text.trim)
-                    .filter(_.nonEmpty)
-                    .getOrElse("")
-            }
-            .handleErrorWith { error =>
-                logger.error(error)(s"Error generating fun fact: $error") *>
-                    IO.pure("")
-            }
+        buildGeminiRequest(modelId, prompt, temperature = Some(1.5)).flatMap { request =>
+            client
+                .run(request)
+                .use { response =>
+                    if response.status.isSuccess then
+                        response
+                            .as[GeminiResponse]
+                            .map { geminiResp =>
+                                geminiResp.candidates.headOption
+                                    .flatMap(_.content.parts.flatMap(_.headOption))
+                                    .map(_.text.trim)
+                                    .filter(_.nonEmpty)
+                                    .getOrElse("")
+                            }
+                    else
+                        response.bodyText.compile.string.flatMap { body =>
+                            logger.error(
+                                s"Gemini API error (fun fact): status=${response.status}, body=$body"
+                            ) *>
+                                IO.pure("")
+                        }
+                }
+                .handleErrorWith { error =>
+                    logger.error(error)(s"Error generating fun fact: ${error.getMessage}") *>
+                        IO.pure("")
+                }
+        }
 
     private def summarize(text: String, language: String, modelId: String): IO[SummaryResult] =
         val prompt = s"""You must follow these rules for your response:
@@ -157,27 +202,42 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         |13. For each topic, list the key stories with brief summaries.
                         |Now, following these rules exactly summarize the following text. Answer in $language: $text.""".stripMargin
 
-        client
-            .expect[GeminiResponse](buildGeminiRequest(modelId, prompt))
-            .map { response =>
-                response.candidates.headOption
-                    .flatMap(_.content.parts.flatMap(_.headOption))
-                    .map(_.text)
-                    .map { text =>
-                        if text.startsWith("```html") then
-                            text.stripPrefix("```html").stripSuffix("```").trim
-                        else text.trim
-                    } match
-                    case Some(html) if html.nonEmpty => SummarySuccess(html)
-                    case _ => SummaryError("Could not extract summary from response.")
-            }
-            .handleErrorWith { error =>
-                val errorMessage = error match
-                    case _: TimeoutException =>
-                        "Summary request timed out. The AI service is taking too long to respond. Please try again with fewer feeds."
-                    case _ =>
-                        "Error communicating with the summary API."
-                logger.error(error)(s"Error summarizing text: $error") *> IO.pure(
-                    SummaryError(errorMessage)
-                )
-            }
+        buildGeminiRequest(modelId, prompt).flatMap { request =>
+            client
+                .run(request)
+                .use { response =>
+                    if response.status.isSuccess then
+                        response
+                            .as[GeminiResponse]
+                            .map { geminiResp =>
+                                geminiResp.candidates.headOption
+                                    .flatMap(_.content.parts.flatMap(_.headOption))
+                                    .map(_.text)
+                                    .map { text =>
+                                        if text.startsWith("```html") then
+                                            text.stripPrefix("```html").stripSuffix("```").trim
+                                        else text.trim
+                                    } match
+                                    case Some(html) if html.nonEmpty => SummarySuccess(html)
+                                    case _ =>
+                                        SummaryError("Could not extract summary from response.")
+                            }
+                    else
+                        response.bodyText.compile.string.flatMap { body =>
+                            logger.error(
+                                s"Gemini API error: status=${response.status}, body=$body"
+                            ) *>
+                                IO.pure(SummaryError(s"API error: ${response.status.reason}"))
+                        }
+                }
+                .handleErrorWith { error =>
+                    val errorMessage = error match
+                        case _: TimeoutException =>
+                            "Summary request timed out. The AI service is taking too long to respond. Please try again with fewer feeds."
+                        case _ =>
+                            "Error communicating with the summary API."
+                    logger.error(error)(s"Error summarizing text: ${error.getMessage}") *> IO.pure(
+                        SummaryError(errorMessage)
+                    )
+                }
+        }
