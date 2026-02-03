@@ -21,3 +21,12 @@ object SummaryModel:
     def all: List[SummaryModel] = values.toList
 
     def default: SummaryModel = Gemini3FlashPreview
+
+    /** Determines if a model uses thinkingLevel configuration (Gemini 3.x models) */
+    def usesThinkingLevel(modelId: String): Boolean =
+        modelId.contains("gemini-3")
+
+    /** Determines if a model uses thinkingBudget configuration (Gemini 2.5 models and flash-latest)
+      */
+    def usesThinkingBudget(modelId: String): Boolean =
+        modelId.contains("2.5") || modelId.contains("flash-latest")
