@@ -2,8 +2,8 @@ package ru.trett.rss.server.services
 
 import cats.effect.IO
 import io.circe.Decoder
+import io.circe.Json
 import io.circe.generic.auto.*
-import io.circe.syntax.*
 import org.http4s.Header
 import org.http4s.Headers
 import org.http4s.Method
@@ -46,7 +46,29 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             s"https://generativelanguage.googleapis.com/v1beta/models/$modelId:generateContent"
         )
 
-    private def buildGeminiRequest(modelId: String, prompt: String): Request[IO] =
+    private def buildGeminiRequest(
+        modelId: String,
+        prompt: String,
+        temperature: Option[Double] = None
+    ): Request[IO] =
+        var config = Json.obj(
+            "contents" -> Json.arr(
+                Json.obj("parts" -> Json.arr(Json.obj("text" -> Json.fromString(prompt))))
+            ),
+            "thinkingConfig" -> Json.obj("thinkingLevel" -> Json.fromString("LOW"))
+        )
+
+        config = temperature match
+            case Some(temp) =>
+                config.mapObject(obj =>
+                    obj.add(
+                        "generationConfig",
+                        Json.obj("temperature" -> Json.fromDoubleOrNull(temp))
+                    )
+                )
+            case None =>
+                config
+
         Request[IO](
             method = Method.POST,
             uri = getEndpoint(modelId),
@@ -54,7 +76,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                 Header.Raw(ci"X-goog-api-key", apiKey),
                 Header.Raw(ci"Content-Type", "application/json")
             )
-        ).withEntity(Map("contents" -> List(Map("parts" -> List(Map("text" -> prompt))))).asJson)
+        ).withEntity(config)
 
     def getSummary(user: User, offset: Int): IO[SummaryResponse] =
         val selectedModel = user.settings.summaryModel
@@ -127,7 +149,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         |Do not add any introduction or preamble, just state the fact directly.""".stripMargin
 
         client
-            .expect[GeminiResponse](buildGeminiRequest(modelId, prompt))
+            .expect[GeminiResponse](buildGeminiRequest(modelId, prompt, temperature = Some(1.5)))
             .map { response =>
                 response.candidates.headOption
                     .flatMap(_.content.parts.flatMap(_.headOption))
