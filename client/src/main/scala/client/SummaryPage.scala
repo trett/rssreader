@@ -4,13 +4,11 @@ import be.doeraene.webcomponents.ui5.*
 import be.doeraene.webcomponents.ui5.configkeys.*
 import client.NetworkUtils.*
 import com.raquo.laminar.api.L.*
-import ru.trett.rss.models.{SummaryResponse, SummarySuccess, SummaryError}
+import ru.trett.rss.models.SummaryEvent
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object SummaryPage:
-
-    import Decoders.given
 
     private val model = AppState.model
 
@@ -27,52 +25,71 @@ object SummaryPage:
     private val stateSignal = stateVar.signal
     private val loadMoreBus: EventBus[Unit] = new EventBus
 
+    private var currentSubscription: Option[Subscription] = None
+    private var currentClose: Option[() => Unit] = None
+
     private def resetState(): Unit = stateVar.set(PageState())
 
-    private def fetchSummaryBatch(): EventStream[Try[Option[SummaryResponse]]] =
-        FetchStream
-            .withDecoder(responseDecoder[SummaryResponse])
-            .get("/api/summarize")
+    private def cleanup(): Unit =
+        currentSubscription.foreach(_.kill())
+        currentClose.foreach(_())
+        currentSubscription = None
+        currentClose = None
 
-    private val batchObserver: Observer[Try[Option[SummaryResponse]]] = Observer {
-        case Success(Some(resp)) if resp.funFact.isDefined =>
-            stateVar.update(_.copy(isLoading = false, hasMore = false, funFact = resp.funFact))
+    private def startStreaming(offset: Int): Unit =
+        cleanup()
 
-        case Success(Some(resp)) if resp.feedsProcessed > 0 =>
-            val (newContent, isError) = resp.result match
-                case SummarySuccess(html)  => (html, false)
-                case SummaryError(message) => (message, true)
-            stateVar.update(s =>
-                s.copy(
-                    isLoading = false,
-                    summaries = s.summaries :+ newContent,
-                    hasError = isError,
-                    totalProcessed = s.totalProcessed + resp.feedsProcessed,
-                    hasMore = resp.hasMore
-                )
+        stateVar.update(s =>
+            s.copy(
+                isLoading = true,
+                hasError = false,
+                summaries = if offset > 0 then s.summaries :+ "" else s.summaries
             )
-            Home.refreshUnreadCountBus.emit(())
+        )
 
-        case Success(_) =>
-            stateVar.update(_.copy(isLoading = false, hasError = true))
+        val (stream, close) = NetworkUtils.streamSummary(s"/api/summarize?offset=$offset")
+        currentClose = Some(close)
 
-        case Failure(err) =>
-            stateVar.update(_.copy(isLoading = false, hasError = true))
-            handleError(err)
-    }
+        currentSubscription = Some(stream.foreach {
+            case Success(SummaryEvent.Content(text)) =>
+                stateVar.update(s =>
+                    val newSummaries =
+                        if s.summaries.isEmpty then List(text)
+                        else s.summaries.init :+ (s.summaries.last + text)
+                    s.copy(summaries = newSummaries)
+                )
+
+            case Success(SummaryEvent.Metadata(processed, remaining, more)) =>
+                stateVar.update(s =>
+                    s.copy(totalProcessed = s.totalProcessed + processed, hasMore = more)
+                )
+                Home.refreshUnreadCountBus.emit(())
+
+            case Success(SummaryEvent.FunFact(text)) =>
+                stateVar.update(_.copy(funFact = Some(text), isLoading = false))
+
+            case Success(SummaryEvent.Error(msg)) =>
+                stateVar.update(_.copy(hasError = true, isLoading = false))
+                client.NotifyComponent.errorMessage(new RuntimeException(msg))
+
+            case Success(SummaryEvent.Done) =>
+                stateVar.update(_.copy(isLoading = false))
+                cleanup()
+
+            case Failure(err) =>
+                stateVar.update(_.copy(hasError = true, isLoading = false))
+                cleanup()
+                handleError(err)
+        }(unsafeWindowOwner))
 
     def render: Element =
         resetState()
-        val initialFetch = fetchSummaryBatch()
         div(
             cls := "main-content",
-            initialFetch --> batchObserver,
-            onMountBind { ctx =>
-                loadMoreBus.events.flatMapSwitch { _ =>
-                    stateVar.update(_.copy(isLoading = true))
-                    fetchSummaryBatch()
-                } --> batchObserver
-            },
+            onMountUnmountCallback(mount = _ => startStreaming(0), unmount = _ => cleanup()),
+            loadMoreBus.events.map(_ => stateVar.now().totalProcessed) --> (offset =>
+                startStreaming(offset)
+            ),
             Card(
                 _.slots.header := CardHeader(
                     _.titleText := "AI Summary",

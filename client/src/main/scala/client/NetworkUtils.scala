@@ -15,6 +15,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import ru.trett.rss.models.UserSettings
+import ru.trett.rss.models.SummaryEvent
 
 object NetworkUtils {
 
@@ -68,4 +69,19 @@ object NetworkUtils {
 
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())
+
+    def streamSummary(url: String): (EventStream[Try[SummaryEvent]], () => Unit) =
+        val bus = new EventBus[Try[SummaryEvent]]
+        val source = new dom.EventSource(url)
+
+        source.onmessage = msg =>
+            decode[SummaryEvent](msg.data.toString) match
+                case Right(event) => bus.emit(Success(event))
+                case Left(err)    => bus.emit(Failure(err))
+
+        source.onerror = _ =>
+            bus.emit(Failure(new RuntimeException("Stream error")))
+            source.close()
+
+        (bus.events, () => source.close())
 }
