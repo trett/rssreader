@@ -1,10 +1,11 @@
 import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.*
-import com.typesafe.sbt.packager.docker.Cmd
+import com.typesafe.sbt.packager.docker.*
 import org.scalajs.linker.interface.ModuleSplitStyle
 
 import scala.sys.process.*
 
-lazy val projectVersion = "2.4.3"
+lazy val projectVersion = "2.4.4-gcr"
+lazy val gitCommitHash = Process("git rev-parse --short HEAD").!!.trim
 lazy val organizationName = "ru.trett"
 lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
@@ -74,7 +75,26 @@ lazy val server = project
         organization := organizationName,
         scalaVersion := scala3Version,
         name := "server",
-        dockerBaseImage := "eclipse-temurin:21-jre-jammy",
+        dockerPermissionStrategy := DockerPermissionStrategy.None,
+        dockerBaseImage := "gcr.io/distroless/java21",
+        dockerCommands := {
+            val commands = dockerCommands.value
+            val filteredCommands = commands.filter {
+                case Cmd("RUN", _*) => false
+                case Cmd("USER", _*) => false
+                case Cmd("ENTRYPOINT", _*) => false
+                case Cmd("CMD", _*) => false
+                case Cmd("WORKDIR", _*) => false
+                case ExecCmd("ENTRYPOINT", _*) => false
+                case ExecCmd("CMD", _*) => false
+                case _ => true
+            }
+            filteredCommands ++ Seq(
+                Cmd("WORKDIR", "/opt/docker"),
+                ExecCmd("ENTRYPOINT", "java", "-cp", "/opt/docker/lib/*", "ru.trett.rss.server.Server")
+            )
+        },
+        Docker / version := gitCommitHash,
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         watchSources ++= (client / Compile / watchSources).value,
@@ -121,6 +141,8 @@ lazy val server = project
         libraryDependencies += "org.jsoup" % "jsoup" % "1.21.2",
         libraryDependencies += "com.github.blemale" %% "scaffeine" % "5.3.0",
         libraryDependencies += "io.circe" %% "circe-fs2" % "0.14.1",
+        libraryDependencies += "com.github.jwt-scala" %% "jwt-circe" % "10.0.1",
+        libraryDependencies += "com.google.cloud.sql" % "postgres-socket-factory" % "1.15.1",
         libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.17.2" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
         libraryDependencies += "org.scalamock" %% "scalamock" % "7.5.2" % Test,

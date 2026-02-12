@@ -2,6 +2,7 @@ package ru.trett.rss.server
 
 import cats.data.OptionT
 import cats.effect.*
+import cats.effect.unsafe.IORuntimeConfig
 import cats.implicits.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
@@ -31,13 +32,14 @@ import org.typelevel.otel4s.oteljava.OtelJava
 import pureconfig.ConfigSource
 import scala.concurrent.duration.*
 import ru.trett.rss.server.authorization.AuthFilter
-import ru.trett.rss.server.authorization.SessionManager
+import ru.trett.rss.server.authorization.JwtManager
 import ru.trett.rss.server.config.AppConfig
 import ru.trett.rss.server.config.CorsConfig
 import ru.trett.rss.server.config.DbConfig
 import ru.trett.rss.server.config.OAuthConfig
 import ru.trett.rss.server.controllers.ChannelController
 import ru.trett.rss.server.controllers.FeedController
+import ru.trett.rss.server.controllers.JobController
 import ru.trett.rss.server.controllers.LoginController
 import ru.trett.rss.server.controllers.LogoutController
 import ru.trett.rss.server.controllers.SummarizeController
@@ -50,10 +52,12 @@ import ru.trett.rss.server.repositories.UserRepository
 import ru.trett.rss.server.services.ChannelService
 import ru.trett.rss.server.services.FeedService
 import ru.trett.rss.server.services.SummarizeService
-import ru.trett.rss.server.services.UpdateTask
 import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
+
+    override protected def runtimeConfig: IORuntimeConfig =
+        super.runtimeConfig.copy(cpuStarvationCheckInitialDelay = Duration.Inf)
 
     private val logger: SelfAwareStructuredLogger[IO] =
         LoggerFactory[IO].getLogger
@@ -88,14 +92,14 @@ object Server extends IOApp:
                     .surround {
                         val client = EmberClientBuilder
                             .default[IO]
-                            .withTimeout(120.seconds) // Increased timeout for AI API calls
+                            .withTimeout(30.seconds)
                             .build
                         transactor(appConfig.db).use { xa =>
                             client.use { client =>
                                 for {
                                     _ <- FlywayMigration.migrate(appConfig.db)
                                     corsPolicy = createCorsPolicy(appConfig.cors)
-                                    sessionManager <- SessionManager[IO]
+                                    jwtManager = JwtManager(appConfig.jwt.secret)
                                     channelRepository = ChannelRepository(xa)
                                     feedRepository = FeedRepository(xa)
                                     feedService = FeedService(feedRepository)
@@ -111,12 +115,17 @@ object Server extends IOApp:
                                         "Starting server on port: " + appConfig.server.port
                                     )
                                     authFilter <- AuthFilter[IO]
+                                    jobController = new JobController(
+                                        channelService,
+                                        userService,
+                                        appConfig.jobs
+                                    )
                                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
                                     appRoutes <-
                                         corsPolicy(
                                             jarRoutes <+>
                                                 routes(
-                                                    sessionManager,
+                                                    jwtManager,
                                                     channelService,
                                                     userService,
                                                     feedService,
@@ -124,28 +133,19 @@ object Server extends IOApp:
                                                     authFilter,
                                                     client,
                                                     summarizeService,
-                                                    new LogoutController[IO](sessionManager)
+                                                    new LogoutController[IO],
+                                                    jobController
                                                 )
                                         )
-                                    exitCode <- UpdateTask(
-                                        channelService,
-                                        userService
-                                    ).background.void
-                                        .surround {
-                                            for {
-                                                server <- EmberServerBuilder
-                                                    .default[IO]
-                                                    .withHost(ipv4"0.0.0.0")
-                                                    .withPort(
-                                                        Port.fromInt(appConfig.server.port).get
-                                                    )
-                                                    .withHttpApp(
-                                                        withErrorLogging(appRoutes).orNotFound
-                                                    )
-                                                    .build
-                                                    .use(_ => IO.never)
-                                            } yield server
-                                        }
+                                    exitCode <-
+                                        EmberServerBuilder
+                                            .default[IO]
+                                            .withHost(ipv4"0.0.0.0")
+                                            .withPort(Port.fromInt(appConfig.server.port).get)
+                                            .withHttpApp(withErrorLogging(appRoutes).orNotFound)
+                                            .build
+                                            .use(_ => IO.never)
+                                            .as(ExitCode.Success)
                                 } yield exitCode
                             }
                         }
@@ -185,7 +185,7 @@ object Server extends IOApp:
             .withMaxAge(config.maxAge)
 
     private def routes(
-        sessionManager: SessionManager[IO],
+        jwtManager: JwtManager,
         channelService: ChannelService,
         userService: UserService,
         feedService: FeedService,
@@ -193,10 +193,11 @@ object Server extends IOApp:
         authFilter: AuthFilter[IO],
         client: Client[IO],
         summarizeService: SummarizeService,
-        logoutController: LogoutController[IO]
+        logoutController: LogoutController[IO],
+        jobController: JobController
     ): HttpRoutes[IO] =
-        unprotectedRoutes(sessionManager, oauthConfig, userService, client) <+>
-            authFilter.middleware(sessionManager, userService)(
+        unprotectedRoutes(jwtManager, oauthConfig, userService, client, jobController) <+>
+            authFilter.middleware(jwtManager, userService)(
                 authedRoutes(
                     channelService,
                     userService,
@@ -213,12 +214,18 @@ object Server extends IOApp:
         }
 
     private def unprotectedRoutes(
-        sessionManager: SessionManager[IO],
+        jwtManager: JwtManager,
         oauthConfig: OAuthConfig,
         userService: UserService,
-        client: Client[IO]
+        client: Client[IO],
+        jobController: JobController
     ): HttpRoutes[IO] =
-        LoginController.routes(sessionManager, oauthConfig, userService, client) <+> indexRoute
+        LoginController.routes(
+            jwtManager,
+            oauthConfig,
+            userService,
+            client
+        ) <+> indexRoute <+> jobController.routes
 
     private def authedRoutes(
         channelService: ChannelService,

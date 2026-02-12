@@ -13,27 +13,23 @@ import scala.concurrent.duration.*
 
 class AuthFilter[F[_]: Sync: LiftIO] private (cache: Cache[String, User]):
 
-    def middleware(
-        sessionManager: SessionManager[F],
-        userService: UserService
-    ): AuthMiddleware[F, User] =
-        AuthMiddleware(authUser(sessionManager, userService))
+    def middleware(jwtManager: JwtManager, userService: UserService): AuthMiddleware[F, User] =
+        AuthMiddleware(authUser(jwtManager, userService))
 
     def updateCache(user: User): F[Unit] = Sync[F].delay(cache.put(user.email, user))
 
     private def authUser(
-        sessionManager: SessionManager[F],
+        jwtManager: JwtManager,
         userService: UserService
     ): Kleisli[[A] =>> OptionT[F, A], Request[F], User] =
         Kleisli { req =>
             req.cookies.find(_.name == "sessionId") match {
                 case Some(sessionId) =>
-                    OptionT
-                        .some(sessionId.content)
-                        .flatMapF(sessionManager.getSession)
-                        .flatMap(sessionData =>
+                    jwtManager.verifyToken(sessionId.content) match {
+                        case Right(sessionData) =>
                             OptionT(getUser(sessionData.userEmail, userService))
-                        )
+                        case Left(_) => OptionT.none[F, User]
+                    }
                 case None => OptionT.none[F, User]
             }
         }

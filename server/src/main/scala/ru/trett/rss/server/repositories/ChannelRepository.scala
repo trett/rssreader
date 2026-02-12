@@ -19,7 +19,7 @@ class ChannelRepository(xa: Transactor[IO]):
     def insertChannel(channel: Channel, user: User): IO[Long] =
         val insertChannelQuery =
             sql"""
-              INSERT INTO channels (title, link) 
+              INSERT INTO channels (title, link)
               VALUES (${channel.title}, ${channel.link})
               """.update.withUniqueGeneratedKeys[Long]("id")
 

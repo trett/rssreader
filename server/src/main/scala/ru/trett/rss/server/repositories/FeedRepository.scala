@@ -29,15 +29,15 @@ class FeedRepository(xa: Transactor[IO]):
 
     def getUnreadCount(channelId: Long, userId: String): IO[Int] =
         sql"""
-      SELECT COUNT(*) 
-      FROM feeds 
+      SELECT COUNT(*)
+      FROM feeds
       WHERE channel_id = $channelId AND user_id = $userId AND read = false
     """.query[Int].unique.transact(xa)
 
     def getTotalUnreadCount(userId: String): IO[Int] =
         sql"""
-      SELECT COUNT(*) 
-      FROM feeds 
+      SELECT COUNT(*)
+      FROM feeds
       WHERE user_id = $userId AND read = false
     """.query[Int].unique.transact(xa)
 
