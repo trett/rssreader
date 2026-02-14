@@ -21,11 +21,6 @@ object SummaryPage:
     def render: HtmlElement =
         val stateVar = Var(State(isLoading = true))
         val loadMoreBus = new EventBus[Int]
-        var currentClose: Option[() => Unit] = None
-
-        def cleanup(): Unit =
-            currentClose.foreach(_())
-            currentClose = None
 
         val streamObserver: Observer[Try[SummaryEvent]] = Observer {
             case Success(SummaryEvent.Content(text)) =>
@@ -51,38 +46,29 @@ object SummaryPage:
 
             case Success(SummaryEvent.Done) =>
                 stateVar.update(_.copy(isLoading = false))
-                cleanup()
 
             case Failure(err) =>
                 stateVar.update(_.copy(error = Some(err.getMessage), isLoading = false))
-                cleanup()
                 NetworkUtils.handleError(err)
         }
 
-        def startStreaming(offset: Int)(using owner: Owner): Unit =
-            cleanup()
-            stateVar.update(s =>
-                s.copy(
-                    isLoading = true,
-                    error = None,
-                    // If loading more, append a placeholder for the new summary to avoid overwriting the last one
-                    summaries = if offset > 0 then s.summaries :+ "" else s.summaries
-                )
-            )
-
-            val (stream, close) = NetworkUtils.streamSummary(s"/api/summarize?offset=$offset")
-            currentClose = Some(close)
-            stream.addObserver(streamObserver)(owner)
+        val eventsStream =
+            EventStream.merge(EventStream.fromValue(0), loadMoreBus.events).flatMapSwitch {
+                offset =>
+                    stateVar.update(s =>
+                        s.copy(
+                            isLoading = true,
+                            error = None,
+                            // If loading more, append a placeholder for the new summary to avoid overwriting the last one
+                            summaries = if offset > 0 then s.summaries :+ "" else s.summaries
+                        )
+                    )
+                    NetworkUtils.streamSummary(s"/api/summarize?offset=$offset")
+            }
 
         div(
             cls := "main-content",
-            onMountUnmountCallback(
-                mount = ctx =>
-                    loadMoreBus.events
-                        .startWith(0)
-                        .foreach(offset => startStreaming(offset)(using ctx.owner))(ctx.owner),
-                unmount = _ => cleanup()
-            ),
+            eventsStream --> streamObserver,
             Card(
                 _.slots.header := CardHeader(
                     _.titleText := "AI Summary",
@@ -122,10 +108,7 @@ object SummaryPage:
                                 justifyContent.center,
                                 padding.px := 20,
                                 gap.px := 10,
-                                BusyIndicator(
-                                    _.active := true,
-                                    _.size := BusyIndicatorSize.S
-                                ),
+                                BusyIndicator(_.active := true, _.size := BusyIndicatorSize.S),
                                 span("Loading more stories...")
                             )
                         else emptyNode
@@ -133,8 +116,7 @@ object SummaryPage:
                     // Load More Button
                     child <-- stateVar.signal.map { state =>
                         if !state.isLoading && state.summaries.nonEmpty && state.funFact.isEmpty
-                        then
-                            renderLoadMore(state, loadMoreBus)
+                        then renderLoadMore(state, loadMoreBus)
                         else emptyNode
                     }
                 )
