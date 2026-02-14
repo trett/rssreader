@@ -242,4 +242,3 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     .drain ++
                     Stream.emit(SummaryEvent.Error(errorMessage))
             } ++ Stream.emit(SummaryEvent.Done)
-
