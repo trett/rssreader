@@ -123,7 +123,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                                     strippedText,
                                     validatedLanguage.displayName,
                                     selectedModel.modelId
-                                ) ++ Stream.emit(SummaryEvent.Done)
+                                )
                         )
                 }
             }
@@ -233,4 +233,5 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     .eval(logger.error(error)(s"Error summarizing text: ${error.getMessage}"))
                     .drain ++
                     Stream.emit(SummaryEvent.Error(errorMessage))
-            }
+            } ++ Stream.emit(SummaryEvent.Done)
+
