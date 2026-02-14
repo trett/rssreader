@@ -207,12 +207,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                             .map { geminiResp =>
                                 geminiResp.candidates.headOption
                                     .flatMap(_.content.parts.flatMap(_.headOption))
-                                    .map(_.text)
-                                    .map { text =>
-                                        if text.startsWith("```html") then
-                                            text.stripPrefix("```html").stripSuffix("```")
-                                        else text
-                                    }
+                                    .map(_.text.replace("```html", "").replace("```", ""))
                                     .getOrElse("")
                             }
                             .map(SummaryEvent.Content(_))
