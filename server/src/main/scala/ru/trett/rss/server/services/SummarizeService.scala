@@ -1,6 +1,7 @@
 package ru.trett.rss.server.services
 
 import cats.effect.IO
+import fs2.Stream
 import io.circe.Decoder
 import io.circe.Json
 import io.circe.generic.auto.*
@@ -15,14 +16,7 @@ import org.http4s.client.Client
 import org.typelevel.ci.*
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.LoggerFactory
-import ru.trett.rss.models.{
-    SummaryLanguage,
-    SummaryModel,
-    SummaryResponse,
-    SummaryResult,
-    SummarySuccess,
-    SummaryError
-}
+import ru.trett.rss.models.{SummaryLanguage, SummaryModel, SummaryEvent}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.FeedRepository
 import org.jsoup.Jsoup
@@ -41,15 +35,17 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     private val batchSize = 30
 
-    private def getEndpoint(modelId: String): Uri =
+    private def getEndpoint(modelId: String, stream: Boolean = false): Uri =
+        val method = if stream then "streamGenerateContent" else "generateContent"
         Uri.unsafeFromString(
-            s"https://generativelanguage.googleapis.com/v1beta/models/$modelId:generateContent"
+            s"https://generativelanguage.googleapis.com/v1beta/models/$modelId:$method"
         )
 
     private def buildGeminiRequest(
         modelId: String,
         prompt: String,
-        temperature: Option[Double] = None
+        temperature: Option[Double] = None,
+        stream: Boolean = false
     ): IO[Request[IO]] =
         val baseConfig = Json.obj(
             "contents" -> Json
@@ -79,7 +75,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
         IO.pure(
             Request[IO](
                 method = Method.POST,
-                uri = getEndpoint(modelId),
+                uri = getEndpoint(modelId, stream),
                 headers = Headers(
                     Header.Raw(ci"X-goog-api-key", apiKey),
                     Header.Raw(ci"Content-Type", "application/json")
@@ -87,63 +83,56 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
             ).withEntity(config)
         )
 
-    def getSummary(user: User, offset: Int): IO[SummaryResponse] =
+    def streamSummary(user: User, offset: Int): Stream[IO, SummaryEvent] =
         val selectedModel = user.settings.summaryModel
             .flatMap(SummaryModel.fromString)
             .getOrElse(SummaryModel.default)
 
-        for
-            totalUnread <- feedRepository.getTotalUnreadCount(user.id)
-            feeds <- feedRepository.getUnreadFeeds(user, batchSize, offset)
-            response <-
-                if feeds.isEmpty && offset == 0 then
-                    // No feeds at all - generate fun fact
-                    generateFunFact(user, selectedModel.modelId).map(funFact =>
-                        SummaryResponse(
-                            result = SummarySuccess(""),
-                            hasMore = false,
-                            feedsProcessed = 0,
-                            totalRemaining = 0,
-                            funFact = Some(funFact)
+        Stream
+            .eval(feedRepository.getTotalUnreadCount(user.id))
+            .flatMap { totalUnread =>
+                Stream.eval(feedRepository.getUnreadFeeds(user, batchSize, offset)).flatMap {
+                    feeds =>
+                        val remainingAfterThis = totalUnread - offset - feeds.size
+                        val metadata = SummaryEvent.Metadata(
+                            feedsProcessed = feeds.size,
+                            totalRemaining = Math.max(0, remainingAfterThis),
+                            hasMore = remainingAfterThis > 0
                         )
-                    )
-                else if feeds.isEmpty then
-                    // No more feeds (reached end of pagination)
-                    IO.pure(
-                        SummaryResponse(
-                            result = SummarySuccess(""),
-                            hasMore = false,
-                            feedsProcessed = 0,
-                            totalRemaining = 0,
-                            funFact = None
-                        )
-                    )
-                else
-                    val text = feeds.map(_.description).mkString("\n")
-                    val strippedText = Jsoup.parse(text).text()
-                    val validatedLanguage = user.settings.summaryLanguage
-                        .flatMap(SummaryLanguage.fromString)
-                        .getOrElse(SummaryLanguage.English)
 
-                    for
-                        summaryResult <- summarize(
-                            strippedText,
-                            validatedLanguage.displayName,
-                            selectedModel.modelId
+                        Stream.emit(metadata) ++ (
+                            if feeds.isEmpty && offset == 0 then
+                                Stream
+                                    .eval(generateFunFact(user, selectedModel.modelId))
+                                    .map(SummaryEvent.FunFact(_)) ++ Stream.emit(SummaryEvent.Done)
+                            else if feeds.isEmpty then Stream.emit(SummaryEvent.Done)
+                            else
+                                val text = feeds.map(_.description).mkString("\n")
+                                val strippedText = Jsoup.parse(text).text()
+                                val validatedLanguage = user.settings.summaryLanguage
+                                    .flatMap(SummaryLanguage.fromString)
+                                    .getOrElse(SummaryLanguage.English)
+
+                                Stream
+                                    .eval(
+                                        if user.settings.isAiMode then
+                                            feedRepository.markFeedAsRead(feeds.map(_.link), user)
+                                        else IO.unit
+                                    )
+                                    .drain ++ summarizeStream(
+                                    strippedText,
+                                    validatedLanguage.displayName,
+                                    selectedModel.modelId
+                                )
                         )
-                        _ <- summaryResult match
-                            case _: SummarySuccess if user.settings.isAiMode =>
-                                feedRepository.markFeedAsRead(feeds.map(_.link), user)
-                            case _ => IO.unit
-                        remainingAfterThis = totalUnread - offset - feeds.size
-                    yield SummaryResponse(
-                        result = summaryResult,
-                        hasMore = remainingAfterThis > 0,
-                        feedsProcessed = feeds.size,
-                        totalRemaining = Math.max(0, remainingAfterThis),
-                        funFact = None
-                    )
-        yield response
+                }
+            }
+            .handleErrorWith { error =>
+                Stream.eval(logger.error(error)("Error in streamSummary")).drain ++
+                    Stream.emit(
+                        SummaryEvent.Error("Error generating summary: " + error.getMessage)
+                    ) ++ Stream.emit(SummaryEvent.Done)
+            }
 
     private def generateFunFact(user: User, modelId: String): IO[String] =
         val validatedLanguage = user.settings.summaryLanguage
@@ -185,7 +174,11 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                 }
         }
 
-    private def summarize(text: String, language: String, modelId: String): IO[SummaryResult] =
+    private def summarizeStream(
+        text: String,
+        language: String,
+        modelId: String
+    ): Stream[IO, SummaryEvent] =
         val prompt = s"""You must follow these rules for your response:
                         |1. Provide only the raw text of the code.
                         |2. Do NOT use any markdown formatting.
@@ -202,42 +195,50 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         |13. For each topic, list the key stories with brief summaries.
                         |Now, following these rules exactly summarize the following text. Answer in $language: $text.""".stripMargin
 
-        buildGeminiRequest(modelId, prompt).flatMap { request =>
-            client
-                .run(request)
-                .use { response =>
+        Stream
+            .eval(buildGeminiRequest(modelId, prompt, stream = true))
+            .flatMap { request =>
+                client.stream(request).flatMap { response =>
                     if response.status.isSuccess then
-                        response
-                            .as[GeminiResponse]
+                        response.body
+                            .through(fs2.text.utf8.decode)
+                            .through(io.circe.fs2.stringArrayParser)
+                            .through(io.circe.fs2.decoder[IO, GeminiResponse])
                             .map { geminiResp =>
                                 geminiResp.candidates.headOption
                                     .flatMap(_.content.parts.flatMap(_.headOption))
                                     .map(_.text)
-                                    .map { text =>
-                                        if text.startsWith("```html") then
-                                            text.stripPrefix("```html").stripSuffix("```").trim
-                                        else text.trim
-                                    } match
-                                    case Some(html) if html.nonEmpty => SummarySuccess(html)
-                                    case _ =>
-                                        SummaryError("Could not extract summary from response.")
+                                    .getOrElse("")
                             }
+                            .map { text =>
+                                if (text.startsWith("```html")) {
+                                    text.stripPrefix("```html").stripSuffix("```").trim
+                                } else {
+                                    text.trim
+                                }
+                            }
+                            .filter(_.nonEmpty)
+                            .map(SummaryEvent.Content(_))
                     else
-                        response.bodyText.compile.string.flatMap { body =>
-                            logger.error(
-                                s"Gemini API error: status=${response.status}, body=$body"
-                            ) *>
-                                IO.pure(SummaryError(s"API error: ${response.status.reason}"))
-                        }
+                        Stream
+                            .eval(response.bodyText.compile.string.flatMap { body =>
+                                logger.error(
+                                    s"Gemini API stream error: status=${response.status}, body=$body"
+                                )
+                            })
+                            .drain ++ Stream.emit(
+                            SummaryEvent.Error(s"API error: ${response.status.reason}")
+                        )
                 }
-                .handleErrorWith { error =>
-                    val errorMessage = error match
-                        case _: TimeoutException =>
-                            "Summary request timed out. The AI service is taking too long to respond. Please try again with fewer feeds."
-                        case _ =>
-                            "Error communicating with the summary API."
-                    logger.error(error)(s"Error summarizing text: ${error.getMessage}") *> IO.pure(
-                        SummaryError(errorMessage)
-                    )
-                }
-        }
+            }
+            .handleErrorWith { error =>
+                val errorMessage = error match
+                    case _: TimeoutException =>
+                        "Summary request timed out."
+                    case _ =>
+                        "Error communicating with the summary API."
+                Stream
+                    .eval(logger.error(error)(s"Error summarizing text: ${error.getMessage}"))
+                    .drain ++
+                    Stream.emit(SummaryEvent.Error(errorMessage))
+            } ++ Stream.emit(SummaryEvent.Done)

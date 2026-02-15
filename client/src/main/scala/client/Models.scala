@@ -24,6 +24,24 @@ object Decoders:
     }
     given Decoder[SummaryResponse] = deriveDecoder
 
+    import SummaryEvent.*
+    given Decoder[Content] = deriveDecoder
+    given Decoder[Metadata] = deriveDecoder
+    given Decoder[FunFact] = deriveDecoder
+    given Decoder[Error] = deriveDecoder
+
+    given Decoder[SummaryEvent] = Decoder.instance { cursor =>
+        cursor.downField("type").as[String].flatMap {
+            case "content"  => cursor.as[Content]
+            case "metadata" => cursor.as[Metadata]
+            case "funFact"  => cursor.as[FunFact]
+            case "error"    => cursor.as[Error]
+            case "done"     => Right(Done)
+            case other =>
+                Left(io.circe.DecodingFailure(s"Unknown SummaryEvent type: $other", cursor.history))
+        }
+    }
+
 final class Model:
     val feedVar: Var[FeedItemList] = Var(List())
     val channelVar: Var[ChannelList] = Var(List())
