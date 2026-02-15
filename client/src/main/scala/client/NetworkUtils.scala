@@ -94,6 +94,8 @@ object NetworkUtils {
                         fireValue(Failure(new RuntimeException("Stream error")))
                         s.close()
             },
-            stop = _ => source.foreach(_.close())
+            stop = _ =>
+                source.foreach(_.close())
+                source.clear()
         )
 }
