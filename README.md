@@ -51,6 +51,7 @@ This is the easiest way to test the application locally in a production-like env
     CLIENT_ID=your_google_client_id
     CLIENT_SECRET=your_google_client_secret
     GOOGLE_API_KEY=your_google_ai_api_key
+    JWT_SECRET=your_secure_jwt_secret
     ```
 
 2.  **Build Docker images**:
@@ -81,6 +82,7 @@ This setup is for actively developing the application with hot-reloading where p
     export CLIENT_ID=your_google_client_id
     export CLIENT_SECRET=your_google_client_secret
     export GOOGLE_API_KEY=your_google_ai_api_key
+    export JWT_SECRET=your_secure_jwt_secret
     sbt server/run
     ```
     The server will be running on `http://localhost`.
@@ -101,6 +103,7 @@ The application is configured using environment variables.
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
 | `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
 | `JOB_TOKEN`       | Secret token for triggering background jobs via HTTP.                                    | -                              | No                 |
+| `JWT_SECRET`      | Secret string used for signing JWT tokens.                                               | -                              | **Yes**            |
 | `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |
 
 ## Deployment

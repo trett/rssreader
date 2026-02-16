@@ -2,21 +2,24 @@ package ru.trett.rss.server.authorization
 
 import cats.data.*
 import cats.effect.*
+import cats.effect.std.MapRef
 import cats.syntax.all.*
-import com.github.blemale.scaffeine.{Cache, Scaffeine}
 import org.http4s.*
 import org.http4s.server.*
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
 
-import scala.concurrent.duration.*
+import java.util.concurrent.ConcurrentHashMap
 
-class AuthFilter[F[_]: Sync: LiftIO] private (cache: Cache[String, User]):
+class AuthFilter[F[_]: Sync: LiftIO]:
+
+    private val cache: MapRef[F, String, Option[User]] =
+        MapRef.fromConcurrentHashMap(new ConcurrentHashMap[String, User])
 
     def middleware(jwtManager: JwtManager, userService: UserService): AuthMiddleware[F, User] =
         AuthMiddleware(authUser(jwtManager, userService))
 
-    def updateCache(user: User): F[Unit] = Sync[F].delay(cache.put(user.email, user))
+    def updateCache(user: User): F[Unit] = cache.updateKeyValueIfSet(user.email, _ => user)
 
     private def authUser(
         jwtManager: JwtManager,
@@ -35,22 +38,17 @@ class AuthFilter[F[_]: Sync: LiftIO] private (cache: Cache[String, User]):
         }
 
     private def getUser(email: String, userService: UserService): F[Option[User]] =
-        Sync[F].delay(cache.getIfPresent(email)).flatMap {
+        cache(email).get.flatMap {
             case Some(user) => user.some.pure[F]
             case None =>
                 LiftIO[F]
                     .liftIO(userService.getUserByEmail(email))
                     .flatMap {
                         case Some(user) =>
-                            Sync[F].delay(cache.put(email, user)).as(user.some)
+                            cache(email).updateAndGet(_ => Some(user))
                         case None => none[User].pure[F]
                     }
         }
 
 object AuthFilter:
-    def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] =
-        val cache: Cache[String, User] = Scaffeine()
-            .maximumSize(100)
-            .expireAfterWrite(1.hour)
-            .build[String, User]()
-        new AuthFilter(cache).pure[F]
+    def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] = new AuthFilter().pure[F]

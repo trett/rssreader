@@ -92,15 +92,9 @@ object Server extends IOApp:
                         appConfig.google.apiKey
                     )
                     channelService = ChannelService(channelRepository, client)
-                    _ <- logger.info(
-                        "Starting server on port: " + appConfig.server.port
-                    )
+                    _ <- logger.info("Starting server on port: " + appConfig.server.port)
                     authFilter <- AuthFilter[IO]
-                    jobController = new JobController(
-                        channelService,
-                        userService,
-                        appConfig.jobs
-                    )
+                    jobController = new JobController(channelService, userService, appConfig.jobs)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
                     appRoutes <-
                         corsPolicy(
@@ -147,7 +141,8 @@ object Server extends IOApp:
                 hikariConfig.setJdbcUrl(config.url)
                 hikariConfig.setUsername(config.user)
                 hikariConfig.setPassword(config.password)
-                hikariConfig.setMaximumPoolSize(32)
+                hikariConfig.setMaximumPoolSize(10)
+                hikariConfig.setMinimumIdle(0)
                 hikariConfig
             }
             xa <- HikariTransactor

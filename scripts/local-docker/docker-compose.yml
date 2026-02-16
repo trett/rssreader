@@ -24,7 +24,7 @@ services:
       - host.docker.internal:host-gateway
 
   server:
-    image: server:9bb2749
+    image: server:latest
     container_name: rss_server
     restart: always
     depends_on:
@@ -38,3 +38,4 @@ services:
       CLIENT_ID: ${CLIENT_ID}
       CLIENT_SECRET: ${CLIENT_SECRET}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}

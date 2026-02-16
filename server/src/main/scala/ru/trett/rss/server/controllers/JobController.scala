@@ -19,7 +19,7 @@ class JobController(channelService: ChannelService, userService: UserService, co
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
         case req @ POST -> Root / "api" / "jobs" / "update" =>
             val token = req.headers.get(ci"Authorization").map(_.head.value)
-            if (config.token.nonEmpty && !token.contains(s"Bearer ${config.token}")) {
+            if (config.token.isEmpty || !token.contains(s"Bearer ${config.token}")) {
                 logger.warn("Unauthorized job update attempt") *> Forbidden("Invalid token")
             } else {
                 for {

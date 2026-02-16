@@ -1,0 +1,35 @@
+steps:
+  - name: ghcr.io/graalvm/graalvm-ce:ol8-java17-22.3.3
+    args:
+      - '-c'
+      - |
+        set -e
+        gu install native-image
+
+        # Install nodejs, sbt and build dependencies
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+        microdnf install -y nodejs gcc zlib-devel
+
+        # Install sbt manually since it's not in the base image
+        curl -L https://github.com/sbt/sbt/releases/download/v1.10.11/sbt-1.10.11.tgz | tar -xz -C /usr/local
+        ln -sf /usr/local/sbt/bin/sbt /usr/local/bin/sbt
+
+        # Build the native image
+        # We use 'server/Docker/stage' which triggers the native image build and prepares the docker context
+        sbt "server/Docker/stage"
+    entrypoint: bash
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - '-t'
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/rssreader:$SHORT_SHA
+      - server/target/docker/stage
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - $_AR_HOSTNAMEv/$_AR_PROJECT_ID/$_AR_REPOSITORY/rssreader:$SHORT_SHA
+timeout: 1800s
+options:
+  machineType: E2_HIGHCPU_32
+  logging: CLOUD_LOGGING_ONLY
+

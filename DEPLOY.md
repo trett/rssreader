@@ -22,6 +22,7 @@ export DB_USER="rss_user"
 export DB_PASSWORD="your-secure-password"
 export SERVICE_NAME="rss-reader"
 export JOB_TOKEN="your-secret-job-token" # Generate a strong random string
+export JWT_SECRET="your-secure-jwt-secret" # Generate a strong random string for token signing
 export OAUTH_CLIENT_ID="your-google-oauth-client-id"
 export OAUTH_CLIENT_SECRET="your-google-oauth-client-secret"
 export GOOGLE_API_KEY="your-google-gemini-api-key"
@@ -54,7 +55,7 @@ gcloud sql users create $DB_USER \
 ## 3. Configuration
 
 ### Service Definition
-Create a `service.yaml` file with the following content. This defines the multi-container deployment (sidecar).
+Create a `service.yaml` file with the following content. This defines the Cloud Run service.
 
 **Important:** Replace placeholders (like `YOUR_PROJECT_ID`, `YOUR_IMAGE_URL`) with your actual values or use `envsubst`.
 
@@ -70,7 +71,7 @@ spec:
   template:
     metadata:
       annotations:
-        run.googleapis.com/cloudsql-instances: PROJECT_ID:REGION:DB_INSTANCE_NAME
+        run.googleapis.com/cloudsql-instances: ${PROJECT_ID}:${REGION}:${DB_INSTANCE_NAME}
         run.googleapis.com/execution-environment: gen1
         run.googleapis.com/startup-cpu-boost: 'true'
     spec:
@@ -81,15 +82,17 @@ spec:
           - containerPort: 8080
         env:
         - name: DATASOURCE_URL
-          value: "jdbc:postgresql:///rss?cloudSqlInstance=$PROJECT_ID:$REGION:$DB_INSTANCE_NAME&socketFactory=com.google.cloud.sql.postgres.SocketFactory&user=rss_user&password=$DB_PASSWORD"
+          value: "jdbc:postgresql:///rss?cloudSqlInstance=$PROJECT_ID:$REGION:$DB_INSTANCE_NAME&socketFactory=com.google.cloud.sql.postgres.SocketFactory&user=$DB_USER&password=$DB_PASSWORD"
         - name: CLIENT_ID
-          value: "OAUTH_CLIENT_ID"
+          value: "$OAUTH_CLIENT_ID"
         - name: CLIENT_SECRET
-          value: "OAUTH_CLIENT_SECRET"
+          value: "$OAUTH_CLIENT_SECRET"
         - name: GOOGLE_API_KEY
-          value: "GOOGLE_API_KEY"
+          value: "$GOOGLE_API_KEY"
         - name: JOB_TOKEN
-          value: "JOB_TOKEN"
+          value: "$JOB_TOKEN"
+        - name: JWT_SECRET
+          value: "$JWT_SECRET"
         - name: SERVER_URL
           value: "https://rss-reader-PROJECT_ID.REGION.run.app" # Update after first deploy if needed
         - name: CORS_URL
@@ -107,12 +110,12 @@ spec:
       timeoutSeconds: 300
 ```
 
-## 3. Deploy to Cloud Run
+## 4. Deploy to Cloud Run
 
 Deploy using the `service.yaml`. 
 
 ```bash
-gcloud run services replace service.deploy.yaml --region=$REGION
+envsubst < service.yaml | gcloud run services replace - --region=$REGION
 ```
 
 ## 5. Configure Cloud Scheduler

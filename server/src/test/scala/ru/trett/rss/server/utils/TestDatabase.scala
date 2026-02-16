@@ -3,8 +3,8 @@ package ru.trett.rss.server.utils
 import cats.effect.{IO, Resource}
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.HikariTransactor
-import org.flywaydb.core.Flyway
 import org.testcontainers.containers.PostgreSQLContainer
+import ru.trett.rss.server.db.FlywayMigration
 
 /** Utility for creating test databases with Testcontainers PostgreSQL.
   */
@@ -40,11 +40,7 @@ object TestDatabase:
         } yield xa
 
     private def runMigrations(jdbcUrl: String, username: String, password: String): IO[Unit] =
-        IO.blocking {
-            val flyway = Flyway
-                .configure()
-                .dataSource(jdbcUrl, username, password)
-                .locations("classpath:db/migration")
-                .load()
-            flyway.migrate()
-        }.void
+        FlywayMigration.migrate(
+            ru.trett.rss.server.config
+                .DbConfig("org.postgresql.Driver", jdbcUrl, username, password)
+        )
