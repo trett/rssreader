@@ -1,6 +1,6 @@
 # Deployment Guide for Google Cloud Run
 
-This guide outlines the steps to deploy the RSS Reader application to Google Cloud Run, including setting up the PostgreSQL database, background update tasks, and monitoring with OpenTelemetry sidecar.
+This guide outlines the steps to deploy the RSS Reader application to Google Cloud Run, including setting up the PostgreSQL database and background update tasks.
 
 ## Prerequisites
 
@@ -53,9 +53,6 @@ gcloud sql users create $DB_USER \
 
 ## 3. Configuration
 
-### Collector Config
-Ensure you have the `collector-config.yaml` file in your current directory. This file configures the OpenTelemetry collector to receive metrics from your app and push them to Google Managed Prometheus.
-
 ### Service Definition
 Create a `service.yaml` file with the following content. This defines the multi-container deployment (sidecar).
 
@@ -97,10 +94,6 @@ spec:
           value: "https://rss-reader-PROJECT_ID.REGION.run.app" # Update after first deploy if needed
         - name: CORS_URL
           value: "https://rss-reader-PROJECT_ID.REGION.run.app" # Update after first deploy if needed
-        - name: OTEL_METRICS_EXPORTER
-          value: none # do nt use OTEL in GCP
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: "http://localhost:4317"
         resources:
           limits:
             cpu: 1000m

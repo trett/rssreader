@@ -11,7 +11,6 @@ lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
 lazy val htt4sVersion = "1.0.0-M45"
 lazy val logs4catVersion = "2.7.1"
-lazy val otel4sVersion = "0.14.0"
 lazy val doobieVersion = "1.0.0-RC11"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
@@ -98,7 +97,6 @@ lazy val server = project
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
         watchSources ++= (client / Compile / watchSources).value,
-        javaOptions += "-Dotel.java.global-autoconfigure.enabled=true",
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
@@ -116,17 +114,6 @@ lazy val server = project
             "org.typelevel" %% "log4cats-core",
             "org.typelevel" %% "log4cats-slf4j"
         ).map(_ % logs4catVersion),
-        libraryDependencies ++= Seq(
-            "org.typelevel" %% "otel4s-oteljava",
-            "org.typelevel" %% "otel4s-instrumentation-metrics"
-        ).map(_ % otel4sVersion),
-        libraryDependencies ++= Seq(
-            "org.typelevel" %% "otel4s-oteljava" % "0.14.0",
-            "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % "2.22.0-alpha",
-            "io.opentelemetry" % "opentelemetry-exporter-prometheus" % "1.45.0-alpha",
-            "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.56.0" % Runtime,
-            "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % "1.56.0" % Runtime
-        ),
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
             "io.circe" %%% "circe-generic",
