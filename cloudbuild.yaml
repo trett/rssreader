@@ -18,6 +18,8 @@ steps:
         # We use 'server/Docker/stage' which triggers the native image build and prepares the docker context
         sbt "server/Docker/stage"
     entrypoint: bash
+    env:
+      - 'SBT_OPTS=-Xmx4G'
   - name: gcr.io/cloud-builders/docker
     args:
       - build
@@ -30,6 +32,6 @@ steps:
       - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/rssreader:$SHORT_SHA
 timeout: 2400s
 options:
-  machineType: E2_HIGHCPU_32
+  pool:
+    name: 'projects/$_AR_PROJECT_ID/locations/$_DEPLOY_REGION/workerPools/$_POOL_ID'
   logging: CLOUD_LOGGING_ONLY
-
