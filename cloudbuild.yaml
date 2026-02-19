@@ -27,7 +27,7 @@ steps:
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - $_AR_HOSTNAMEv/$_AR_PROJECT_ID/$_AR_REPOSITORY/rssreader:$SHORT_SHA
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/rssreader:$SHORT_SHA
 timeout: 1800s
 options:
   machineType: E2_HIGHCPU_32
