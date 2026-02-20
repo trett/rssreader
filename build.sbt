@@ -101,7 +101,6 @@ lazy val server = project
             "-H:IncludeResources=db/migration/.*",
             "-H:DeadlockWatchdogInterval=900",
             "-Ob",
-            "--jobs=4",
             "-J-Xmx24G",
             "-R:MaxHeapSize=512m",
             "--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,com.fasterxml.jackson",
