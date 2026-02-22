@@ -3,27 +3,13 @@
   "includes":[{
     "pattern":"\\QMETA-INF/services/java.sql.Driver\\E"
   }, {
-    "pattern":"\\QMETA-INF/services/org.flywaydb.core.extensibility.Plugin\\E"
-  }, {
     "pattern":"\\QMETA-INF/services/org.slf4j.spi.SLF4JServiceProvider\\E"
   }, {
     "pattern":"\\Qapplication.conf\\E"
   }, {
-    "pattern":"\\Qdb/migration/V1_0_0__Initial.sql\\E"
-  }, {
-    "pattern":"\\Qdb/migration/V1_0_1__Remove_retention_period_from_settings.sql\\E"
-  }, {
-    "pattern":"\\Qdb/migration/V1_0_2__Add_user_id_to_feeds.sql\\E"
-  }, {
-    "pattern":"\\Qdb/migration/V1_0_3__Add_highlighted_to_user_channels.sql\\E"
-  }, {
-    "pattern":"\\Qdb/migration/V1_0_4__Increase_varchar_limits.sql\\E"
-  }, {
-    "pattern":"\\Qdb/migration\\E"
+    "pattern":"\\Qdb/init.sql\\E"
   }, {
     "pattern":"\\Qlogback.xml\\E"
-  }, {
-    "pattern":"\\Qorg/flywaydb/core/internal/version.txt\\E"
   }, {
     "pattern":"java.base:\\Qjdk/internal/icu/impl/data/icudt67b/nfc.nrm\\E"
   }, {

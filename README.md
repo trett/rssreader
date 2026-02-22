@@ -21,7 +21,6 @@ A modern, containerized RSS reader application built with Scala, Scala.js, and L
 -   [http4s](https://http4s.org/): A functional, type-safe HTTP library.
 -   [doobie](https://tpolecat.github.io/doobie/): A functional JDBC layer for Scala.
 -   [PostgreSQL](https://www.postgresql.org/): The application uses a PostgreSQL database.
--   [Flyway](https://flywaydb.org/): For database migrations.
 -   [circe](https://circe.github.io/circe/): For JSON manipulation.
 -   [PureConfig](https://pureconfig.github.io/): For loading configuration.
 

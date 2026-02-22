@@ -135,6 +135,6 @@ gcloud scheduler jobs create http rss-update-job \
     --description="Trigger RSS feed updates"
 ```
 
-## 6. Database Migrations
+## 6. Database Schema
 
-The application runs Flyway migrations automatically on startup. No manual schema application is required.
+The database schema should be applied manually using the `db/init.sql` file provided in the resources.

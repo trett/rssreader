@@ -40,7 +40,6 @@ import ru.trett.rss.server.controllers.LoginController
 import ru.trett.rss.server.controllers.LogoutController
 import ru.trett.rss.server.controllers.SummarizeController
 import ru.trett.rss.server.controllers.UserController
-import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
 import ru.trett.rss.server.repositories.FeedRepository
@@ -78,7 +77,7 @@ object Server extends IOApp:
         transactor(appConfig.db).use { xa =>
             client.use { client =>
                 for {
-                    _ <- FlywayMigration.migrate(appConfig.db)
+                    _ <- logger.info("Starting server on port: " + appConfig.server.port)
                     corsPolicy = createCorsPolicy(appConfig.cors)
                     jwtManager = JwtManager(appConfig.jwt.secret)
                     channelRepository = ChannelRepository(xa)
@@ -92,7 +91,6 @@ object Server extends IOApp:
                         appConfig.google.apiKey
                     )
                     channelService = ChannelService(channelRepository, client)
-                    _ <- logger.info("Starting server on port: " + appConfig.server.port)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes

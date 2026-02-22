@@ -156,10 +156,6 @@
   "methods":[{"name":"setPattern","parameterTypes":["java.lang.String"] }]
 },
 {
-  "name":"com.fasterxml.jackson.databind.ext.Java7SupportImpl",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
   "name":"com.sun.crypto.provider.AESCipher$General",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
@@ -510,77 +506,6 @@
 {
   "name":"jdk.management.jfr.SettingDescriptorInfo",
   "queryAllPublicMethods":true
-},
-{
-  "name":"org.flywaydb.core.api.migration.baseline.BaselineMigrationConfigurationExtension",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"getBaselineMigrationPrefix","parameterTypes":[] }, {"name":"setBaselineMigrationPrefix","parameterTypes":["java.lang.String"] }]
-},
-{
-  "name":"org.flywaydb.core.extensibility.ConfigurationExtension",
-  "queryAllDeclaredMethods":true
-},
-{
-  "name":"org.flywaydb.core.extensibility.Plugin",
-  "queryAllDeclaredMethods":true
-},
-{
-  "name":"org.flywaydb.core.internal.command.clean.CleanModeConfigurationExtension",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"getClean","parameterTypes":[] }, {"name":"setClean","parameterTypes":["org.flywaydb.core.internal.command.clean.CleanModel"] }]
-},
-{
-  "name":"org.flywaydb.core.internal.command.clean.CleanModel",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true
-},
-{
-  "name":"org.flywaydb.core.internal.command.clean.SchemaModel",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true
-},
-{
-  "name":"org.flywaydb.core.internal.logging.slf4j.Slf4jLogCreator",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.flywaydb.core.internal.proprietaryStubs.LicensingConfigurationExtensionStub",
-  "allDeclaredFields":true
-},
-{
-  "name":"org.flywaydb.core.internal.proprietaryStubs.OfflinePermitConfigurationExtensionStub",
-  "allDeclaredFields":true
-},
-{
-  "name":"org.flywaydb.core.internal.proprietaryStubs.PATTokenConfigurationExtensionStub",
-  "allDeclaredFields":true
-},
-{
-  "name":"org.flywaydb.core.internal.publishing.PublishingConfigurationExtension",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"isCheckDriftOnMigrate","parameterTypes":[] }, {"name":"isPublishResult","parameterTypes":[] }, {"name":"setCheckDriftOnMigrate","parameterTypes":["boolean"] }, {"name":"setPublishResult","parameterTypes":["boolean"] }]
-},
-{
-  "name":"org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"getTransactional","parameterTypes":[] }, {"name":"isTransactionalLock","parameterTypes":[] }, {"name":"setTransactional","parameterTypes":["org.flywaydb.database.postgresql.TransactionalModel"] }, {"name":"setTransactionalLock","parameterTypes":["boolean"] }]
-},
-{
-  "name":"org.flywaydb.database.postgresql.TransactionalModel",
-  "allDeclaredFields":true,
-  "queryAllDeclaredMethods":true,
-  "queryAllDeclaredConstructors":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"getLock","parameterTypes":[] }, {"name":"setLock","parameterTypes":["java.lang.Boolean"] }]
 },
 {
   "name":"org.http4s.Header$Raw$",

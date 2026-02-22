@@ -25,7 +25,6 @@ The project uses **Scala 3**. Always use Scala 3 syntax and keywords:
 
 - **http4s**: The server is built using http4s, a functional, type-safe HTTP library for Scala.
 - **doobie**: Database access is handled with doobie, a functional JDBC layer for Scala, connecting to a PostgreSQL database.
-- **Flyway**: Database migrations are managed with Flyway.
 - **circe**: Used for JSON serialization and deserialization.
 - **PureConfig**: For loading configuration from files.
 - **log4cats/Logback**: Used for logging.
