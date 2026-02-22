@@ -4,7 +4,6 @@ steps:
       - '-c'
       - |
         set -e
-        gu install native-image
 
         # Install nodejs, sbt and build dependencies
         curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
