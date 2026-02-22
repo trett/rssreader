@@ -7,7 +7,7 @@ steps:
 
         # Install nodejs, sbt and build dependencies
         curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-        microdnf install -y nodejs gcc zlib-devel
+        microdnf install -y nodejs
 
         # Install sbt manually since it's not in the base image
         curl -L https://github.com/sbt/sbt/releases/download/v1.10.11/sbt-1.10.11.tgz | tar -xz -C /usr/local
