@@ -96,7 +96,7 @@ lazy val server = project
             "-H:IncludeResources=logback\\.xml",
             "-H:IncludeResources=public/.*",
             "-H:DeadlockWatchdogInterval=900",
-            "-O1",
+            "-Ob",
             "-J-Xmx24G",
             "-R:MaxHeapSize=512m",
             "--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,com.fasterxml.jackson",
