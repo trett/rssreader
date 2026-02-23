@@ -31,7 +31,7 @@ import org.typelevel.otel4s.oteljava.OtelJava
 import pureconfig.ConfigSource
 import scala.concurrent.duration.*
 import ru.trett.rss.server.authorization.AuthFilter
-import ru.trett.rss.server.authorization.SessionManager
+import ru.trett.rss.server.authorization.JwtManager
 import ru.trett.rss.server.config.AppConfig
 import ru.trett.rss.server.config.CorsConfig
 import ru.trett.rss.server.config.DbConfig
@@ -95,7 +95,7 @@ object Server extends IOApp:
                                 for {
                                     _ <- FlywayMigration.migrate(appConfig.db)
                                     corsPolicy = createCorsPolicy(appConfig.cors)
-                                    sessionManager <- SessionManager[IO]
+                                    jwtManager = JwtManager(appConfig.jwt.secret)
                                     channelRepository = ChannelRepository(xa)
                                     feedRepository = FeedRepository(xa)
                                     feedService = FeedService(feedRepository)
@@ -116,7 +116,7 @@ object Server extends IOApp:
                                         corsPolicy(
                                             jarRoutes <+>
                                                 routes(
-                                                    sessionManager,
+                                                    jwtManager,
                                                     channelService,
                                                     userService,
                                                     feedService,
@@ -124,7 +124,7 @@ object Server extends IOApp:
                                                     authFilter,
                                                     client,
                                                     summarizeService,
-                                                    new LogoutController[IO](sessionManager)
+                                                    new LogoutController[IO]
                                                 )
                                         )
                                     exitCode <- UpdateTask(
@@ -185,7 +185,7 @@ object Server extends IOApp:
             .withMaxAge(config.maxAge)
 
     private def routes(
-        sessionManager: SessionManager[IO],
+        jwtManager: JwtManager,
         channelService: ChannelService,
         userService: UserService,
         feedService: FeedService,
@@ -195,8 +195,8 @@ object Server extends IOApp:
         summarizeService: SummarizeService,
         logoutController: LogoutController[IO]
     ): HttpRoutes[IO] =
-        unprotectedRoutes(sessionManager, oauthConfig, userService, client) <+>
-            authFilter.middleware(sessionManager, userService)(
+        unprotectedRoutes(jwtManager, oauthConfig, userService, client) <+>
+            authFilter.middleware(jwtManager, userService)(
                 authedRoutes(
                     channelService,
                     userService,
@@ -213,12 +213,12 @@ object Server extends IOApp:
         }
 
     private def unprotectedRoutes(
-        sessionManager: SessionManager[IO],
+        jwtManager: JwtManager,
         oauthConfig: OAuthConfig,
         userService: UserService,
         client: Client[IO]
     ): HttpRoutes[IO] =
-        LoginController.routes(sessionManager, oauthConfig, userService, client) <+> indexRoute
+        LoginController.routes(jwtManager, oauthConfig, userService, client) <+> indexRoute
 
     private def authedRoutes(
         channelService: ChannelService,

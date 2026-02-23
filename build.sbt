@@ -120,6 +120,7 @@ lazy val server = project
         ).map(_ % doobieVersion),
         libraryDependencies += "org.jsoup" % "jsoup" % "1.21.2",
         libraryDependencies += "com.github.blemale" %% "scaffeine" % "5.3.0",
+        libraryDependencies += "com.github.jwt-scala" %% "jwt-circe" % "10.0.1",
         libraryDependencies += "io.circe" %% "circe-fs2" % "0.14.1",
         libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.17.2" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,

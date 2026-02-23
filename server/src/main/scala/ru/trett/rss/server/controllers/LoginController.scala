@@ -19,7 +19,7 @@ object LoginController:
         Uri.unsafeFromString("https://accounts.google.com/o/oauth2/v2/auth")
 
     def routes(
-        sessionManager: SessionManager[IO],
+        jwtManager: JwtManager,
         oauthConfig: OAuthConfig,
         userService: UserService,
         client: Client[IO]
@@ -59,13 +59,14 @@ object LoginController:
                     )
                     userInfo <- getUserInfo(client, token.access_token)
                     sessionData = SessionData(userInfo.email)
-                    sessionId <- sessionManager.createSession(sessionData)
+                    jwtToken = jwtManager.createToken(sessionData)
                     response <- SeeOther(Location(uri"/"))
                         .map(
                             _.addCookie(
                                 ResponseCookie(
                                     "sessionId",
-                                    sessionId,
+                                    jwtToken,
+                                    path = Some("/"),
                                     httpOnly = true,
                                     secure = true,
                                     maxAge = Some(60 * 60 * 24) // 1 day
@@ -90,13 +91,6 @@ object LoginController:
                             case Left(_)  => BadRequest("Failed to create user")
                         }
                 } yield response
-
-            case req @ POST -> Root / "logout" =>
-                req.cookies.find(_.name == "sessionId") match {
-                    case Some(cookie) =>
-                        sessionManager.deleteSession(cookie.content) *> Ok("Logged out")
-                    case None => BadRequest("No session to log out from")
-                }
         }
 
     private def getToken(
