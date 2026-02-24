@@ -74,6 +74,7 @@ lazy val server = project
         organization := organizationName,
         scalaVersion := scala3Version,
         name := "server",
+        Docker / version := sys.env.get("DOCKER_TAG").getOrElse("local"),
         dockerBaseImage := "eclipse-temurin:21-jre-jammy",
         dockerRepository := sys.env.get("REGISTRY"),
         dockerExposedPorts := Seq(8080),
