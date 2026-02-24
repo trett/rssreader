@@ -9,7 +9,8 @@ case class AppConfig(
     db: DbConfig,
     oauth: OAuthConfig,
     cors: CorsConfig,
-    google: GoogleConfig
+    google: GoogleConfig,
+    jwt: JwtConfig
 ) derives ConfigReader
 
 case class ServerConfig(port: Int, host: String = "0.0.0.0") derives ConfigReader
@@ -24,3 +25,5 @@ case class CorsConfig(allowedOrigin: String, allowCredentials: Boolean, maxAge: 
     derives ConfigReader
 
 case class GoogleConfig(apiKey: String) derives ConfigReader
+
+case class JwtConfig(secret: String) derives ConfigReader

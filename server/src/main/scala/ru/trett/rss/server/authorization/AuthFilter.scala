@@ -6,34 +6,36 @@ import cats.syntax.all.*
 import com.github.blemale.scaffeine.{Cache, Scaffeine}
 import org.http4s.*
 import org.http4s.server.*
+import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
 
 import scala.concurrent.duration.*
 
-class AuthFilter[F[_]: Sync: LiftIO] private (cache: Cache[String, User]):
+class AuthFilter[F[_]: Sync: LiftIO: LoggerFactory] private (cache: Cache[String, User]):
 
-    def middleware(
-        sessionManager: SessionManager[F],
-        userService: UserService
-    ): AuthMiddleware[F, User] =
-        AuthMiddleware(authUser(sessionManager, userService))
+    private val logger = LoggerFactory[F].getLogger
+
+    def middleware(jwtManager: JwtManager, userService: UserService): AuthMiddleware[F, User] =
+        AuthMiddleware(authUser(jwtManager, userService))
 
     def updateCache(user: User): F[Unit] = Sync[F].delay(cache.put(user.email, user))
 
     private def authUser(
-        sessionManager: SessionManager[F],
+        jwtManager: JwtManager,
         userService: UserService
     ): Kleisli[[A] =>> OptionT[F, A], Request[F], User] =
         Kleisli { req =>
             req.cookies.find(_.name == "sessionId") match {
                 case Some(sessionId) =>
-                    OptionT
-                        .some(sessionId.content)
-                        .flatMapF(sessionManager.getSession)
-                        .flatMap(sessionData =>
+                    jwtManager.verifyToken(sessionId.content) match {
+                        case Right(sessionData) =>
                             OptionT(getUser(sessionData.userEmail, userService))
-                        )
+                        case Left(e) =>
+                            OptionT
+                                .liftF(logger.error(e)("Failed to verify token"))
+                                .flatMap(_ => OptionT.none[F, User])
+                    }
                 case None => OptionT.none[F, User]
             }
         }
@@ -52,7 +54,7 @@ class AuthFilter[F[_]: Sync: LiftIO] private (cache: Cache[String, User]):
         }
 
 object AuthFilter:
-    def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] =
+    def apply[F[_]: Sync: LiftIO: LoggerFactory]: F[AuthFilter[F]] =
         val cache: Cache[String, User] = Scaffeine()
             .maximumSize(100)
             .expireAfterWrite(1.hour)
