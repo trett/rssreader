@@ -47,22 +47,29 @@ object Home:
     private val feedsObserver =
         feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
 
+    private val hasMoreObserver = Observer[FeedItemList] { xs =>
+        hasMoreVar.set(xs.size == pageLimit)
+    }
+
     private val unreadCountObserver = Observer[Try[Int]] {
         case Success(count) => unreadCountVar.set(count)
         case Failure(err)   => handleError(err)
     }
 
+    private def bindFeeds(stream: EventStream[Try[FeedItemList]], owner: Owner): Unit =
+        val data = stream.collectSuccess
+        val errors = stream.collectFailure
+        data.addObserver(feedsObserver)(owner)
+        data.addObserver(hasMoreObserver)(owner)
+        errors.addObserver(errorObserver)(owner)
+
     def render: Element =
         div(
-            cls := "cards main-content",
+            cls := "main-content",
             div(
                 onMountBind(ctx =>
                     refreshFeedsBus --> { page =>
-                        val response = getChannelsAndFeedsRequest(page)
-                        val data = response.collectSuccess
-                        val errors = response.collectFailure
-                        data.addObserver(feedsObserver)(ctx.owner)
-                        errors.addObserver(errorObserver)(ctx.owner)
+                        bindFeeds(getChannelsAndFeedsRequest(page), ctx.owner)
                     }
                 ),
                 div(
@@ -95,22 +102,23 @@ object Home:
                     _.design := ButtonDesign.Transparent,
                     _.icon := IconName.download,
                     "More News",
-                    onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
-                    hidden <-- feedVar.signal.map(xs => xs.isEmpty)
+                    onClick.mapTo(
+                        (feedVar.now().size + pageLimit - 1) / pageLimit + 1
+                    ) --> Home.refreshFeedsBus,
+                    hidden <-- feedSignal.combineWith(hasMoreSignal).map { case (feeds, hasMore) =>
+                        feeds.isEmpty || !hasMore
+                    }
                 )
             )
         )
 
     private def feeds(): Element =
-        val response = getChannelsAndFeedsRequest(1)
-        val data = response.collectSuccess
-        val errors = response.collectFailure
+        val stream = getChannelsAndFeedsRequest(1)
         val unreadCountResponse = getUnreadCountRequest()
         UList(
+            onMountCallback(ctx => bindFeeds(stream, ctx.owner)),
             _.noDataText := "Nothing to read",
             children <-- feedSignal.split(_.link)(renderItem),
-            data --> feedsObserver,
-            errors --> errorObserver,
             unreadCountResponse --> unreadCountObserver
         )
 
