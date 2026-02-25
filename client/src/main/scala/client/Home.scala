@@ -56,18 +56,20 @@ object Home:
         case Failure(err)   => handleError(err)
     }
 
+    private def bindFeeds(stream: EventStream[Try[FeedItemList]], owner: Owner): Unit =
+        val data = stream.collectSuccess
+        val errors = stream.collectFailure
+        data.addObserver(feedsObserver)(owner)
+        data.addObserver(hasMoreObserver)(owner)
+        errors.addObserver(errorObserver)(owner)
+
     def render: Element =
         div(
-            cls := "cards main-content",
+            cls := "main-content",
             div(
                 onMountBind(ctx =>
                     refreshFeedsBus --> { page =>
-                        val response = getChannelsAndFeedsRequest(page)
-                        val data = response.collectSuccess
-                        val errors = response.collectFailure
-                        data.addObserver(feedsObserver)(ctx.owner)
-                        data.addObserver(hasMoreObserver)(ctx.owner)
-                        errors.addObserver(errorObserver)(ctx.owner)
+                        bindFeeds(getChannelsAndFeedsRequest(page), ctx.owner)
                     }
                 ),
                 div(
@@ -111,16 +113,14 @@ object Home:
         )
 
     private def feeds(): Element =
-        val response = getChannelsAndFeedsRequest(1)
-        val data = response.collectSuccess
-        val errors = response.collectFailure
+        val stream = getChannelsAndFeedsRequest(1)
         val unreadCountResponse = getUnreadCountRequest()
         UList(
+            onMountBind(ctx =>
+                stream --> (tryFeeds => bindFeeds(EventStream.fromValue(tryFeeds), ctx.owner))
+            ),
             _.noDataText := "Nothing to read",
             children <-- feedSignal.split(_.link)(renderItem),
-            data --> feedsObserver,
-            data --> hasMoreObserver,
-            errors --> errorObserver,
             unreadCountResponse --> unreadCountObserver
         )
 
