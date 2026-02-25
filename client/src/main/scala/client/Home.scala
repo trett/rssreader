@@ -100,7 +100,9 @@ object Home:
                     _.design := ButtonDesign.Transparent,
                     _.icon := IconName.download,
                     "More News",
-                    onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
+                    onClick.mapTo(
+                        (feedVar.now().size + pageLimit - 1) / pageLimit + 1
+                    ) --> Home.refreshFeedsBus,
                     hidden <-- feedSignal.combineWith(hasMoreSignal).map { case (feeds, hasMore) =>
                         feeds.isEmpty || !hasMore
                     }
