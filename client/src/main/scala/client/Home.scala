@@ -47,6 +47,10 @@ object Home:
     private val feedsObserver =
         feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
 
+    private val hasMoreObserver = Observer[FeedItemList] { xs =>
+        hasMoreVar.set(xs.size == pageLimit)
+    }
+
     private val unreadCountObserver = Observer[Try[Int]] {
         case Success(count) => unreadCountVar.set(count)
         case Failure(err)   => handleError(err)
@@ -62,6 +66,7 @@ object Home:
                         val data = response.collectSuccess
                         val errors = response.collectFailure
                         data.addObserver(feedsObserver)(ctx.owner)
+                        data.addObserver(hasMoreObserver)(ctx.owner)
                         errors.addObserver(errorObserver)(ctx.owner)
                     }
                 ),
@@ -96,7 +101,10 @@ object Home:
                     _.icon := IconName.download,
                     "More News",
                     onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
-                    hidden <-- feedVar.signal.map(xs => xs.isEmpty)
+                    hidden <-- Signal.combine(feedVar.signal, hasMoreVar.signal).map {
+                        (xs, hasMore) =>
+                            xs.isEmpty || !hasMore
+                    }
                 )
             )
         )
@@ -110,6 +118,7 @@ object Home:
             _.noDataText := "Nothing to read",
             children <-- feedSignal.split(_.link)(renderItem),
             data --> feedsObserver,
+            data --> hasMoreObserver,
             errors --> errorObserver,
             unreadCountResponse --> unreadCountObserver
         )
