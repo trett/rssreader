@@ -101,9 +101,8 @@ object Home:
                     _.icon := IconName.download,
                     "More News",
                     onClick.mapTo(feedVar.now().size / pageLimit + 1) --> Home.refreshFeedsBus,
-                    hidden <-- Signal.combine(feedVar.signal, hasMoreVar.signal).map {
-                        (xs, hasMore) =>
-                            xs.isEmpty || !hasMore
+                    hidden <-- feedSignal.combineWith(hasMoreSignal).map { case (feeds, hasMore) =>
+                        feeds.isEmpty || !hasMore
                     }
                 )
             )
