@@ -116,9 +116,7 @@ object Home:
         val stream = getChannelsAndFeedsRequest(1)
         val unreadCountResponse = getUnreadCountRequest()
         UList(
-            onMountBind(ctx =>
-                stream --> (tryFeeds => bindFeeds(EventStream.fromValue(tryFeeds), ctx.owner))
-            ),
+            onMountCallback(ctx => bindFeeds(stream, ctx.owner)),
             _.noDataText := "Nothing to read",
             children <-- feedSignal.split(_.link)(renderItem),
             unreadCountResponse --> unreadCountObserver
