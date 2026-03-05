@@ -91,40 +91,35 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
         Stream
             .eval(feedRepository.getTotalUnreadCount(user.id))
             .flatMap { totalUnread =>
-                Stream.eval(feedRepository.getUnreadFeeds(user, batchSize, offset)).flatMap {
-                    feeds =>
-                        val remainingAfterThis = totalUnread - offset - feeds.size
-                        val metadata = SummaryEvent.Metadata(
-                            feedsProcessed = feeds.size,
-                            totalRemaining = Math.max(0, remainingAfterThis),
-                            hasMore = remainingAfterThis > 0
-                        )
+                Stream.eval(feedRepository.getUnreadFeeds(user, batchSize, 0)).flatMap { feeds =>
+                    val remainingAfterThis = totalUnread - feeds.size
+                    val metadata = SummaryEvent.Metadata(
+                        feedsProcessed = feeds.size,
+                        totalRemaining = Math.max(0, remainingAfterThis),
+                        hasMore = remainingAfterThis > 0
+                    )
 
-                        Stream.emit(metadata) ++ (
-                            if feeds.isEmpty && offset == 0 then
-                                Stream
-                                    .eval(generateFunFact(user, selectedModel.modelId))
-                                    .map(SummaryEvent.FunFact(_)) ++ Stream.emit(SummaryEvent.Done)
-                            else if feeds.isEmpty then Stream.emit(SummaryEvent.Done)
-                            else
-                                val text = feeds.map(_.description).mkString("\n")
-                                val strippedText = Jsoup.parse(text).text()
-                                val validatedLanguage = user.settings.summaryLanguage
-                                    .flatMap(SummaryLanguage.fromString)
-                                    .getOrElse(SummaryLanguage.English)
+                    Stream.emit(metadata) ++ (
+                        if feeds.isEmpty && offset == 0 then
+                            Stream
+                                .eval(generateFunFact(user, selectedModel.modelId))
+                                .map(SummaryEvent.FunFact(_)) ++ Stream.emit(SummaryEvent.Done)
+                        else if feeds.isEmpty then Stream.emit(SummaryEvent.Done)
+                        else
+                            val text = feeds.map(_.description).mkString("\n")
+                            val strippedText = Jsoup.parse(text).text()
+                            val validatedLanguage = user.settings.summaryLanguage
+                                .flatMap(SummaryLanguage.fromString)
+                                .getOrElse(SummaryLanguage.English)
 
-                                Stream
-                                    .eval(
-                                        if user.settings.isAiMode then
-                                            feedRepository.markFeedAsRead(feeds.map(_.link), user)
-                                        else IO.unit
-                                    )
-                                    .drain ++ summarizeStream(
-                                    strippedText,
-                                    validatedLanguage.displayName,
-                                    selectedModel.modelId
-                                )
-                        )
+                            Stream
+                                .eval(feedRepository.markFeedAsRead(feeds.map(_.link), user))
+                                .drain ++ summarizeStream(
+                                strippedText,
+                                validatedLanguage.displayName,
+                                selectedModel.modelId
+                            )
+                    )
                 }
             }
             .handleErrorWith { error =>
