@@ -84,7 +84,7 @@ lazy val server = project
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
             "ch.qos.logback" % "logback-classic" % "1.5.25",
-            "org.flywaydb" % "flyway-core" % "11.17.2",
+            "org.flywaydb" % "flyway-core" % "12.0.3",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9"
         ),
         libraryDependencies ++= Seq(
@@ -123,7 +123,7 @@ lazy val server = project
         libraryDependencies += "com.github.blemale" %% "scaffeine" % "5.3.0",
         libraryDependencies += "com.github.jwt-scala" %% "jwt-circe" % "10.0.1",
         libraryDependencies += "io.circe" %% "circe-fs2" % "0.14.1",
-        libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "11.17.2" % "runtime",
+        libraryDependencies += "org.flywaydb" % "flyway-database-postgresql" % "12.0.3" % "runtime",
         libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
         libraryDependencies += "org.scalamock" %% "scalamock" % "7.5.2" % Test,
         libraryDependencies += "org.testcontainers" % "testcontainers" % "2.0.2" % Test,
