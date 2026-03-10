@@ -1,5 +1,5 @@
 steps:
-  - name: ghcr.io/graalvm/native-image-community:17
+  - name: ghcr.io/graalvm/native-image-community:21
     args:
       - '-c'
       - |
@@ -18,7 +18,7 @@ steps:
         sbt "server/Docker/stage"
     entrypoint: bash
     env:
-      - 'SBT_OPTS=-Xmx4G'
+      - 'SBT_OPTS=-Xmx8G'
   - name: gcr.io/cloud-builders/docker
     args:
       - build

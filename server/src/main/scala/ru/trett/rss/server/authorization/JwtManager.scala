@@ -2,11 +2,17 @@ package ru.trett.rss.server.authorization
 
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
 import io.circe.syntax.*
-import io.circe.generic.auto.*
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import java.time.Clock
 import scala.concurrent.duration.*
 
 case class SessionData(userEmail: String)
+
+object SessionData:
+    given Decoder[SessionData] = deriveDecoder[SessionData]
+    given Encoder[SessionData] = deriveEncoder[SessionData]
 
 class JwtManager(secret: String):
     private val algorithm = JwtAlgorithm.HS256

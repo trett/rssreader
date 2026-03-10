@@ -93,13 +93,15 @@ lazy val server = project
             "--verbose",
             "-march=x86-64-v3",
             "-H:IncludeResources=application\\.conf",
-            "-H:IncludeResources=logback\\.xml",
+            "-H:IncludeResources=simplelogger\\.properties",
             "-H:IncludeResources=public/.*",
             "-H:DeadlockWatchdogInterval=900",
             "-Ob",
-            "-J-Xmx24G",
+            "-J-Xmx28G",
+            "-J-XX:ActiveProcessorCount=6",
+            "--parallelism=6",
             "-R:MaxHeapSize=512m",
-            "--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,com.fasterxml.jackson",
+            "--initialize-at-build-time=org.slf4j.LoggerFactory,org.slf4j.simple.SimpleLogger",
             "--initialize-at-run-time=io.netty.channel.epoll.Epoll,io.netty.channel.epoll.Native,io.netty.channel.epoll.EpollEventLoop,io.netty.channel.epoll.EpollEventLoopGroup,io.netty.channel.kqueue.KQueue,io.netty.channel.kqueue.Native,io.netty.channel.kqueue.KQueueEventLoopGroup"
         ),
         // Docker Settings
@@ -138,7 +140,7 @@ lazy val server = project
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
-            "ch.qos.logback" % "logback-classic" % "1.5.25",
+            "org.slf4j" % "slf4j-simple" % "2.0.17",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
             "org.jsoup" % "jsoup" % "1.21.2",
             "io.circe" %% "circe-fs2" % "0.14.1",
@@ -195,7 +197,6 @@ pushImage := {
 // from the client project to the server's managed resources directory.
 // This allows the server to serve the frontend as static content.
 server / generateFrontendAssets := {
-    val _ = (client / Compile / fullLinkJS).value
     val distDir = buildClientDist.value
     val targetDir = (server / Compile / resourceManaged).value / "public"
     IO.copyDirectory(distDir, targetDir)

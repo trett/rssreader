@@ -141,6 +141,7 @@ object Server extends IOApp:
                 hikariConfig.setPassword(config.password)
                 hikariConfig.setMaximumPoolSize(10)
                 hikariConfig.setMinimumIdle(0)
+                hikariConfig.setRegisterMbeans(false)
                 hikariConfig
             }
             xa <- HikariTransactor
