@@ -103,6 +103,7 @@ lazy val server = project
             "--initialize-at-run-time=io.netty.channel.epoll.Epoll,io.netty.channel.epoll.Native,io.netty.channel.epoll.EpollEventLoop,io.netty.channel.epoll.EpollEventLoopGroup,io.netty.channel.kqueue.KQueue,io.netty.channel.kqueue.Native,io.netty.channel.kqueue.KQueueEventLoopGroup"
         ),
         // Docker Settings
+        Docker / version := sys.env.get("DOCKER_TAG").getOrElse("local"),
         dockerPermissionStrategy := DockerPermissionStrategy.None,
         dockerBaseImage := "debian:12-slim",
         dockerApiVersion := Some(DockerApiVersion(1, 40)),

@@ -6,12 +6,15 @@ import cats.effect.std.MapRef
 import cats.syntax.all.*
 import org.http4s.*
 import org.http4s.server.*
+import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
 
 import java.util.concurrent.ConcurrentHashMap
 
-class AuthFilter[F[_]: Sync: LiftIO]:
+class AuthFilter[F[_]: Sync: LiftIO: LoggerFactory]:
+
+    private val logger = LoggerFactory[F].getLogger
 
     private val cache: MapRef[F, String, Option[User]] =
         MapRef.fromConcurrentHashMap(new ConcurrentHashMap[String, User])
@@ -31,7 +34,10 @@ class AuthFilter[F[_]: Sync: LiftIO]:
                     jwtManager.verifyToken(sessionId.content) match {
                         case Right(sessionData) =>
                             OptionT(getUser(sessionData.userEmail, userService))
-                        case Left(_) => OptionT.none[F, User]
+                        case Left(e) =>
+                            OptionT
+                                .liftF(logger.error(e)("Failed to verify token"))
+                                .flatMap(_ => OptionT.none[F, User])
                     }
                 case None => OptionT.none[F, User]
             }
@@ -51,4 +57,4 @@ class AuthFilter[F[_]: Sync: LiftIO]:
         }
 
 object AuthFilter:
-    def apply[F[_]: Sync: LiftIO]: F[AuthFilter[F]] = new AuthFilter().pure[F]
+    def apply[F[_]: Sync: LiftIO: LoggerFactory]: F[AuthFilter[F]] = new AuthFilter().pure[F]

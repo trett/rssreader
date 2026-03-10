@@ -12,6 +12,7 @@ import org.http4s.implicits.*
 import ru.trett.rss.server.authorization.*
 import ru.trett.rss.server.config.OAuthConfig
 import ru.trett.rss.server.services.UserService
+import scala.concurrent.duration.*
 
 object LoginController:
 
@@ -69,7 +70,7 @@ object LoginController:
                                     path = Some("/"),
                                     httpOnly = true,
                                     secure = true,
-                                    maxAge = Some(60 * 60 * 24) // 1 day
+                                    maxAge = Some(1.day.toSeconds) // 1 day
                                 )
                             )
                         )

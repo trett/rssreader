@@ -2,7 +2,7 @@ package ru.trett.rss.server.controllers
 
 import cats.effect.Async
 import org.http4s.dsl.Http4sDsl
-import cats.implicits._
+import cats.implicits.*
 import org.http4s.AuthedRoutes
 import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.server.models.User
@@ -18,7 +18,14 @@ class LogoutController[F[_]: Async: LoggerFactory] extends Http4sDsl[F] {
                 _ <- logger.info(s"Logging out user: ${user.email}")
                 res <- Ok().map(
                     _.addCookie(
-                        ResponseCookie("sessionId", "", path = Some("/"), maxAge = Some(-1))
+                        ResponseCookie(
+                            "sessionId",
+                            "",
+                            path = Some("/"),
+                            maxAge = Some(-1),
+                            httpOnly = true,
+                            secure = true
+                        )
                     )
                 )
             } yield res
