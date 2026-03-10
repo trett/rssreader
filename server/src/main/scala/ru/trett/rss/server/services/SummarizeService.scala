@@ -206,11 +206,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                                     .getOrElse("")
                             }
                             .map { text =>
-                                if (text.startsWith("```html")) {
-                                    text.stripPrefix("```html").stripSuffix("```").trim
-                                } else {
-                                    text.trim
-                                }
+                                text.stripPrefix("```html").stripSuffix("```")
                             }
                             .filter(_.nonEmpty)
                             .map(SummaryEvent.Content(_))
