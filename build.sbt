@@ -97,9 +97,9 @@ lazy val server = project
             "-H:IncludeResources=public/.*",
             "-H:DeadlockWatchdogInterval=900",
             "-Ob",
-            "-J-Xmx28G",
-            "-J-XX:ActiveProcessorCount=6",
-            "--parallelism=6",
+            "-J-Xmx8G",
+            "-J-XX:ActiveProcessorCount=4",
+            "--parallelism=4",
             "-R:MaxHeapSize=512m",
             "--initialize-at-build-time=org.slf4j.LoggerFactory,org.slf4j.simple.SimpleLogger",
             "--initialize-at-run-time=io.netty.channel.epoll.Epoll,io.netty.channel.epoll.Native,io.netty.channel.epoll.EpollEventLoop,io.netty.channel.epoll.EpollEventLoopGroup,io.netty.channel.kqueue.KQueue,io.netty.channel.kqueue.Native,io.netty.channel.kqueue.KQueueEventLoopGroup"
