@@ -89,6 +89,7 @@ lazy val server = project
         // GraalVM Native Image Settings
         graalVMNativeImageOptions ++= Seq(
             "--no-fallback",
+            "--strict-image-heap",
             "-H:+ReportExceptionStackTraces",
             "--verbose",
             "-march=x86-64-v3",
@@ -101,7 +102,7 @@ lazy val server = project
             "-J-XX:ActiveProcessorCount=4",
             "--parallelism=4",
             "-R:MaxHeapSize=512m",
-            "--initialize-at-build-time=org.slf4j.LoggerFactory,org.slf4j.simple.SimpleLogger",
+            "--initialize-at-build-time=org.slf4j",
             "--initialize-at-run-time=io.netty.channel.epoll.Epoll,io.netty.channel.epoll.Native,io.netty.channel.epoll.EpollEventLoop,io.netty.channel.epoll.EpollEventLoopGroup,io.netty.channel.kqueue.KQueue,io.netty.channel.kqueue.Native,io.netty.channel.kqueue.KQueueEventLoopGroup"
         ),
         // Docker Settings
