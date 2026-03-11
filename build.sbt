@@ -98,7 +98,7 @@ lazy val server = project
             "-H:IncludeResources=public/.*",
             "-H:DeadlockWatchdogInterval=900",
             "-Ob",
-            "-J-Xmx8G",
+            "-J-Xmx12G",
             "-J-XX:ActiveProcessorCount=4",
             "--parallelism=4",
             "-R:MaxHeapSize=512m",
