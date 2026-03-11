@@ -27,7 +27,7 @@ The project uses **Scala 3**. Always use Scala 3 syntax and keywords:
 - **doobie**: Database access is handled with doobie, a functional JDBC layer for Scala, connecting to a PostgreSQL database.
 - **circe**: Used for JSON serialization and deserialization.
 - **PureConfig**: For loading configuration from files.
-- **log4cats/Logback**: Used for logging.
+- **log4cats/SLF4J**: Used for logging with slf4j-simple.
 - **ScalaTest/ScalaMock**: Used for testing.
 
 ### Frontend (Client)

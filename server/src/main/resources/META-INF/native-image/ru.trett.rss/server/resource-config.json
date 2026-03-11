@@ -7,9 +7,9 @@
   }, {
     "pattern":"\\Qapplication.conf\\E"
   }, {
-    "pattern":"\\Qdb/init.sql\\E"
+    "pattern":"\\Qsimplelogger.properties\\E"
   }, {
-    "pattern":"\\Qlogback.xml\\E"
+    "pattern":"\\Qdb/init.sql\\E"
   }, {
     "pattern":"java.base:\\Qjdk/internal/icu/impl/data/icudt67b/nfc.nrm\\E"
   }, {

@@ -1,6 +1,7 @@
 package ru.trett.rss.server.utils
 
 import cats.effect.{IO, Resource}
+import cats.implicits.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.HikariTransactor
 import doobie.implicits.*
@@ -41,5 +42,9 @@ object TestDatabase:
     private def runMigrations(xa: HikariTransactor[IO]): IO[Unit] =
         for {
             sql <- IO.blocking(Source.fromResource("db/init.sql").mkString)
-            _ <- doobie.Fragment.const(sql).update.run.transact(xa)
+            statements = sql
+                .split(";")
+                .map(_.trim)
+                .filter(_.nonEmpty)
+            _ <- statements.toList.traverse(s => doobie.Fragment.const(s).update.run.transact(xa))
         } yield ()
