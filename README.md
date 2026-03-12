@@ -2,7 +2,7 @@
 
 # RSS Reader
 
-A modern, web-based RSS reader application built with Scala, Scala.js, and Laminar. It provides a simple and clean interface for reading your favorite RSS feeds, with the ability to generate summaries of unread articles.
+A modern, containerized RSS reader application built with Scala, Scala.js, and Laminar. Designed for cloud-native deployment (optimized for Google Cloud Run), it provides a simple and clean interface for reading your favorite RSS feeds, with AI-powered summaries of unread articles.
 
 ## Features
 
@@ -12,7 +12,6 @@ A modern, web-based RSS reader application built with Scala, Scala.js, and Lamin
 -   **AI-Powered Summaries**: Generate summaries of all your unread articles using Google's Generative AI.
 -   **Secure Authentication**: Authentication is handled securely via Google OAuth2.
 -   **Responsive Design**: The application is designed to work on both desktop and mobile browsers.
--   **Observability**: Built-in metrics collection with OpenTelemetry, exportable to Prometheus and visualizable in Grafana.
 
 ## Tech Stack
 
@@ -22,12 +21,8 @@ A modern, web-based RSS reader application built with Scala, Scala.js, and Lamin
 -   [http4s](https://http4s.org/): A functional, type-safe HTTP library.
 -   [doobie](https://tpolecat.github.io/doobie/): A functional JDBC layer for Scala.
 -   [PostgreSQL](https://www.postgresql.org/): The application uses a PostgreSQL database.
--   [Flyway](https://flywaydb.org/): For database migrations.
 -   [circe](https://circe.github.io/circe/): For JSON manipulation.
 -   [PureConfig](https://pureconfig.github.io/): For loading configuration.
--   [OpenTelemetry](https://opentelemetry.io/): For metrics collection and observability.
--   [Prometheus](https://prometheus.io/): For metrics storage and querying.
--   [Grafana](https://grafana.com/): For metrics visualization and dashboards.
 
 ### Frontend
 
@@ -45,38 +40,36 @@ A modern, web-based RSS reader application built with Scala, Scala.js, and Lamin
 -   [Node.js 20](https://nodejs.org/) and [npm](https://www.npmjs.com/) (version specified in `.nvmrc`)
 -   [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
 
-### Running with Docker (Recommended)
+### Running Locally with Docker
 
-This is the easiest way to run the application.
+This is the easiest way to test the application locally in a production-like environment.
 
 1.  **Set up environment variables**:
-    You'll need to provide your Google OAuth credentials. Create a `.env` file in the `scripts/local-docker` directory with the following content:
+    You'll need to provide your Google OAuth credentials and Gemini API key. Create a `.env` file in the `scripts/local-docker` directory with the following content:
     ```
     CLIENT_ID=your_google_client_id
     CLIENT_SECRET=your_google_client_secret
     GOOGLE_API_KEY=your_google_ai_api_key
+    JWT_SECRET=your_secure_jwt_secret
     ```
 
 2.  **Build Docker images**:
-    This command will build the Docker image.
+    This command will build the Docker image locally.
     ```bash
     sbt buildImage
     ```
 
 3.  **Run the application**:
-    Use Docker Compose to start all the services.
+    Use Docker Compose to start all the services (App, Postgres, Caddy).
     ```bash
     docker-compose -f scripts/local-docker/docker-compose.yml up
     ```
     The application will be available at:
     - Main app: `http://localhost`
-    - Prometheus: `http://localhost:9090`
-    - Grafana: `http://localhost:3000` (default credentials: admin/admin)
-    - Metrics endpoint: `http://localhost:9464/metrics`
 
 ### Local Development
 
-This setup is for actively developing the application.
+This setup is for actively developing the application with hot-reloading where possible.
 
 1.  **Start the database**:
     Prepare and start a PostgreSQL database instance.
@@ -88,6 +81,7 @@ This setup is for actively developing the application.
     export CLIENT_ID=your_google_client_id
     export CLIENT_SECRET=your_google_client_secret
     export GOOGLE_API_KEY=your_google_ai_api_key
+    export JWT_SECRET=your_secure_jwt_secret
     sbt server/run
     ```
     The server will be running on `http://localhost`.
@@ -107,16 +101,29 @@ The application is configured using environment variables.
 | `SERVER_URL`      | The public URL of the server. Used for OAuth redirect URI.                               | `https://localhost`            | No                 |
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
 | `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
+| `JOB_TOKEN`       | Secret token for triggering background jobs via HTTP.                                    | -                              | No                 |
+| `JWT_SECRET`      | Secret string used for signing JWT tokens.                                               | -                              | **Yes**            |
 | `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |
 
 ## Deployment
 
-The Docker image built with `sbt buildImage` can be used for production deployment. The image includes both the backend server and frontend assets. You can adapt the `scripts/local-docker/docker-compose.yml` file for your production environment. Remember to configure all the necessary environment variables.
+The application is optimized for deployment as a **Google Cloud Run** service. The container image includes both the backend server and the pre-built frontend assets.
 
-To push the image to a registry, set the `REGISTRY` environment variable and run:
-```bash
-sbt pushImage
-```
+For a comprehensive step-by-step deployment guide, including Cloud SQL and Cloud Scheduler setup, please refer to **[DEPLOY.md](DEPLOY.md)**.
+
+### Building and Pushing to Registry
+
+To build the production image and push it to your configured container registry:
+
+1. Set the `REGISTRY` environment variable:
+   ```bash
+   export REGISTRY=docker.pkg.dev/your-project/your-repo/rss-reader
+   ```
+
+2. Run the push command:
+   ```bash
+   sbt pushImage
+   ```
 
 ## License
 

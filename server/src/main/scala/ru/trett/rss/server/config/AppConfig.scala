@@ -10,6 +10,7 @@ case class AppConfig(
     oauth: OAuthConfig,
     cors: CorsConfig,
     google: GoogleConfig,
+    jobs: JobConfig,
     jwt: JwtConfig
 ) derives ConfigReader
 
@@ -25,5 +26,7 @@ case class CorsConfig(allowedOrigin: String, allowCredentials: Boolean, maxAge: 
     derives ConfigReader
 
 case class GoogleConfig(apiKey: String) derives ConfigReader
+
+case class JobConfig(token: String) derives ConfigReader
 
 case class JwtConfig(secret: String) derives ConfigReader

@@ -1,0 +1,524 @@
+[
+{
+  "name":"[B"
+},
+{
+  "name":"[C"
+},
+{
+  "name":"[D"
+},
+{
+  "name":"[F"
+},
+{
+  "name":"[I"
+},
+{
+  "name":"[J"
+},
+{
+  "name":"[Lcats.parse.Parser0;"
+},
+{
+  "name":"[Lcats.parse.Parser;"
+},
+{
+  "name":"[Ljava.lang.String;"
+},
+{
+  "name":"[Ljava.sql.Statement;"
+},
+{
+  "name":"[Lscala.util.Either;"
+},
+{
+  "name":"[S"
+},
+{
+  "name":"[Z"
+},
+{
+  "name":"cats.Later",
+  "fields":[{"name":"value$lzy1"}]
+},
+{
+  "name":"cats.effect.IO$",
+  "fields":[{"name":"secureRandom$lzy1"}]
+},
+{
+  "name":"cats.effect.std.Console$",
+  "fields":[{"name":"cats$effect$std$ConsoleCompanionPlatform$$stdinReader$lzy1"}]
+},
+{
+  "name":"cats.effect.std.Semaphore$impl",
+  "fields":[{"name":"Done$lzy1"}, {"name":"Wait$lzy1"}]
+},
+{
+  "name":"cats.effect.unsafe.Head",
+  "fields":[{"name":"head"}]
+},
+{
+  "name":"cats.effect.unsafe.Tail",
+  "fields":[{"name":"tailPublisher"}]
+},
+{
+  "name":"cats.parse.Parser$State",
+  "fields":[{"name":"locationMap$lzy1"}]
+},
+{
+  "name":"cats.parse.Parser0",
+  "fields":[{"name":"hashCode$lzy1"}]
+},
+{
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.ARCFOURCipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.DESCipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.DESedeCipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.PBKDF2Core$HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.PBKDF2Core$HmacSHA224",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.PBKDF2Core$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.PBKDF2Core$HmacSHA384",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.crypto.provider.PBKDF2Core$HmacSHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.zaxxer.hikari.HikariConfig",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.zaxxer.hikari.pool.PoolBase",
+  "fields":[{"name":"catalog"}]
+},
+{
+  "name":"com.zaxxer.hikari.pool.PoolEntry",
+  "fields":[{"name":"state"}]
+},
+{
+  "name":"doobie.free.KleisliInterpreter",
+  "fields":[{"name":"BlobInterpreter$lzy1"}, {"name":"CallableStatementInterpreter$lzy1"}, {"name":"ClobInterpreter$lzy1"}, {"name":"ConnectionInterpreter$lzy1"}, {"name":"DatabaseMetaDataInterpreter$lzy1"}, {"name":"DriverInterpreter$lzy1"}, {"name":"NClobInterpreter$lzy1"}, {"name":"PreparedStatementInterpreter$lzy1"}, {"name":"RefInterpreter$lzy1"}, {"name":"ResultSetInterpreter$lzy1"}, {"name":"SQLDataInterpreter$lzy1"}, {"name":"SQLInputInterpreter$lzy1"}, {"name":"SQLOutputInterpreter$lzy1"}, {"name":"StatementInterpreter$lzy1"}]
+},
+{
+  "name":"doobie.package$implicits$",
+  "fields":[{"name":"legacy$lzy1"}]
+},
+{
+  "name":"doobie.util.Write$Composite",
+  "fields":[{"name":"length$lzy1"}, {"name":"puts$lzy1"}]
+},
+{
+  "name":"doobie.util.fragment$Fragment",
+  "fields":[{"name":"write$lzy1"}]
+},
+{
+  "name":"doobie.util.meta.Meta$",
+  "fields":[{"name":"Advanced$lzy1"}, {"name":"Basic$lzy1"}]
+},
+{
+  "name":"doobie.util.meta.MetaConstructors$",
+  "fields":[{"name":"Advanced$lzy2"}, {"name":"Basic$lzy2"}]
+},
+{
+  "name":"fs2.Chunk$",
+  "fields":[{"name":"IArraySlice$lzy1"}]
+},
+{
+  "name":"fs2.internal.ScopedResource$$anon$1",
+  "fields":[{"name":"TheLease$lzy1"}]
+},
+{
+  "name":"fs2.io.net.NetworkCompanionPlatform$$anon$1",
+  "fields":[{"name":"fallback$lzy1"}]
+},
+{
+  "name":"java.lang.Boolean",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.Byte",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.Character",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.ClassValue"
+},
+{
+  "name":"java.lang.Comparable",
+  "queryAllDeclaredMethods":true
+},
+{
+  "name":"java.lang.Deprecated",
+  "queryAllPublicMethods":true
+},
+{
+  "name":"java.lang.Double",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.Float",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.Integer",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.Long",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.SecurityManager",
+  "methods":[{"name":"checkPermission","parameterTypes":["java.security.Permission"] }]
+},
+{
+  "name":"java.lang.Short",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.StackTraceElement",
+  "queryAllPublicMethods":true
+},
+{
+  "name":"java.lang.System",
+  "methods":[{"name":"getSecurityManager","parameterTypes":[] }]
+},
+{
+  "name":"java.lang.Thread",
+  "fields":[{"name":"threadLocalRandomProbe"}]
+},
+{
+  "name":"java.lang.Void",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.invoke.VarHandle",
+  "methods":[{"name":"releaseFence","parameterTypes":[] }]
+},
+{
+  "name":"java.math.BigDecimal"
+},
+{
+  "name":"java.math.BigInteger"
+},
+{
+  "name":"java.security.AccessController",
+  "methods":[{"name":"doPrivileged","parameterTypes":["java.security.PrivilegedExceptionAction"] }]
+},
+{
+  "name":"java.security.AlgorithmParametersSpi"
+},
+{
+  "name":"java.security.KeyStoreSpi"
+},
+{
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "name":"java.util.Date"
+},
+{
+  "name":"java.util.PropertyPermission",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "name":"java.util.concurrent.atomic.AtomicBoolean",
+  "fields":[{"name":"value"}]
+},
+{
+  "name":"java.util.concurrent.atomic.AtomicReference",
+  "fields":[{"name":"value"}]
+},
+{
+  "name":"java.util.concurrent.atomic.Striped64",
+  "fields":[{"name":"base"}, {"name":"cellsBusy"}]
+},
+{
+  "name":"java.util.logging.LogManager",
+  "methods":[{"name":"getLoggingMXBean","parameterTypes":[] }]
+},
+{
+  "name":"javax.security.auth.x500.X500Principal",
+  "fields":[{"name":"thisX500Name"}],
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "name":"org.http4s.Header$Raw$",
+  "fields":[{"name":"catsInstancesForHttp4sHeaderRaw$lzy1"}]
+},
+{
+  "name":"org.http4s.Headers$",
+  "fields":[{"name":"HeadersOrder$lzy1"}]
+},
+{
+  "name":"org.http4s.MediaType$",
+  "fields":[{"name":"application$divgraphql$lzy1"}, {"name":"application$lzy1"}, {"name":"application_parts$lzy1"}, {"name":"audio$lzy1"}, {"name":"chemical$lzy1"}, {"name":"font$lzy1"}, {"name":"image$lzy1"}, {"name":"message$lzy1"}, {"name":"model$lzy1"}, {"name":"multipart$lzy1"}, {"name":"text$divevent$minusstream$lzy1"}, {"name":"text$lzy1"}, {"name":"video$lzy1"}, {"name":"x_conference$lzy1"}, {"name":"x_shader$lzy1"}]
+},
+{
+  "name":"org.http4s.Query$",
+  "fields":[{"name":"parser$lzy1"}]
+},
+{
+  "name":"org.http4s.Query$Empty$",
+  "fields":[{"name":"multiParams$lzy1"}, {"name":"params$lzy1"}]
+},
+{
+  "name":"org.http4s.Query$Parsed",
+  "fields":[{"name":"multiParams$lzy3"}, {"name":"params$lzy3"}]
+},
+{
+  "name":"org.http4s.Uri",
+  "fields":[{"name":"renderString$lzy1"}]
+},
+{
+  "name":"org.http4s.Uri$",
+  "fields":[{"name":"SkipEncodeInPath$lzy1"}, {"name":"toSkip$lzy1"}]
+},
+{
+  "name":"org.http4s.Uri$Path$",
+  "fields":[{"name":"Asterisk$lzy1"}]
+},
+{
+  "name":"org.postgresql.Driver",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.postgresql.core.QueryExecutorCloseAction",
+  "fields":[{"name":"pgStream"}]
+},
+{
+  "name":"org.postgresql.jdbc.PgStatement",
+  "fields":[{"name":"cancelTimerTask"}, {"name":"isClosed"}, {"name":"statementState"}]
+},
+{
+  "name":"org.slf4j.Logger"
+},
+{
+  "name":"org.slf4j.spi.SLF4JServiceProvider"
+},
+{
+  "name":"org.typelevel.ci.package$CIStringSyntax",
+  "fields":[{"name":"ci$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.Server$",
+  "fields":[{"name":"cats$effect$IOApp$$queue$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.config.AppConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.config.CorsConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy5"}]
+},
+{
+  "name":"ru.trett.rss.server.config.DbConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy3"}]
+},
+{
+  "name":"ru.trett.rss.server.config.GoogleConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy6"}]
+},
+{
+  "name":"ru.trett.rss.server.config.JobConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy7"}]
+},
+{
+  "name":"ru.trett.rss.server.config.JwtConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy8"}]
+},
+{
+  "name":"ru.trett.rss.server.config.OAuthConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy4"}]
+},
+{
+  "name":"ru.trett.rss.server.config.ServerConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy2"}]
+},
+{
+  "name":"ru.trett.rss.server.controllers.LoginController$",
+  "fields":[{"name":"oauthResponseEntityDecoder$lzy1"}, {"name":"userInfoResponseEntityDecoder$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.controllers.LogoutController",
+  "fields":[{"name":"as$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.controllers.UserController$",
+  "fields":[{"name":"given_Decoder_UserSettings$lzy1"}, {"name":"given_Encoder_UserSettings$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.repositories.ChannelRepository",
+  "fields":[{"name":"given_Read_Channel$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.repositories.FeedRepository",
+  "fields":[{"name":"given_Read_Feed$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.repositories.UserRepository",
+  "fields":[{"name":"given_Read_Option$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.services.ChannelService",
+  "fields":[{"name":"given_FeedParserRegistry_IO$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.services.SummarizeService",
+  "fields":[{"name":"given_Decoder_GeminiResponse$lzy1"}]
+},
+{
+  "name":"scodec.bits.ByteVector",
+  "fields":[{"name":"hashCode$lzy1"}]
+},
+{
+  "name":"sun.misc.Signal",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }, {"name":"handle","parameterTypes":["sun.misc.Signal","sun.misc.SignalHandler"] }]
+},
+{
+  "name":"sun.misc.SignalHandler"
+},
+{
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}]
+},
+{
+  "name":"sun.security.pkcs12.PKCS12KeyStore",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.JavaKeyStore$JKS",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.SHA2$SHA224",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.SHA5$SHA384",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.SHA5$SHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.ssl.SSLContextImpl$DefaultSSLContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.x509.AuthorityInfoAccessExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.AuthorityKeyIdentifierExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.BasicConstraintsExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.CRLDistributionPointsExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.CertificatePoliciesExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.ExtendedKeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.IssuerAlternativeNameExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.KeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.NetscapeCertTypeExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.PrivateKeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.SubjectAlternativeNameExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.SubjectKeyIdentifierExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+}
+]

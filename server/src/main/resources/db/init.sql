@@ -13,20 +13,24 @@ CREATE TABLE public.users
 CREATE TABLE public.channels
 (
     id INT NOT NULL PRIMARY KEY DEFAULT NEXTVAL('rss_sequence'),
-    title VARCHAR(255),
-    link VARCHAR(255)
+    title VARCHAR(1000),
+    link VARCHAR(500)
 );
 
 CREATE TABLE public.feeds
 (
-    link VARCHAR(255) NOT NULL PRIMARY KEY,
-    title VARCHAR(255),
+    link VARCHAR(500) NOT NULL,
+    user_id VARCHAR(30) NOT NULL,
+    title VARCHAR(1000),
     pub_date TIMESTAMP WITH TIME ZONE,
     description TEXT,
     read BOOLEAN,
     channel_id INT,
+    PRIMARY KEY (link, user_id),
     CONSTRAINT FK_feeds_channels FOREIGN KEY (channel_id)
-        REFERENCES public.channels(id) ON DELETE CASCADE
+        REFERENCES public.channels(id) ON DELETE CASCADE,
+    CONSTRAINT FK_feeds_users FOREIGN KEY (user_id)
+        REFERENCES public.users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE public.user_channels
@@ -34,6 +38,7 @@ CREATE TABLE public.user_channels
     user_id VARCHAR(30) NOT NULL,
     channel_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    highlighted BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (user_id, channel_id),
     CONSTRAINT FK_user_channels_user FOREIGN KEY (user_id) 
         REFERENCES public.users(id) ON DELETE CASCADE,
@@ -42,3 +47,5 @@ CREATE TABLE public.user_channels
 );
 
 CREATE INDEX idx_user_channels_user_channel ON public.user_channels(user_id, channel_id);
+CREATE INDEX idx_feeds_user_channel ON public.feeds(user_id, channel_id);
+CREATE INDEX idx_feeds_channel_user_read ON public.feeds(channel_id, user_id, read);

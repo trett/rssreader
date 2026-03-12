@@ -2,14 +2,13 @@ package ru.trett.rss.server
 
 import cats.data.OptionT
 import cats.effect.*
+import cats.effect.unsafe.IORuntimeConfig
 import cats.implicits.*
 import com.comcast.ip4s.*
 import com.zaxxer.hikari.HikariConfig
 import doobie.hikari.*
 import doobie.util.log.LogEvent
 import doobie.util.log.LogHandler
-import io.opentelemetry.api.{OpenTelemetry => JOpenTelemetry}
-import io.opentelemetry.instrumentation.runtimemetrics.java17.*
 import org.http4s.AuthedRoutes
 import org.http4s.HttpRoutes
 import org.http4s.StaticFile
@@ -26,8 +25,6 @@ import org.http4s.server.middleware.ErrorHandling
 import org.http4s.server.staticcontent.*
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.*
-import org.typelevel.otel4s.instrumentation.ce.IORuntimeMetrics
-import org.typelevel.otel4s.oteljava.OtelJava
 import pureconfig.ConfigSource
 import scala.concurrent.duration.*
 import ru.trett.rss.server.authorization.AuthFilter
@@ -38,11 +35,11 @@ import ru.trett.rss.server.config.DbConfig
 import ru.trett.rss.server.config.OAuthConfig
 import ru.trett.rss.server.controllers.ChannelController
 import ru.trett.rss.server.controllers.FeedController
+import ru.trett.rss.server.controllers.JobController
 import ru.trett.rss.server.controllers.LoginController
 import ru.trett.rss.server.controllers.LogoutController
 import ru.trett.rss.server.controllers.SummarizeController
 import ru.trett.rss.server.controllers.UserController
-import ru.trett.rss.server.db.FlywayMigration
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
 import ru.trett.rss.server.repositories.FeedRepository
@@ -50,10 +47,12 @@ import ru.trett.rss.server.repositories.UserRepository
 import ru.trett.rss.server.services.ChannelService
 import ru.trett.rss.server.services.FeedService
 import ru.trett.rss.server.services.SummarizeService
-import ru.trett.rss.server.services.UpdateTask
 import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
+
+    override protected def runtimeConfig: IORuntimeConfig =
+        super.runtimeConfig.copy(cpuStarvationCheckInitialDelay = Duration.Inf)
 
     private val logger: SelfAwareStructuredLogger[IO] =
         LoggerFactory[IO].getLogger
@@ -63,11 +62,6 @@ object Server extends IOApp:
             println(logEvent.sql)
         }
 
-    private def registerRuntimeMetrics(openTelemetry: JOpenTelemetry): Resource[IO, Unit] = {
-        val acquire = IO.delay(RuntimeMetrics.create(openTelemetry))
-        Resource.fromAutoCloseable(acquire).void
-    }
-
     override def run(args: List[String]): IO[ExitCode] =
         val appConfig = loadConfig match {
             case Some(config) => config
@@ -76,81 +70,58 @@ object Server extends IOApp:
                 return IO.pure(ExitCode.Error)
         }
 
-        OtelJava
-            .autoConfigured[IO]()
-            .flatTap(otel4s => registerRuntimeMetrics(otel4s.underlying))
-            .evalTap(_ => logger.info("OpenTelemetry metrics initialized"))
-            .use { otel4s =>
-                given org.typelevel.otel4s.metrics.MeterProvider[IO] =
-                    otel4s.meterProvider
-                IORuntimeMetrics
-                    .register[IO](runtime.metrics, IORuntimeMetrics.Config.default)
-                    .surround {
-                        val client = EmberClientBuilder
+        val client = EmberClientBuilder
+            .default[IO]
+            .withTimeout(30.seconds)
+            .build
+        transactor(appConfig.db).use { xa =>
+            client.use { client =>
+                for {
+                    _ <- logger.info("Starting server on port: " + appConfig.server.port)
+                    corsPolicy = createCorsPolicy(appConfig.cors)
+                    jwtManager = JwtManager(appConfig.jwt.secret)
+                    channelRepository = ChannelRepository(xa)
+                    feedRepository = FeedRepository(xa)
+                    feedService = FeedService(feedRepository)
+                    userRepository = UserRepository(xa)
+                    userService = UserService(userRepository)
+                    summarizeService = new SummarizeService(
+                        feedRepository,
+                        client,
+                        appConfig.google.apiKey
+                    )
+                    channelService = ChannelService(channelRepository, client)
+                    authFilter <- AuthFilter[IO]
+                    jobController = new JobController(channelService, userService, appConfig.jobs)
+                    jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
+                    appRoutes <-
+                        corsPolicy(
+                            jarRoutes <+>
+                                routes(
+                                    jwtManager,
+                                    channelService,
+                                    userService,
+                                    feedService,
+                                    appConfig.oauth,
+                                    authFilter,
+                                    client,
+                                    summarizeService,
+                                    new LogoutController[IO],
+                                    jobController
+                                )
+                        )
+                    exitCode <-
+                        EmberServerBuilder
                             .default[IO]
-                            .withTimeout(120.seconds) // Increased timeout for AI API calls
+                            .withHost(ipv4"0.0.0.0")
+                            .withPort(Port.fromInt(appConfig.server.port).get)
+                            .withHttpApp(withErrorLogging(appRoutes).orNotFound)
                             .build
-                        transactor(appConfig.db).use { xa =>
-                            client.use { client =>
-                                for {
-                                    _ <- FlywayMigration.migrate(appConfig.db)
-                                    corsPolicy = createCorsPolicy(appConfig.cors)
-                                    jwtManager = JwtManager(appConfig.jwt.secret)
-                                    channelRepository = ChannelRepository(xa)
-                                    feedRepository = FeedRepository(xa)
-                                    feedService = FeedService(feedRepository)
-                                    userRepository = UserRepository(xa)
-                                    userService = UserService(userRepository)
-                                    summarizeService = new SummarizeService(
-                                        feedRepository,
-                                        client,
-                                        appConfig.google.apiKey
-                                    )
-                                    channelService = ChannelService(channelRepository, client)
-                                    _ <- logger.info(
-                                        "Starting server on port: " + appConfig.server.port
-                                    )
-                                    authFilter <- AuthFilter[IO]
-                                    jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
-                                    appRoutes <-
-                                        corsPolicy(
-                                            jarRoutes <+>
-                                                routes(
-                                                    jwtManager,
-                                                    channelService,
-                                                    userService,
-                                                    feedService,
-                                                    appConfig.oauth,
-                                                    authFilter,
-                                                    client,
-                                                    summarizeService,
-                                                    new LogoutController[IO]
-                                                )
-                                        )
-                                    exitCode <- UpdateTask(
-                                        channelService,
-                                        userService
-                                    ).background.void
-                                        .surround {
-                                            for {
-                                                server <- EmberServerBuilder
-                                                    .default[IO]
-                                                    .withHost(ipv4"0.0.0.0")
-                                                    .withPort(
-                                                        Port.fromInt(appConfig.server.port).get
-                                                    )
-                                                    .withHttpApp(
-                                                        withErrorLogging(appRoutes).orNotFound
-                                                    )
-                                                    .build
-                                                    .use(_ => IO.never)
-                                            } yield server
-                                        }
-                                } yield exitCode
-                            }
-                        }
-                    }
+                            .use(_ => IO.never)
+                            .as(ExitCode.Success)
+                } yield exitCode
             }
+        }
 
     private def loadConfig: Option[AppConfig] =
         ConfigSource.default.load[AppConfig] match {
@@ -168,7 +139,9 @@ object Server extends IOApp:
                 hikariConfig.setJdbcUrl(config.url)
                 hikariConfig.setUsername(config.user)
                 hikariConfig.setPassword(config.password)
-                hikariConfig.setMaximumPoolSize(32)
+                hikariConfig.setMaximumPoolSize(10)
+                hikariConfig.setMinimumIdle(0)
+                hikariConfig.setRegisterMbeans(false)
                 hikariConfig
             }
             xa <- HikariTransactor
@@ -193,9 +166,10 @@ object Server extends IOApp:
         authFilter: AuthFilter[IO],
         client: Client[IO],
         summarizeService: SummarizeService,
-        logoutController: LogoutController[IO]
+        logoutController: LogoutController[IO],
+        jobController: JobController
     ): HttpRoutes[IO] =
-        unprotectedRoutes(jwtManager, oauthConfig, userService, client) <+>
+        unprotectedRoutes(jwtManager, oauthConfig, userService, client, jobController) <+>
             authFilter.middleware(jwtManager, userService)(
                 authedRoutes(
                     channelService,
@@ -216,9 +190,15 @@ object Server extends IOApp:
         jwtManager: JwtManager,
         oauthConfig: OAuthConfig,
         userService: UserService,
-        client: Client[IO]
+        client: Client[IO],
+        jobController: JobController
     ): HttpRoutes[IO] =
-        LoginController.routes(jwtManager, oauthConfig, userService, client) <+> indexRoute
+        LoginController.routes(
+            jwtManager,
+            oauthConfig,
+            userService,
+            client
+        ) <+> indexRoute <+> jobController.routes
 
     private def authedRoutes(
         channelService: ChannelService,

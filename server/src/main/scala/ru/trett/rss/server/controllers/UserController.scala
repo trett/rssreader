@@ -46,10 +46,10 @@ object UserController {
                         )
                     )
                     result <- userService.updateUserSettings(updatedUser)
-                    _ <- logger.info(s"""User: ${user.email} was updated with settings: 
-                          |hideRead: ${settings.hideRead}, 
+                    _ <- logger.info(s"""User: ${user.email} was updated with settings:
+                          |hideRead: ${settings.hideRead},
                           |summaryLanguage: $validatedLanguage,
-                          |aiMode: ${settings.aiMode}, 
+                          |aiMode: ${settings.aiMode},
                           |summaryModel: $validatedModel""".stripMargin)
                     _ <- cacheUpdater(updatedUser)
                     response <- Ok(s"User created with result: $result")
