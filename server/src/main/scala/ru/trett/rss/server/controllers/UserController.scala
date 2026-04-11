@@ -8,7 +8,7 @@ import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
 import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
-import ru.trett.rss.models.{SummaryLanguage, SummaryModel, UserSettings}
+import ru.trett.rss.models.{SummaryLanguage, SummaryModel, SummaryProvider, UserSettings}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
 
@@ -34,14 +34,21 @@ object UserController {
                     validatedLanguage = settings.summaryLanguage.flatMap { lang =>
                         SummaryLanguage.fromString(lang).map(_.displayName)
                     }
+                    validatedProvider = settings.summaryProvider.flatMap { provider =>
+                        SummaryProvider.fromString(provider).map(_.displayName)
+                    }
+                    resolvedProvider = validatedProvider
+                        .flatMap(SummaryProvider.fromString)
+                        .getOrElse(SummaryProvider.default)
                     validatedModel = settings.summaryModel.flatMap { model =>
-                        SummaryModel.fromString(model).map(_.displayName)
+                        SummaryModel.fromString(resolvedProvider, model).map(_.displayName)
                     }
                     updatedUser = user.copy(settings =
                         User.Settings(
                             settings.hideRead,
                             validatedLanguage,
                             settings.aiMode,
+                            validatedProvider,
                             validatedModel
                         )
                     )
@@ -49,6 +56,7 @@ object UserController {
                     _ <- logger.info(s"""User: ${user.email} was updated with settings:
                           |hideRead: ${settings.hideRead},
                           |summaryLanguage: $validatedLanguage,
+                          |summaryProvider: $validatedProvider,
                           |aiMode: ${settings.aiMode},
                           |summaryModel: $validatedModel""".stripMargin)
                     _ <- cacheUpdater(updatedUser)

@@ -88,7 +88,9 @@ object Server extends IOApp:
                     summarizeService = new SummarizeService(
                         feedRepository,
                         client,
-                        appConfig.google.apiKey
+                        appConfig.google.apiKey,
+                        appConfig.openai.apiKey,
+                        appConfig.openai.defaultModel
                     )
                     channelService = ChannelService(channelRepository, client)
                     authFilter <- AuthFilter[IO]

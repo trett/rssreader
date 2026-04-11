@@ -17,6 +17,7 @@ object User:
         hideRead: Boolean = false,
         summaryLanguage: Option[String] = None,
         aiMode: Option[Boolean] = None,
+        summaryProvider: Option[String] = None,
         summaryModel: Option[String] = None
     ):
         /** AI mode is the default. Returns true unless aiMode is explicitly set to false. */

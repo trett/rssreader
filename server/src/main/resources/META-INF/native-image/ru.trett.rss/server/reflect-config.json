@@ -359,6 +359,10 @@
   "fields":[{"name":"derived$ConfigReader$lzy6"}]
 },
 {
+  "name":"ru.trett.rss.server.config.OpenAiConfig$",
+  "fields":[{"name":"derived$ConfigReader$lzy9"}]
+},
+{
   "name":"ru.trett.rss.server.config.JobConfig$",
   "fields":[{"name":"derived$ConfigReader$lzy7"}]
 },

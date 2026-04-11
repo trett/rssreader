@@ -5,6 +5,7 @@ import fs2.Stream
 import io.circe.Decoder
 import io.circe.Json
 import io.circe.generic.auto.*
+import io.circe.parser.parse
 import org.http4s.Header
 import org.http4s.Headers
 import org.http4s.Method
@@ -16,7 +17,7 @@ import org.http4s.client.Client
 import org.typelevel.ci.*
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.LoggerFactory
-import ru.trett.rss.models.{SummaryLanguage, SummaryModel, SummaryEvent}
+import ru.trett.rss.models.{SummaryEvent, SummaryLanguage, SummaryModel, SummaryProvider}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.FeedRepository
 import org.jsoup.Jsoup
@@ -27,13 +28,20 @@ case class Content(parts: Option[List[Part]])
 case class Candidate(content: Content)
 case class GeminiResponse(candidates: List[Candidate])
 
-class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKey: String)(using
-    loggerFactory: LoggerFactory[IO]
-):
+class SummarizeService(
+    feedRepository: FeedRepository,
+    client: Client[IO],
+    googleApiKey: String,
+    openAiApiKey: String,
+    openAiDefaultModel: String
+)(using loggerFactory: LoggerFactory[IO]):
+
+    private case class ProviderSelection(provider: SummaryProvider, model: SummaryModel)
 
     given Decoder[GeminiResponse] = Decoder.forProduct1("candidates")(GeminiResponse.apply)
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     private val batchSize = 30
+    private val openAiEndpoint = Uri.unsafeFromString("https://api.openai.com/v1/chat/completions")
 
     private def getEndpoint(modelId: String, stream: Boolean = false): Uri =
         val method = if stream then "streamGenerateContent" else "generateContent"
@@ -77,17 +85,74 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                 method = Method.POST,
                 uri = getEndpoint(modelId, stream),
                 headers = Headers(
-                    Header.Raw(ci"X-goog-api-key", apiKey),
+                    Header.Raw(ci"X-goog-api-key", googleApiKey),
                     Header.Raw(ci"Content-Type", "application/json")
                 )
             ).withEntity(config)
         )
 
-    def streamSummary(user: User, offset: Int): Stream[IO, SummaryEvent] =
-        val selectedModel = user.settings.summaryModel
-            .flatMap(SummaryModel.fromString)
-            .getOrElse(SummaryModel.default)
+    private def buildOpenAiRequest(
+        modelId: String,
+        prompt: String,
+        stream: Boolean = false
+    ): IO[Request[IO]] =
+        val body = Json.obj(
+            "model" -> Json.fromString(modelId),
+            "messages" -> Json.arr(
+                Json.obj("role" -> Json.fromString("user"), "content" -> Json.fromString(prompt))
+            ),
+            "stream" -> Json.fromBoolean(stream)
+        )
 
+        IO.pure(
+            Request[IO](
+                method = Method.POST,
+                uri = openAiEndpoint,
+                headers = Headers(
+                    Header.Raw(ci"Authorization", s"Bearer $openAiApiKey"),
+                    Header.Raw(ci"Content-Type", "application/json")
+                )
+            ).withEntity(body)
+        )
+
+    private def resolveSelection(user: User): ProviderSelection =
+        val provider = user.settings.summaryProvider
+            .flatMap(SummaryProvider.fromString)
+            .getOrElse(SummaryProvider.default)
+
+        val model = user.settings.summaryModel
+            .flatMap(SummaryModel.fromString(provider, _))
+            .orElse {
+                if provider == SummaryProvider.OpenAI then
+                    SummaryModel
+                        .fromModelId(openAiDefaultModel)
+                        .filter(_.provider == SummaryProvider.OpenAI)
+                else None
+            }
+            .getOrElse(SummaryModel.defaultFor(provider))
+
+        ProviderSelection(provider, model)
+
+    private def validateProviderKey(provider: SummaryProvider): Option[String] = provider match
+        case SummaryProvider.Gemini if googleApiKey.trim.isEmpty =>
+            Some("Gemini is selected, but GOOGLE_API_KEY is not configured.")
+        case SummaryProvider.OpenAI if openAiApiKey.trim.isEmpty =>
+            Some("OpenAI is selected, but OPENAI_API_KEY is not configured.")
+        case _ => None
+
+    def streamSummary(user: User, offset: Int): Stream[IO, SummaryEvent] =
+        val selection = resolveSelection(user)
+        validateProviderKey(selection.provider) match
+            case Some(error) =>
+                Stream.emit(SummaryEvent.Error(error)) ++ Stream.emit(SummaryEvent.Done)
+            case None =>
+                streamSummaryInternal(user, offset, selection)
+
+    private def streamSummaryInternal(
+        user: User,
+        offset: Int,
+        selection: ProviderSelection
+    ): Stream[IO, SummaryEvent] =
         Stream
             .eval(feedRepository.getTotalUnreadCount(user.id))
             .flatMap { totalUnread =>
@@ -102,7 +167,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     Stream.emit(metadata) ++ (
                         if feeds.isEmpty && offset == 0 then
                             Stream
-                                .eval(generateFunFact(user, selectedModel.modelId))
+                                .eval(generateFunFact(user, selection))
                                 .map(SummaryEvent.FunFact(_)) ++ Stream.emit(SummaryEvent.Done)
                         else if feeds.isEmpty then Stream.emit(SummaryEvent.Done)
                         else
@@ -117,7 +182,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                                 .drain ++ summarizeStream(
                                 strippedText,
                                 validatedLanguage.displayName,
-                                selectedModel.modelId
+                                selection
                             )
                     )
                 }
@@ -129,7 +194,7 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     ) ++ Stream.emit(SummaryEvent.Done)
             }
 
-    private def generateFunFact(user: User, modelId: String): IO[String] =
+    private def generateFunFact(user: User, selection: ProviderSelection): IO[String] =
         val validatedLanguage = user.settings.summaryLanguage
             .flatMap(SummaryLanguage.fromString)
             .getOrElse(SummaryLanguage.English)
@@ -141,38 +206,65 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         |Do not use markdown formatting.
                         |Do not add any introduction or preamble, just state the fact directly.""".stripMargin
 
-        buildGeminiRequest(modelId, prompt, temperature = Some(1.5)).flatMap { request =>
-            client
-                .run(request)
-                .use { response =>
-                    if response.status.isSuccess then
-                        response
-                            .as[GeminiResponse]
-                            .map { geminiResp =>
-                                geminiResp.candidates.headOption
-                                    .flatMap(_.content.parts.flatMap(_.headOption))
-                                    .map(_.text.trim)
-                                    .filter(_.nonEmpty)
-                                    .getOrElse("")
+        selection.provider match
+            case SummaryProvider.Gemini =>
+                buildGeminiRequest(selection.model.modelId, prompt, temperature = Some(1.5))
+                    .flatMap { request =>
+                        client
+                            .run(request)
+                            .use { response =>
+                                if response.status.isSuccess then
+                                    response
+                                        .as[GeminiResponse]
+                                        .map { geminiResp =>
+                                            geminiResp.candidates.headOption
+                                                .flatMap(_.content.parts.flatMap(_.headOption))
+                                                .map(_.text.trim)
+                                                .filter(_.nonEmpty)
+                                                .getOrElse("")
+                                        }
+                                else
+                                    response.bodyText.compile.string.flatMap { body =>
+                                        logger.error(
+                                            s"Gemini API error (fun fact): status=${response.status}, body=$body"
+                                        ) *>
+                                            IO.pure("")
+                                    }
                             }
-                    else
-                        response.bodyText.compile.string.flatMap { body =>
-                            logger.error(
-                                s"Gemini API error (fun fact): status=${response.status}, body=$body"
+                            .handleErrorWith { error =>
+                                logger.error(error)(
+                                    s"Error generating Gemini fun fact: ${error.getMessage}"
+                                ) *>
+                                    IO.pure("")
+                            }
+                    }
+            case SummaryProvider.OpenAI =>
+                buildOpenAiRequest(selection.model.modelId, prompt).flatMap { request =>
+                    client
+                        .run(request)
+                        .use { response =>
+                            if response.status.isSuccess then
+                                response.as[Json].map(extractOpenAiMessage)
+                            else
+                                response.bodyText.compile.string.flatMap { body =>
+                                    logger.error(
+                                        s"OpenAI API error (fun fact): status=${response.status}, body=$body"
+                                    ) *>
+                                        IO.pure("")
+                                }
+                        }
+                        .handleErrorWith { error =>
+                            logger.error(error)(
+                                s"Error generating OpenAI fun fact: ${error.getMessage}"
                             ) *>
                                 IO.pure("")
                         }
                 }
-                .handleErrorWith { error =>
-                    logger.error(error)(s"Error generating fun fact: ${error.getMessage}") *>
-                        IO.pure("")
-                }
-        }
 
     private def summarizeStream(
         text: String,
         language: String,
-        modelId: String
+        selection: ProviderSelection
     ): Stream[IO, SummaryEvent] =
         val prompt = s"""You must follow these rules for your response:
                         |1. Provide only the raw text of the code.
@@ -190,38 +282,64 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                         |13. For each topic, list the key stories with brief summaries.
                         |Now, following these rules exactly summarize the following text. Answer in $language: $text.""".stripMargin
 
-        Stream
-            .eval(buildGeminiRequest(modelId, prompt, stream = true))
-            .flatMap { request =>
-                client.stream(request).flatMap { response =>
-                    if response.status.isSuccess then
-                        response.body
-                            .through(fs2.text.utf8.decode)
-                            .through(io.circe.fs2.stringArrayParser)
-                            .through(io.circe.fs2.decoder[IO, GeminiResponse])
-                            .map { geminiResp =>
-                                geminiResp.candidates.headOption
-                                    .flatMap(_.content.parts.flatMap(_.headOption))
-                                    .map(_.text)
-                                    .getOrElse("")
-                            }
-                            .map { text =>
-                                text.stripPrefix("```html").stripSuffix("```")
-                            }
-                            .filter(_.nonEmpty)
-                            .map(SummaryEvent.Content(_))
-                    else
-                        Stream
-                            .eval(response.bodyText.compile.string.flatMap { body =>
-                                logger.error(
-                                    s"Gemini API stream error: status=${response.status}, body=$body"
+        val stream = selection.provider match
+            case SummaryProvider.Gemini =>
+                Stream
+                    .eval(buildGeminiRequest(selection.model.modelId, prompt, stream = true))
+                    .flatMap { request =>
+                        client.stream(request).flatMap { response =>
+                            if response.status.isSuccess then
+                                response.body
+                                    .through(fs2.text.utf8.decode)
+                                    .through(io.circe.fs2.stringArrayParser)
+                                    .through(io.circe.fs2.decoder[IO, GeminiResponse])
+                                    .map { geminiResp =>
+                                        geminiResp.candidates.headOption
+                                            .flatMap(_.content.parts.flatMap(_.headOption))
+                                            .map(_.text)
+                                            .getOrElse("")
+                                    }
+                                    .map(text => text.stripPrefix("```html").stripSuffix("```"))
+                                    .filter(_.nonEmpty)
+                                    .map(SummaryEvent.Content(_))
+                            else
+                                Stream
+                                    .eval(response.bodyText.compile.string.flatMap { body =>
+                                        logger.error(
+                                            s"Gemini API stream error: status=${response.status}, body=$body"
+                                        )
+                                    })
+                                    .drain ++ Stream.emit(
+                                    SummaryEvent.Error(s"API error: ${response.status.reason}")
                                 )
-                            })
-                            .drain ++ Stream.emit(
-                            SummaryEvent.Error(s"API error: ${response.status.reason}")
-                        )
-                }
-            }
+                        }
+                    }
+            case SummaryProvider.OpenAI =>
+                Stream
+                    .eval(buildOpenAiRequest(selection.model.modelId, prompt, stream = true))
+                    .flatMap { request =>
+                        client.stream(request).flatMap { response =>
+                            if response.status.isSuccess then
+                                response.body
+                                    .through(fs2.text.utf8.decode)
+                                    .through(fs2.text.lines)
+                                    .flatMap(line => Stream.emits(parseOpenAiDelta(line).toList))
+                                    .filter(_.nonEmpty)
+                                    .map(text => SummaryEvent.Content(stripMarkdownFence(text)))
+                            else
+                                Stream
+                                    .eval(response.bodyText.compile.string.flatMap { body =>
+                                        logger.error(
+                                            s"OpenAI API stream error: status=${response.status}, body=$body"
+                                        )
+                                    })
+                                    .drain ++ Stream.emit(
+                                    SummaryEvent.Error(s"API error: ${response.status.reason}")
+                                )
+                        }
+                    }
+
+        stream
             .handleErrorWith { error =>
                 val errorMessage = error match
                     case _: TimeoutException =>
@@ -233,3 +351,35 @@ class SummarizeService(feedRepository: FeedRepository, client: Client[IO], apiKe
                     .drain ++
                     Stream.emit(SummaryEvent.Error(errorMessage))
             } ++ Stream.emit(SummaryEvent.Done)
+
+    private def extractOpenAiMessage(json: Json): String =
+        json.hcursor
+            .downField("choices")
+            .downArray
+            .downField("message")
+            .downField("content")
+            .as[String]
+            .toOption
+            .map(_.trim)
+            .filter(_.nonEmpty)
+            .getOrElse("")
+
+    private def parseOpenAiDelta(line: String): Option[String] =
+        val trimmed = line.trim
+        if !trimmed.startsWith("data:") then None
+        else
+            val payload = trimmed.stripPrefix("data:").trim
+            if payload.isEmpty || payload == "[DONE]" then None
+            else
+                parse(payload).toOption.flatMap { json =>
+                    json.hcursor
+                        .downField("choices")
+                        .downArray
+                        .downField("delta")
+                        .downField("content")
+                        .as[String]
+                        .toOption
+                }
+
+    private def stripMarkdownFence(text: String): String =
+        text.stripPrefix("```html").stripPrefix("```").stripSuffix("```")

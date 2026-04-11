@@ -147,6 +147,48 @@ object SettingsPage {
                         formBlockStyle,
                         marginBottom.px := 16,
                         Label(
+                            "AI Provider",
+                            _.forId := "summary-provider-cmb",
+                            _.showColon := true,
+                            _.wrappingType := WrappingType.None,
+                            paddingRight.px := 20
+                        ),
+                        Select(
+                            _.id := "summary-provider-cmb",
+                            _.events.onChange
+                                .map(_.detail.selectedOption.textContent) --> settingsVar
+                                .updater[String]((a, b) =>
+                                    SummaryProvider.fromString(b) match
+                                        case Some(provider) =>
+                                            a.map(
+                                                _.copy(
+                                                    summaryProvider = Some(provider.displayName),
+                                                    summaryModel = Some(
+                                                        SummaryModel
+                                                            .defaultFor(provider)
+                                                            .displayName
+                                                    )
+                                                )
+                                            )
+                                        case None => a
+                                ),
+                            SummaryProvider.all.map(provider =>
+                                Select.option(
+                                    _.selected <-- settingsSignal.map { settings =>
+                                        settings
+                                            .flatMap(_.summaryProvider)
+                                            .flatMap(SummaryProvider.fromString)
+                                            .getOrElse(SummaryProvider.default) == provider
+                                    },
+                                    provider.displayName
+                                )
+                            )
+                        )
+                    ),
+                    div(
+                        formBlockStyle,
+                        marginBottom.px := 16,
+                        Label(
                             "AI Model",
                             _.forId := "summary-model-cmb",
                             _.showColon := true,
@@ -160,14 +202,25 @@ object SettingsPage {
                                 .updater[String]((a, b) =>
                                     a.map(x => x.copy(summaryModel = Some(b)))
                                 ),
-                            SummaryModel.all.map(model =>
-                                Select.option(
-                                    _.selected <-- settingsSignal.map(x =>
-                                        x.flatMap(_.summaryModel).contains(model.displayName)
-                                    ),
-                                    model.displayName
-                                )
-                            )
+                            children <-- settingsSignal.map { settings =>
+                                val provider = settings
+                                    .flatMap(_.summaryProvider)
+                                    .flatMap(SummaryProvider.fromString)
+                                    .getOrElse(SummaryProvider.default)
+                                val selectedModel = settings
+                                    .flatMap(_.summaryModel)
+                                    .flatMap(SummaryModel.fromString(provider, _))
+                                    .getOrElse(SummaryModel.defaultFor(provider))
+
+                                SummaryModel
+                                    .allFor(provider)
+                                    .map(model =>
+                                        Select.option(
+                                            _.selected := (selectedModel == model),
+                                            model.displayName
+                                        )
+                                    )
+                            }
                         )
                     ),
                     div(
