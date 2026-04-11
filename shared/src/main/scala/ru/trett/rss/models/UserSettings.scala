@@ -5,6 +5,7 @@ final case class UserSettings(
     hideRead: Boolean,
     summaryLanguage: Option[String],
     aiMode: Option[Boolean] = None,
+    summaryProvider: Option[String] = None,
     summaryModel: Option[String] = None
 ):
     /** AI mode is the default. Returns true unless aiMode is explicitly set to false. */

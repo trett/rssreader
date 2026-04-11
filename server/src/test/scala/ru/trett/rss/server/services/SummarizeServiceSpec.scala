@@ -8,6 +8,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.noop.NoOpFactory
+import ru.trett.rss.models.SummaryEvent
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.FeedRepository
 
@@ -33,9 +34,31 @@ class SummarizeServiceSpec extends AnyFunSuite with Matchers with MockFactory {
             .expects(user, 30, 0) // batchSize is 30, expected offset is 0
             .returning(IO.pure(List.empty))
 
-        val service = new SummarizeService(feedRepository, client, "api-key")
+        val service =
+            new SummarizeService(feedRepository, client, "api-key", "openai-key", "gpt-5-mini")
 
         // Call with offset 30 (simulating "Load More" click)
         service.streamSummary(user, 30).compile.toList.unsafeRunSync()
+    }
+
+    test("streamSummary should fail fast when OpenAI is selected without an API key") {
+        val feedRepository = mock[FeedRepository]
+        val client = mock[Client[IO]]
+        val user = User(
+            "user-id",
+            "User",
+            "user@example.com",
+            User.Settings(summaryProvider = Some("OpenAI"))
+        )
+
+        implicit val loggerFactory: LoggerFactory[IO] = NoOpFactory[IO]
+
+        val service = new SummarizeService(feedRepository, client, "api-key", "", "gpt-5-mini")
+        val events = service.streamSummary(user, 0).compile.toList.unsafeRunSync()
+
+        events shouldBe List(
+            SummaryEvent.Error("OpenAI is selected, but OPENAI_API_KEY is not configured."),
+            SummaryEvent.Done
+        )
     }
 }
