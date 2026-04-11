@@ -299,7 +299,7 @@ class SummarizeService(
                                             .map(_.text)
                                             .getOrElse("")
                                     }
-                                    .map(text => text.stripPrefix("```html").stripSuffix("```"))
+                                    .map(stripMarkdownFence)
                                     .filter(_.nonEmpty)
                                     .map(SummaryEvent.Content(_))
                             else
