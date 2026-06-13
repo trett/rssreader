@@ -12,9 +12,10 @@ import java.time.OffsetDateTime
 class FeedRepository(xa: Transactor[IO]):
 
     given Read[Feed] =
-        Read[(String, String, Long, String, String, Option[OffsetDateTime], Boolean)].map {
-            case (link, userId, channelId, title, description, pubDate, isRead) =>
-                Feed(link, userId, channelId, title, description, pubDate, isRead)
+        Read[
+            (String, String, Long, String, String, Option[OffsetDateTime], Boolean, Option[String])
+        ].map { case (link, userId, channelId, title, description, pubDate, isRead, imageUrl) =>
+            Feed(link, userId, channelId, title, description, pubDate, isRead, imageUrl)
         }
 
     def markFeedAsRead(links: List[String], user: User): IO[Int] =
@@ -46,7 +47,7 @@ class FeedRepository(xa: Transactor[IO]):
 
     def getUnreadFeeds(user: User, limit: Int, offset: Int): IO[List[Feed]] =
         sql"""
-      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read
+      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url
       FROM feeds f
       WHERE f.user_id = ${user.id} AND f.read = false
       ORDER BY f.pub_date DESC

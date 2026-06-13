@@ -108,7 +108,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                         feed.description,
                         feed.pubDate.getOrElse(OffsetDateTime.now()),
                         feed.isRead,
-                        highlighted
+                        highlighted,
+                        feed.imageUrl
                     )
                 )
             }

@@ -159,7 +159,15 @@ object Home:
                             cls("feed-content"),
                             width.percent := 100,
                             flexWrap.wrap,
-                            div(unsafeParseToHtmlFragment(x.description)),
+                            div(
+                                display.flex,
+                                gap.px := 12,
+                                alignItems.flexStart,
+                                x.imageUrl.fold(emptyNode)(url =>
+                                    img(cls := "feed-image", src := url, alt := "")
+                                ),
+                                div(cls := "feed-text", unsafeParseToHtmlFragment(x.description))
+                            ),
                             div(flexBasis.percent := 100),
                             div(
                                 paddingTop.px := 10,
