@@ -24,6 +24,19 @@
   "name":"[Lcats.parse.Parser;"
 },
 {
+  "name":"[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
+},
+{
+  "name":"com.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry[]",
+  "unsafeAllocated":true
+},
+{
+  "name":"[Ldoobie.util.Read;"
+},
+{
+  "name":"[Lio.circe.Json$JNumber;"
+},
+{
   "name":"[Ljava.lang.String;"
 },
 {
@@ -238,6 +251,14 @@
   "fields":[{"name":"legacy$lzy1"}]
 },
 {
+  "name":"doobie.util.Read$Composite",
+  "fields":[{"name":"gets$lzy1"}, {"name":"length$lzy2"}]
+},
+{
+  "name":"doobie.util.Read$Transform",
+  "fields":[{"name":"length$lzy1"}]
+},
+{
   "name":"doobie.util.Write$Composite",
   "fields":[{"name":"length$lzy1"}, {"name":"puts$lzy1"}]
 },
@@ -258,12 +279,36 @@
   "fields":[{"name":"IArraySlice$lzy1"}]
 },
 {
+  "name":"fs2.Chunk$Queue",
+  "fields":[{"name":"accumulatedLengths$lzy1"}]
+},
+{
   "name":"fs2.internal.ScopedResource$$anon$1",
   "fields":[{"name":"TheLease$lzy1"}]
 },
 {
   "name":"fs2.io.net.NetworkCompanionPlatform$$anon$1",
   "fields":[{"name":"fallback$lzy1"}]
+},
+{
+  "name":"io.circe.Decoder$",
+  "fields":[{"name":"currencyDecoder$lzy1"}, {"name":"decodeDuration$lzy1"}, {"name":"decodeInstant$lzy1"}, {"name":"decodeJavaBigDecimal$lzy1"}, {"name":"decodeJavaBigInteger$lzy1"}, {"name":"decodeJavaBoolean$lzy1"}, {"name":"decodeJavaByte$lzy1"}, {"name":"decodeJavaCharacter$lzy1"}, {"name":"decodeJavaDouble$lzy1"}, {"name":"decodeJavaFloat$lzy1"}, {"name":"decodeJavaInteger$lzy1"}, {"name":"decodeJavaLong$lzy1"}, {"name":"decodeJavaShort$lzy1"}, {"name":"decodeLocalDate$lzy1"}, {"name":"decodeLocalDateTime$lzy1"}, {"name":"decodeLocalTime$lzy1"}, {"name":"decodeMonthDay$lzy1"}, {"name":"decodeOffsetDateTime$lzy1"}, {"name":"decodeOffsetTime$lzy1"}, {"name":"decodePeriod$lzy1"}, {"name":"decodeURI$lzy1"}, {"name":"decodeUUID$lzy1"}, {"name":"decodeYear$lzy1"}, {"name":"decodeYearMonth$lzy1"}, {"name":"decodeZoneId$lzy1"}, {"name":"decodeZoneOffset$lzy1"}, {"name":"decodeZonedDateTime$lzy1"}]
+},
+{
+  "name":"io.circe.Encoder$",
+  "fields":[{"name":"currencyEncoder$lzy1"}, {"name":"encodeDuration$lzy1"}, {"name":"encodeInstant$lzy1"}, {"name":"encodeJavaBigDecimal$lzy1"}, {"name":"encodeJavaBigInteger$lzy1"}, {"name":"encodeJavaBoolean$lzy1"}, {"name":"encodeJavaByte$lzy1"}, {"name":"encodeJavaCharacter$lzy1"}, {"name":"encodeJavaDouble$lzy1"}, {"name":"encodeJavaFloat$lzy1"}, {"name":"encodeJavaInteger$lzy1"}, {"name":"encodeJavaLong$lzy1"}, {"name":"encodeJavaShort$lzy1"}, {"name":"encodeLocalDate$lzy1"}, {"name":"encodeLocalDateTime$lzy1"}, {"name":"encodeLocalTime$lzy1"}, {"name":"encodeMonthDay$lzy1"}, {"name":"encodeOffsetDateTime$lzy1"}, {"name":"encodeOffsetTime$lzy1"}, {"name":"encodePeriod$lzy1"}, {"name":"encodeURI$lzy1"}, {"name":"encodeUUID$lzy1"}, {"name":"encodeYear$lzy1"}, {"name":"encodeYearMonth$lzy1"}, {"name":"encodeZoneId$lzy1"}, {"name":"encodeZoneOffset$lzy1"}, {"name":"encodeZonedDateTime$lzy1"}]
+},
+{
+  "name":"io.circe.derivation.ConfiguredDecoder$$anon$3",
+  "fields":[{"name":"constructorNames$lzy3"}, {"name":"elemDecoders$lzy3"}, {"name":"elemDefaults$lzy3"}, {"name":"elemLabels$lzy3"}, {"name":"fp$lzy1"}, {"name":"io$circe$derivation$ConfiguredDecoder$$decodersDict$lzy3"}]
+},
+{
+  "name":"io.circe.derivation.ConfiguredEncoder$$anon$3",
+  "fields":[{"name":"elemEncoders$lzy3"}, {"name":"elemLabels$lzy3"}]
+},
+{
+  "name":"io.circe.derivation.Default$$anon$1",
+  "fields":[{"name":"defaults$lzy1"}]
 },
 {
   "name":"java.lang.Boolean",
@@ -417,6 +462,10 @@
   "fields":[{"name":"value"}]
 },
 {
+  "name":"java.util.concurrent.atomic.AtomicMarkableReference",
+  "fields":[{"name":"pair"}]
+},
+{
   "name":"java.util.concurrent.atomic.AtomicReference",
   "fields":[{"name":"value"}]
 },
@@ -508,6 +557,10 @@
   "fields":[{"name":"1d$minusinterleaved$minusparityfec$lzy3"}, {"name":"cache$minusmanifest$lzy1"}, {"name":"calendar$lzy1"}, {"name":"calender$lzy1"}, {"name":"cmd$lzy1"}, {"name":"coffeescript$lzy1"}, {"name":"cql$lzy1"}, {"name":"cql$minusexpression$lzy1"}, {"name":"cql$minusidentifier$lzy1"}, {"name":"css$lzy1"}, {"name":"csv$lzy1"}, {"name":"csv$minusschema$lzy1"}, {"name":"directory$lzy1"}, {"name":"dns$lzy2"}, {"name":"ecmascript$lzy2"}, {"name":"encaprtp$lzy3"}, {"name":"enriched$lzy1"}, {"name":"fhirpath$lzy1"}, {"name":"flexfec$lzy3"}, {"name":"fwdred$lzy2"}, {"name":"gff3$lzy1"}, {"name":"grammar$minusref$minuslist$lzy1"}, {"name":"html$lzy1"}, {"name":"jade$lzy1"}, {"name":"javascript$lzy2"}, {"name":"jcr$minuscnd$lzy1"}, {"name":"jsx$lzy1"}, {"name":"less$lzy1"}, {"name":"markdown$lzy1"}, {"name":"mathml$lzy1"}, {"name":"mdx$lzy1"}, {"name":"mizar$lzy1"}, {"name":"n3$lzy1"}, {"name":"parameters$lzy1"}, {"name":"parityfec$lzy3"}, {"name":"plain$lzy1"}, {"name":"provenance$minusnotation$lzy1"}, {"name":"prs$u002Efallenstein$u002Erst$lzy1"}, {"name":"prs$u002Elines$u002Etag$lzy1"}, {"name":"prs$u002Eprop$u002Elogic$lzy1"}, {"name":"raptorfec$lzy3"}, {"name":"red$lzy2"}, {"name":"rfc822$minusheaders$lzy1"}, {"name":"richtext$lzy1"}, {"name":"rtf$lzy2"}, {"name":"rtp$minusenc$minusaescm128$lzy2"}, {"name":"rtploopback$lzy3"}, {"name":"rtx$lzy3"}, {"name":"sgml$lzy2"}, {"name":"shaclc$lzy1"}, {"name":"shex$lzy1"}, {"name":"slim$lzy1"}, {"name":"spdx$lzy1"}, {"name":"strings$lzy1"}, {"name":"stylus$lzy1"}, {"name":"t140$lzy1"}, {"name":"tab$minusseparated$minusvalues$lzy1"}, {"name":"troff$lzy1"}, {"name":"turtle$lzy1"}, {"name":"ulpfec$lzy3"}, {"name":"uri$minuslist$lzy1"}, {"name":"vcard$lzy1"}, {"name":"vnd$u002Ea$lzy1"}, {"name":"vnd$u002Eabc$lzy1"}, {"name":"vnd$u002Eascii$minusart$lzy1"}, {"name":"vnd$u002Ecurl$lzy2"}, {"name":"vnd$u002Ecurl$u002Edcurl$lzy1"}, {"name":"vnd$u002Ecurl$u002Emcurl$lzy1"}, {"name":"vnd$u002Ecurl$u002Escurl$lzy1"}, {"name":"vnd$u002Edebian$u002Ecopyright$lzy1"}, {"name":"vnd$u002Edmclientscript$lzy1"}, {"name":"vnd$u002Edvb$u002Esubtitle$lzy2"}, {"name":"vnd$u002Eesmertec$u002Etheme$minusdescriptor$lzy1"}, {"name":"vnd$u002Efamilysearch$u002Egedcom$lzy1"}, {"name":"vnd$u002Eficlab$u002Eflt$lzy1"}, {"name":"vnd$u002Efly$lzy1"}, {"name":"vnd$u002Efmi$u002Eflexstor$lzy1"}, {"name":"vnd$u002Egml$lzy1"}, {"name":"vnd$u002Egraphviz$lzy1"}, {"name":"vnd$u002Ehans$lzy1"}, {"name":"vnd$u002Ehgl$lzy1"}, {"name":"vnd$u002Ein3d$u002E3dml$lzy1"}, {"name":"vnd$u002Ein3d$u002Espot$lzy1"}, {"name":"vnd$u002Eiptc$u002Enewsml$lzy1"}, {"name":"vnd$u002Eiptc$u002Enitf$lzy1"}, {"name":"vnd$u002Elatex$minusz$lzy1"}, {"name":"vnd$u002Emotorola$u002Ereflex$lzy1"}, {"name":"vnd$u002Ems$minusmediapackage$lzy1"}, {"name":"vnd$u002Enet2phone$u002Ecommcenter$u002Ecommand$lzy1"}, {"name":"vnd$u002Eradisys$u002Emsml$minusbasic$minuslayout$lzy1"}, {"name":"vnd$u002Esenx$u002Ewarpscript$lzy1"}, {"name":"vnd$u002Esi$u002Euricatalogue$lzy1"}, {"name":"vnd$u002Esosi$lzy1"}, {"name":"vnd$u002Esun$u002Ej2me$u002Eapp$minusdescriptor$lzy1"}, {"name":"vnd$u002Etrolltech$u002Elinguist$lzy1"}, {"name":"vnd$u002Ewap$u002Esi$lzy1"}, {"name":"vnd$u002Ewap$u002Esl$lzy1"}, {"name":"vnd$u002Ewap$u002Ewml$lzy1"}, {"name":"vnd$u002Ewap$u002Ewmlscript$lzy1"}, {"name":"vtt$lzy1"}, {"name":"x$minusasm$lzy1"}, {"name":"x$minusc$lzy1"}, {"name":"x$minuscomponent$lzy1"}, {"name":"x$minusfortran$lzy1"}, {"name":"x$minusgwt$minusrpc$lzy1"}, {"name":"x$minushandlebars$minustemplate$lzy1"}, {"name":"x$minusjava$minussource$lzy1"}, {"name":"x$minusjquery$minustmpl$lzy1"}, {"name":"x$minuslua$lzy1"}, {"name":"x$minusmarkdown$lzy1"}, {"name":"x$minusnfo$lzy1"}, {"name":"x$minusopml$lzy1"}, {"name":"x$minusorg$lzy1"}, {"name":"x$minuspascal$lzy1"}, {"name":"x$minusprocessing$lzy1"}, {"name":"x$minussass$lzy1"}, {"name":"x$minusscss$lzy1"}, {"name":"x$minussetext$lzy1"}, {"name":"x$minussfv$lzy1"}, {"name":"x$minussuse$minusymp$lzy1"}, {"name":"x$minusuuencode$lzy1"}, {"name":"x$minusvcalendar$lzy1"}, {"name":"x$minusvcard$lzy1"}, {"name":"xml$lzy2"}, {"name":"xml$minusexternal$minusparsed$minusentity$lzy2"}, {"name":"yaml$lzy1"}]
 },
 {
+  "name":"org.http4s.QValue$",
+  "fields":[{"name":"One$lzy1"}, {"name":"Zero$lzy1"}]
+},
+{
   "name":"org.http4s.Query$",
   "fields":[{"name":"parser$lzy1"}]
 },
@@ -520,6 +573,26 @@
   "fields":[{"name":"multiParams$lzy3"}, {"name":"params$lzy3"}]
 },
 {
+  "name":"org.http4s.Query$Raw",
+  "fields":[{"name":"multiParams$lzy2"}, {"name":"params$lzy2"}]
+},
+{
+  "name":"org.http4s.QueryParamDecoder$",
+  "fields":[{"name":"booleanQueryParamDecoder$lzy1"}, {"name":"charQueryParamDecoder$lzy1"}, {"name":"doubleQueryParamDecoder$lzy1"}, {"name":"floatQueryParamDecoder$lzy1"}, {"name":"intQueryParamDecoder$lzy1"}, {"name":"longQueryParamDecoder$lzy1"}, {"name":"period$lzy3"}, {"name":"shortQueryParamDecoder$lzy1"}, {"name":"stringQueryParamDecoder$lzy1"}, {"name":"unitQueryParamDecoder$lzy1"}, {"name":"zoneId$lzy3"}]
+},
+{
+  "name":"org.http4s.QueryParameterValue$",
+  "fields":[{"name":"hashInstance$lzy2"}, {"name":"orderInstance$lzy2"}, {"name":"showInstance$lzy2"}]
+},
+{
+  "name":"org.http4s.Request",
+  "fields":[{"name":"$1$$lzy1"}]
+},
+{
+  "name":"org.http4s.RequestCookie",
+  "fields":[{"name":"renderString$lzy1"}]
+},
+{
   "name":"org.http4s.Uri",
   "fields":[{"name":"renderString$lzy1"}]
 },
@@ -530,6 +603,18 @@
 {
   "name":"org.http4s.Uri$Path$",
   "fields":[{"name":"Asterisk$lzy1"}]
+},
+{
+  "name":"org.http4s.circe.CirceInstances$",
+  "fields":[{"name":"defaultCirceParseError$lzy1"}, {"name":"defaultJsonDecodeError$lzy1"}]
+},
+{
+  "name":"org.http4s.dsl.io$",
+  "fields":[{"name":"as$lzy1"}]
+},
+{
+  "name":"org.http4s.util.Renderer$",
+  "fields":[{"name":"RFC7231InstantRenderer$lzy1"}]
 },
 {
   "name":"org.postgresql.Driver",
@@ -548,8 +633,16 @@
   "fields":[{"name":"ci$lzy1"}]
 },
 {
+  "name":"pdi.jwt.JwtBase64$",
+  "fields":[{"name":"decoder$lzy1"}, {"name":"decoderNonSafe$lzy1"}, {"name":"encoder$lzy1"}]
+},
+{
   "name":"ru.trett.rss.server.Server$",
   "fields":[{"name":"cats$effect$IOApp$$queue$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.authorization.SessionData$",
+  "fields":[{"name":"given_Decoder_SessionData$lzy1"}, {"name":"given_Encoder_SessionData$lzy1"}]
 },
 {
   "name":"ru.trett.rss.server.config.AppConfig$",
@@ -594,6 +687,10 @@
 {
   "name":"ru.trett.rss.server.controllers.UserController$",
   "fields":[{"name":"given_Decoder_UserSettings$lzy1"}, {"name":"given_Encoder_UserSettings$lzy1"}]
+},
+{
+  "name":"ru.trett.rss.server.models.User$",
+  "fields":[{"name":"given_Decoder_Settings$lzy1"}, {"name":"given_Decoder_User$lzy1"}, {"name":"given_Encoder_Settings$lzy1"}, {"name":"given_Encoder_User$lzy1"}]
 },
 {
   "name":"ru.trett.rss.server.repositories.ChannelRepository",

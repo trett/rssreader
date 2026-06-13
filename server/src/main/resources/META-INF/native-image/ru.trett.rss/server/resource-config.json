@@ -25,6 +25,16 @@
   }, {
     "pattern":"\\Qorg/postgresql/driverconfig.properties\\E"
   }, {
+    "pattern":"\\Qpublic/api/channels/feeds\\E"
+  }, {
+    "pattern":"\\Qpublic/api/channels\\E"
+  }, {
+    "pattern":"\\Qpublic/api/feeds/unread/total\\E"
+  }, {
+    "pattern":"\\Qpublic/api/user/settings\\E"
+  }, {
+    "pattern":"\\Qpublic/index.html\\E"
+  }, {
     "pattern":"\\Qreference.conf\\E"
   }, {
     "pattern":"\\Qsimplelogger.properties\\E"
