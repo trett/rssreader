@@ -43,18 +43,28 @@ class ChannelRepository(xa: Transactor[IO]):
     ): ConnectionIO[Int] =
         val sql =
             """
-            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read, image_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (link, user_id)
             DO UPDATE SET description = EXCLUDED.description,
-            pub_date = EXCLUDED.pub_date, title = EXCLUDED.title, channel_id = EXCLUDED.channel_id
+            pub_date = EXCLUDED.pub_date, title = EXCLUDED.title, channel_id = EXCLUDED.channel_id,
+            image_url = EXCLUDED.image_url
             """
         type FeedInfo =
-            (String, String, Long, String, String, Option[OffsetDateTime], Boolean)
+            (String, String, Long, String, String, Option[OffsetDateTime], Boolean, Option[String])
         Update[FeedInfo](sql)
             .updateMany(
                 feeds.map(f =>
-                    (f.link, userId, channelId, f.title, f.description, f.pubDate, f.isRead)
+                    (
+                        f.link,
+                        userId,
+                        channelId,
+                        f.title,
+                        f.description,
+                        f.pubDate,
+                        f.isRead,
+                        f.imageUrl
+                    )
                 )
             )
 
@@ -76,7 +86,7 @@ class ChannelRepository(xa: Transactor[IO]):
     ): IO[List[(Channel, Feed, Boolean)]] = {
         val query = fr"""
           SELECT c.id, c.title, c.link,
-          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read,
+          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url,
           uc.highlighted
           FROM channels c
           JOIN user_channels uc ON c.id = uc.channel_id

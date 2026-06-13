@@ -9,5 +9,6 @@ case class Feed(
     title: String,
     description: String,
     pubDate: Option[OffsetDateTime] = None,
-    isRead: Boolean = false
+    isRead: Boolean = false,
+    imageUrl: Option[String] = None
 )

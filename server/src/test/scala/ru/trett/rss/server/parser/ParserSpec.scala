@@ -49,6 +49,7 @@ class ParserSpec extends AnyFunSuite with Matchers {
         firstItem.title shouldBe "Jolla открыла предзаказ на нативно-линуксовый смартфон 5 поколения"
         firstItem.link shouldBe "https://www.linux.org.ru/news/pda/18161013"
         firstItem.description should include("Компания Jolla открыла предзаказ")
+        firstItem.imageUrl shouldBe None
 
         val expectedDate = OffsetDateTime.parse("Sat, 6 Dec 2025 23:53:55 +0300", dateFormatter)
         firstItem.pubDate shouldBe Some(expectedDate)
@@ -127,6 +128,7 @@ class ParserSpec extends AnyFunSuite with Matchers {
             "Media Services enables you to encode your media files"
         )
         firstItem.pubDate shouldBe Some(expectedUpdatedDate)
+        firstItem.imageUrl shouldBe Some("https://v3spec.msn.com/image1.jpg")
     }
 
     test("Parser should parse Atom 1.0 feed second version") {
@@ -156,6 +158,7 @@ class ParserSpec extends AnyFunSuite with Matchers {
         firstItem.link shouldBe "http://example.org/2025/12/07/atom"
         firstItem.description shouldBe "Detailed content about Atom-powered robots running amok in the city."
         firstItem.pubDate shouldBe Some(expectedDate)
+        firstItem.imageUrl shouldBe None
 
         // Verify second entry
         val secondItem = channel.feedItems(1)
@@ -195,6 +198,7 @@ class ParserSpec extends AnyFunSuite with Matchers {
         firstItem.title should include("[PSA]/r/java is not for programming help")
         firstItem.link shouldBe "https://www.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/"
         firstItem.description should include("Learning related questions")
+        firstItem.imageUrl shouldBe None
 
         val expectedDate =
             OffsetDateTime.ofInstant(Instant.parse("2020-10-08T17:21:51+00:00"), ZoneId.of("UTC"))
@@ -248,5 +252,10 @@ class ParserSpec extends AnyFunSuite with Matchers {
         item.title should include("\"Hoćete izbore")
         item.description should include("\"Laž godine 2025\"")
         item.description should include("\"Hoćete izbore - dobićete ih kad god hoćete\"")
+
+        val firstItem = channel.feedItems.head
+        firstItem.imageUrl shouldBe Some(
+            "https://www.021.rs/images/3a726c105ae772d3525e9b88a7549fd5/pao_avion_vojska_libije.jpg"
+        )
     }
 }

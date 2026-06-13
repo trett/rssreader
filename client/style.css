@@ -3,6 +3,20 @@
     color: #475e75;
 }
 
+.feed-image {
+    width: 33%;
+    flex-shrink: 0;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 4px;
+    align-self: flex-start;
+}
+
+.feed-text {
+    flex: 1;
+    min-width: 0;
+}
+
 .google-button {
     background-color: #eaa623;
     color: white;

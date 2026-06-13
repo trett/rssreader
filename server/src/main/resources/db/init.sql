@@ -26,6 +26,7 @@ CREATE TABLE public.feeds
     description TEXT,
     read BOOLEAN,
     channel_id INT,
+    image_url TEXT,
     PRIMARY KEY (link, user_id),
     CONSTRAINT FK_feeds_channels FOREIGN KEY (channel_id)
         REFERENCES public.channels(id) ON DELETE CASCADE,
