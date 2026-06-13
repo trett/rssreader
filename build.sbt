@@ -145,8 +145,7 @@ lazy val server = project
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
             "org.jsoup" % "jsoup" % "1.21.2",
             "io.circe" %% "circe-fs2" % "0.14.1",
-            "com.github.jwt-scala" %% "jwt-circe" % "10.0.1",
-            "com.google.cloud.sql" % "postgres-socket-factory" % "1.15.1"
+            "com.github.jwt-scala" %% "jwt-circe" % "10.0.1"
         ),
         libraryDependencies ++= Seq(
             "org.http4s" %% "http4s-ember-server",
@@ -174,7 +173,7 @@ lazy val server = project
             "org.scalamock" %% "scalamock" % "7.5.2" % Test,
             "org.testcontainers" % "testcontainers" % "2.0.2" % Test,
             "org.testcontainers" % "postgresql" % "1.21.3" % Test,
-            "org.postgresql" % "postgresql" % "42.7.8" % Test
+            "org.postgresql" % "postgresql" % "42.7.11" % Test
         )
     )
 

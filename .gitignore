@@ -12,6 +12,7 @@ project/project/
 .bloop
 **/.bsp/
 **/metals.sbt
+.mcp.json
 
 # IntelliJ IDEA
 .idea
