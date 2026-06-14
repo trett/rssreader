@@ -13,7 +13,7 @@ lazy val scala3Version = "3.7.4"
 lazy val circeVersion = "0.14.15"
 lazy val htt4sVersion = "1.0.0-M45"
 lazy val logs4catVersion = "2.7.1"
-lazy val doobieVersion = "1.0.0-RC11"
+lazy val doobieVersion = "1.0.0-RC12"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
 // --- Task Keys ---
@@ -168,6 +168,7 @@ lazy val server = project
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
         ).map(_ % doobieVersion),
+        dependencyOverrides += "org.postgresql" % "postgresql" % "42.7.11",
         libraryDependencies ++= Seq(
             "org.scalatest" %% "scalatest" % "3.2.19" % Test,
             "org.scalamock" %% "scalamock" % "7.5.2" % Test,
