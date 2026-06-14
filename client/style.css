@@ -3,18 +3,20 @@
     color: #475e75;
 }
 
-.feed-image {
-    width: 33%;
-    flex-shrink: 0;
-    max-height: 200px;
-    object-fit: cover;
-    border-radius: 4px;
-    align-self: flex-start;
+.feed-body::after {
+    content: "";
+    display: block;
+    clear: both;
 }
 
-.feed-text {
-    flex: 1;
-    min-width: 0;
+.feed-image {
+    float: right;
+    width: 33%;
+    max-width: 240px;
+    max-height: 200px;
+    object-fit: cover;
+    margin: 0 0 8px 12px;
+    border-radius: 4px;
 }
 
 .google-button {

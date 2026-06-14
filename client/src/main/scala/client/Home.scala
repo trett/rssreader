@@ -160,9 +160,7 @@ object Home:
                             width.percent := 100,
                             flexWrap.wrap,
                             div(
-                                display.flex,
-                                gap.px := 12,
-                                alignItems.flexStart,
+                                cls := "feed-body",
                                 x.imageUrl.fold(emptyNode)(url =>
                                     img(cls := "feed-image", src := url, alt := "")
                                 ),
