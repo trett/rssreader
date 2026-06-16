@@ -10,37 +10,6 @@ type FeedItemList = List[FeedItemData]
 
 object Decoders:
     given Decoder[UserSettings] = deriveDecoder
-    given Decoder[SummarySuccess] = deriveDecoder
-    given Decoder[SummaryError] = deriveDecoder
-    given Decoder[SummaryResult] = Decoder.instance { cursor =>
-        cursor.downField("type").as[String].flatMap {
-            case "success" => cursor.as[SummarySuccess]
-            case "error"   => cursor.as[SummaryError]
-            case other =>
-                Left(
-                    io.circe.DecodingFailure(s"Unknown SummaryResult type: $other", cursor.history)
-                )
-        }
-    }
-    given Decoder[SummaryResponse] = deriveDecoder
-
-    import SummaryEvent.*
-    given Decoder[Content] = deriveDecoder
-    given Decoder[Metadata] = deriveDecoder
-    given Decoder[FunFact] = deriveDecoder
-    given Decoder[Error] = deriveDecoder
-
-    given Decoder[SummaryEvent] = Decoder.instance { cursor =>
-        cursor.downField("type").as[String].flatMap {
-            case "content"  => cursor.as[Content]
-            case "metadata" => cursor.as[Metadata]
-            case "funFact"  => cursor.as[FunFact]
-            case "error"    => cursor.as[Error]
-            case "done"     => Right(Done)
-            case other =>
-                Left(io.circe.DecodingFailure(s"Unknown SummaryEvent type: $other", cursor.history))
-        }
-    }
 
 final class Model:
     val feedVar: Var[FeedItemList] = Var(List())

@@ -144,7 +144,6 @@ lazy val server = project
             "org.slf4j" % "slf4j-simple" % "2.0.17",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
             "org.jsoup" % "jsoup" % "1.21.2",
-            "io.circe" %% "circe-fs2" % "0.14.1",
             "com.github.jwt-scala" %% "jwt-circe" % "10.0.1"
         ),
         libraryDependencies ++= Seq(

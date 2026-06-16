@@ -2,14 +2,13 @@
 
 # RSS Reader
 
-A modern, containerized RSS reader application built with Scala, Scala.js, and Laminar. Designed for cloud-native deployment (optimized for Google Cloud Run), it provides a simple and clean interface for reading your favorite RSS feeds, with AI-powered summaries of unread articles.
+A modern, containerized RSS reader application built with Scala, Scala.js, and Laminar. Designed for cloud-native deployment (optimized for Google Cloud Run), it provides a simple and clean interface for reading your favorite RSS feeds.
 
 ## Features
 
 -   **Feed Management**: Add and manage your RSS feed subscriptions.
 -   **Clean Reading Interface**: A simple and uncluttered interface for reading articles.
 -   **Automatic Updates**: Feeds are automatically fetched in the background to keep your content up-to-date.
--   **AI-Powered Summaries**: Generate summaries of all your unread articles using Google's Generative AI.
 -   **Secure Authentication**: Authentication is handled securely via Google OAuth2.
 -   **Responsive Design**: The application is designed to work on both desktop and mobile browsers.
 
@@ -45,11 +44,10 @@ A modern, containerized RSS reader application built with Scala, Scala.js, and L
 This is the easiest way to test the application locally in a production-like environment.
 
 1.  **Set up environment variables**:
-    You'll need to provide your Google OAuth credentials and Gemini API key. Create a `.env` file in the `scripts/local-docker` directory with the following content:
+    You'll need to provide your Google OAuth credentials. Create a `.env` file in the `scripts/local-docker` directory with the following content:
     ```
     CLIENT_ID=your_google_client_id
     CLIENT_SECRET=your_google_client_secret
-    GOOGLE_API_KEY=your_google_ai_api_key
     JWT_SECRET=your_secure_jwt_secret
     ```
 
@@ -80,7 +78,6 @@ This setup is for actively developing the application with hot-reloading where p
     ```bash
     export CLIENT_ID=your_google_client_id
     export CLIENT_SECRET=your_google_client_secret
-    export GOOGLE_API_KEY=your_google_ai_api_key
     export JWT_SECRET=your_secure_jwt_secret
     sbt server/run
     ```
@@ -100,7 +97,6 @@ The application is configured using environment variables.
 | `CLIENT_SECRET`   | The client secret for Google OAuth2.                                                     | -                              | **Yes**            |
 | `SERVER_URL`      | The public URL of the server. Used for OAuth redirect URI.                               | `https://localhost`            | No                 |
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
-| `GOOGLE_API_KEY`  | The API key for Google's Generative AI.                                                  | -                              | For summary feature |
 | `JOB_TOKEN`       | Secret token for triggering background jobs via HTTP.                                    | -                              | No                 |
 | `JWT_SECRET`      | Secret string used for signing JWT tokens.                                               | -                              | **Yes**            |
 | `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |

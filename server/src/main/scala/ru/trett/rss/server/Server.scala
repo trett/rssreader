@@ -38,7 +38,6 @@ import ru.trett.rss.server.controllers.FeedController
 import ru.trett.rss.server.controllers.JobController
 import ru.trett.rss.server.controllers.LoginController
 import ru.trett.rss.server.controllers.LogoutController
-import ru.trett.rss.server.controllers.SummarizeController
 import ru.trett.rss.server.controllers.UserController
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
@@ -46,7 +45,6 @@ import ru.trett.rss.server.repositories.FeedRepository
 import ru.trett.rss.server.repositories.UserRepository
 import ru.trett.rss.server.services.ChannelService
 import ru.trett.rss.server.services.FeedService
-import ru.trett.rss.server.services.SummarizeService
 import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
@@ -85,11 +83,6 @@ object Server extends IOApp:
                     feedService = FeedService(feedRepository)
                     userRepository = UserRepository(xa)
                     userService = UserService(userRepository)
-                    summarizeService = new SummarizeService(
-                        feedRepository,
-                        client,
-                        appConfig.google.apiKey
-                    )
                     channelService = ChannelService(channelRepository, client)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)
@@ -105,7 +98,6 @@ object Server extends IOApp:
                                     appConfig.oauth,
                                     authFilter,
                                     client,
-                                    summarizeService,
                                     new LogoutController[IO],
                                     jobController
                                 )
@@ -165,7 +157,6 @@ object Server extends IOApp:
         oauthConfig: OAuthConfig,
         authFilter: AuthFilter[IO],
         client: Client[IO],
-        summarizeService: SummarizeService,
         logoutController: LogoutController[IO],
         jobController: JobController
     ): HttpRoutes[IO] =
@@ -175,7 +166,6 @@ object Server extends IOApp:
                     channelService,
                     userService,
                     feedService,
-                    summarizeService,
                     user => authFilter.updateCache(user),
                     logoutController
                 )
@@ -204,14 +194,12 @@ object Server extends IOApp:
         channelService: ChannelService,
         userService: UserService,
         feedService: FeedService,
-        summarizeService: SummarizeService,
         cacheUpdater: User => IO[Unit],
         logoutController: LogoutController[IO]
     ): AuthedRoutes[User, IO] =
         ChannelController.routes(channelService)
             <+> UserController.routes(userService, cacheUpdater)
             <+> FeedController.routes(feedService)
-            <+> SummarizeController.routes(summarizeService)
             <+> logoutController.routes
 
     private def withErrorLogging(routes: HttpRoutes[IO]) =

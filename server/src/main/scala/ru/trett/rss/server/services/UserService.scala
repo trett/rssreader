@@ -23,17 +23,7 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
     def getUserSettings(id: String): IO[Option[UserSettings]] =
         userRepository
             .findUserById(id)
-            .map(
-                _.map(user =>
-                    UserSettings(
-                        user.name,
-                        user.settings.hideRead,
-                        user.settings.summaryLanguage,
-                        user.settings.aiMode,
-                        user.settings.summaryModel
-                    )
-                )
-            )
+            .map(_.map(user => UserSettings(user.name, user.settings.hideRead)))
 
     // TODO
     def removeUser(id: String): IO[Int] =

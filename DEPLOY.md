@@ -25,7 +25,6 @@ export JOB_TOKEN="your-secret-job-token" # Generate a strong random string
 export JWT_SECRET="your-secure-jwt-secret" # Generate a strong random string for token signing
 export OAUTH_CLIENT_ID="your-google-oauth-client-id"
 export OAUTH_CLIENT_SECRET="your-google-oauth-client-secret"
-export GOOGLE_API_KEY="your-google-gemini-api-key"
 ```
 
 ## 2. Infrastructure Setup
@@ -87,8 +86,6 @@ spec:
           value: "$OAUTH_CLIENT_ID"
         - name: CLIENT_SECRET
           value: "$OAUTH_CLIENT_SECRET"
-        - name: GOOGLE_API_KEY
-          value: "$GOOGLE_API_KEY"
         - name: JOB_TOKEN
           value: "$JOB_TOKEN"
         - name: JWT_SECRET

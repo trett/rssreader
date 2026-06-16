@@ -67,9 +67,8 @@ object SettingsPage {
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
                     _.events.onClick.mapTo(()) --> { _ =>
-                        settingsSignal.now() match
-                            case Some(settings) => Router.toMainPage(settings)
-                            case None           => Router.currentPageVar.set(Some(LoginRoute))
+                        if settingsSignal.now().isDefined then Router.toMainPage()
+                        else Router.currentPageVar.set(Some(LoginRoute))
                     },
                     marginBottom.px := 20
                 ),
@@ -87,87 +86,6 @@ object SettingsPage {
                             _.checked <-- settingsSignal.map(x => x.forall(_.hideRead)),
                             _.events.onChange.mapToChecked --> settingsVar
                                 .updater[Boolean]((a, b) => a.map(x => x.copy(hideRead = b)))
-                        )
-                    ),
-                    div(
-                        formBlockStyle,
-                        marginBottom.px := 16,
-                        Label(
-                            "Summary language",
-                            _.forId := "summary-language-cmb",
-                            _.showColon := true,
-                            _.wrappingType := WrappingType.None,
-                            paddingRight.px := 20
-                        ),
-                        Select(
-                            _.id := "summary-language-cmb",
-                            _.events.onChange
-                                .map(_.detail.selectedOption.textContent) --> settingsVar
-                                .updater[String]((a, b) =>
-                                    a.map(x => x.copy(summaryLanguage = Some(b)))
-                                ),
-                            SummaryLanguage.all.map(lang =>
-                                Select.option(
-                                    _.selected <-- settingsSignal.map(x =>
-                                        x.flatMap(_.summaryLanguage).contains(lang.displayName)
-                                    ),
-                                    lang.displayName
-                                )
-                            )
-                        )
-                    ),
-                    div(
-                        formBlockStyle,
-                        marginBottom.px := 16,
-                        Label(
-                            "App mode",
-                            _.forId := "app-mode-cmb",
-                            _.showColon := true,
-                            _.wrappingType := WrappingType.None,
-                            paddingRight.px := 20
-                        ),
-                        Select(
-                            _.id := "app-mode-cmb",
-                            _.events.onChange
-                                .map(_.detail.selectedOption.textContent) --> settingsVar
-                                .updater[String]((a, b) =>
-                                    a.map(x => x.copy(aiMode = Some(b == "AI Mode")))
-                                ),
-                            Select.option(
-                                _.selected <-- settingsSignal.map(_.exists(_.isAiMode)),
-                                "AI Mode"
-                            ),
-                            Select.option(
-                                _.selected <-- settingsSignal.map(_.exists(!_.isAiMode)),
-                                "Regular Mode"
-                            )
-                        )
-                    ),
-                    div(
-                        formBlockStyle,
-                        marginBottom.px := 16,
-                        Label(
-                            "AI Model",
-                            _.forId := "summary-model-cmb",
-                            _.showColon := true,
-                            _.wrappingType := WrappingType.None,
-                            paddingRight.px := 20
-                        ),
-                        Select(
-                            _.id := "summary-model-cmb",
-                            _.events.onChange
-                                .map(_.detail.selectedOption.textContent) --> settingsVar
-                                .updater[String]((a, b) =>
-                                    a.map(x => x.copy(summaryModel = Some(b)))
-                                ),
-                            SummaryModel.all.map(model =>
-                                Select.option(
-                                    _.selected <-- settingsSignal.map(x =>
-                                        x.flatMap(_.summaryModel).contains(model.displayName)
-                                    ),
-                                    model.displayName
-                                )
-                            )
                         )
                     ),
                     div(
