@@ -98,6 +98,9 @@ class ParserSpec extends AnyFunSuite with Matchers {
         val lastItem = channel.feedItems.last
         lastItem.title shouldBe "Secret scanning updates — November 2025"
         lastItem.link shouldBe "https://github.blog/changelog/2025-12-02-secret-scanning-updates-november-2025"
+
+        firstItem.categories shouldBe List("Release", "copilot")
+        secondItem.categories shouldBe List("Improvement", "actions")
     }
 
     test("Parser should parse Atom 1.0 feed first version") {
@@ -213,6 +216,9 @@ class ParserSpec extends AnyFunSuite with Matchers {
         lastItem.title shouldBe "Jetbrains IDE Debugger MCP Server - Let Claude autonomously use IntelliJ debugger"
         lastItem.link shouldBe "https://www.reddit.com/r/java/comments/1peoil3/jetbrains_ide_debugger_mcp_server_let_claude/"
         lastItem.description should include("JetBrains")
+
+        firstItem.categories shouldBe List("java")
+        secondItem.categories shouldBe List("java")
     }
 
     test("Parser should return None for invalid XML") {

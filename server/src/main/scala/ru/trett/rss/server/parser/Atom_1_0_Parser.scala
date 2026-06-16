@@ -43,7 +43,8 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
         content: String = "",
         updated: Option[OffsetDateTime] = None,
         published: Option[OffsetDateTime] = None,
-        imageUrl: Option[String] = None
+        imageUrl: Option[String] = None,
+        categories: List[String] = List.empty
     )
 
     private[parser] def parse(
@@ -163,6 +164,14 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
                                                 parseDate(readElementText(eventReader))
                                             )
                                         )
+                                    case "category" =>
+                                        val term = attrValue(el, "term").trim
+                                        val label = attrValue(el, "label").trim
+                                        val value = if (term.nonEmpty) term else label
+                                        skipElement(eventReader)
+                                        if (value.nonEmpty)
+                                            loop(state.copy(categories = state.categories :+ value))
+                                        else loop(state)
                                     case _ =>
                                         skipElement(eventReader)
                                         loop(state)
@@ -181,7 +190,17 @@ class Atom_1_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader]:
         val imageUrl = finalState.imageUrl
             .orElse(ImageExtractor.firstImageFromHtml(finalState.content))
             .orElse(ImageExtractor.firstImageFromHtml(finalState.summary))
-        Feed(finalState.link, "", 0L, finalState.title, description, pubDate, false, imageUrl)
+        Feed(
+            finalState.link,
+            "",
+            0L,
+            finalState.title,
+            description,
+            pubDate,
+            false,
+            imageUrl,
+            finalState.categories.distinct
+        )
 
     private def skipElement(eventReader: XMLEventReader): Unit =
         @tailrec

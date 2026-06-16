@@ -13,9 +13,40 @@ class FeedRepository(xa: Transactor[IO]):
 
     given Read[Feed] =
         Read[
-            (String, String, Long, String, String, Option[OffsetDateTime], Boolean, Option[String])
-        ].map { case (link, userId, channelId, title, description, pubDate, isRead, imageUrl) =>
-            Feed(link, userId, channelId, title, description, pubDate, isRead, imageUrl)
+            (
+                String,
+                String,
+                Long,
+                String,
+                String,
+                Option[OffsetDateTime],
+                Boolean,
+                Option[String],
+                List[String]
+            )
+        ].map {
+            case (
+                    link,
+                    userId,
+                    channelId,
+                    title,
+                    description,
+                    pubDate,
+                    isRead,
+                    imageUrl,
+                    categories
+                ) =>
+                Feed(
+                    link,
+                    userId,
+                    channelId,
+                    title,
+                    description,
+                    pubDate,
+                    isRead,
+                    imageUrl,
+                    categories
+                )
         }
 
     def markFeedAsRead(links: List[String], user: User): IO[Int] =
@@ -47,7 +78,7 @@ class FeedRepository(xa: Transactor[IO]):
 
     def getUnreadFeeds(user: User, limit: Int, offset: Int): IO[List[Feed]] =
         sql"""
-      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url
+      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories
       FROM feeds f
       WHERE f.user_id = ${user.id} AND f.read = false
       ORDER BY f.pub_date DESC

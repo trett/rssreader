@@ -43,15 +43,25 @@ class ChannelRepository(xa: Transactor[IO]):
     ): ConnectionIO[Int] =
         val sql =
             """
-            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read, image_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read, image_url, categories)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (link, user_id)
             DO UPDATE SET description = EXCLUDED.description,
             pub_date = EXCLUDED.pub_date, title = EXCLUDED.title, channel_id = EXCLUDED.channel_id,
-            image_url = EXCLUDED.image_url
+            image_url = EXCLUDED.image_url, categories = EXCLUDED.categories
             """
         type FeedInfo =
-            (String, String, Long, String, String, Option[OffsetDateTime], Boolean, Option[String])
+            (
+                String,
+                String,
+                Long,
+                String,
+                String,
+                Option[OffsetDateTime],
+                Boolean,
+                Option[String],
+                List[String]
+            )
         Update[FeedInfo](sql)
             .updateMany(
                 feeds.map(f =>
@@ -63,7 +73,8 @@ class ChannelRepository(xa: Transactor[IO]):
                         f.description,
                         f.pubDate,
                         f.isRead,
-                        f.imageUrl
+                        f.imageUrl,
+                        f.categories
                     )
                 )
             )
@@ -86,7 +97,7 @@ class ChannelRepository(xa: Transactor[IO]):
     ): IO[List[(Channel, Feed, Boolean)]] = {
         val query = fr"""
           SELECT c.id, c.title, c.link,
-          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url,
+          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories,
           uc.highlighted
           FROM channels c
           JOIN user_channels uc ON c.id = uc.channel_id
