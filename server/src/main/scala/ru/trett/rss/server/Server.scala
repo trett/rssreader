@@ -84,7 +84,7 @@ object Server extends IOApp:
                     feedService = FeedService(feedRepository)
                     userRepository = UserRepository(xa)
                     userService = UserService(userRepository)
-                    importanceService = ImportanceService(client, appConfig.google.apiKey)
+                    importanceService = ImportanceService(client)
                     channelService = ChannelService(channelRepository, client, importanceService)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)

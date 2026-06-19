@@ -29,7 +29,8 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
                         user.name,
                         user.settings.hideRead,
                         user.settings.bannedCategories,
-                        user.settings.keywordRules
+                        user.settings.keywordRules,
+                        user.settings.geminiApiKey
                     )
                 )
             )

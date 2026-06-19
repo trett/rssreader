@@ -91,6 +91,24 @@ object SettingsPage {
                         )
                     ),
                     div(
+                        formBlockStyle,
+                        marginTop.px := 16,
+                        marginBottom.px := 16,
+                        Label("Gemini API key", _.forId := "gemini-key-input", _.showColon := true),
+                        Input(
+                            _.id := "gemini-key-input",
+                            _.tpe := InputType.Password,
+                            _.placeholder := "AIza...",
+                            _.value <-- settingsSignal.map(_.flatMap(_.geminiApiKey).getOrElse("")),
+                            _.events.onInput.mapToValue --> settingsVar
+                                .updater[String]((a, v) =>
+                                    a.map(s =>
+                                        s.copy(geminiApiKey = if v.isEmpty then None else Some(v))
+                                    )
+                                )
+                        )
+                    ),
+                    div(
                         paddingTop.px := 10,
                         Button(
                             _.design := ButtonDesign.Emphasized,

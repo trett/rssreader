@@ -49,7 +49,6 @@ This is the easiest way to test the application locally in a production-like env
     CLIENT_ID=your_google_client_id
     CLIENT_SECRET=your_google_client_secret
     JWT_SECRET=your_secure_jwt_secret
-    GOOGLE_API_KEY=your_google_gemini_api_key
     ```
 
 2.  **Build Docker images**:
@@ -100,7 +99,6 @@ The application is configured using environment variables.
 | `CORS_URL`        | The allowed origin for CORS requests.                                                    | `https://localhost`            | No                 |
 | `JOB_TOKEN`       | Secret token for triggering background jobs via HTTP.                                    | -                              | No                 |
 | `JWT_SECRET`      | Secret string used for signing JWT tokens.                                               | -                              | **Yes**            |
-| `GOOGLE_API_KEY`  | Google Gemini API key for AI-powered importance classification.                          | -                              | No                 |
 | `REGISTRY`        | The Docker registry to push the image to                                                 | -                              | No                 |
 
 ## Deployment

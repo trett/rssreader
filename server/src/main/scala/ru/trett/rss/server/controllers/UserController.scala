@@ -35,7 +35,8 @@ object UserController {
                         User.Settings(
                             settings.hideRead,
                             settings.bannedCategories,
-                            settings.keywordRules
+                            settings.keywordRules,
+                            settings.geminiApiKey
                         )
                     )
                     result <- userService.updateUserSettings(updatedUser)

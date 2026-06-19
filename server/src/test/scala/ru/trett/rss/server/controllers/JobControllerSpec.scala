@@ -26,7 +26,7 @@ class JobControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val channelService = new ChannelService(
             mock[ru.trett.rss.server.repositories.ChannelRepository],
             mock[org.http4s.client.Client[IO]],
-            new ImportanceService(mock[org.http4s.client.Client[IO]], "")
+            new ImportanceService(mock[org.http4s.client.Client[IO]])
         ) {}
         (userService, channelService)
     }

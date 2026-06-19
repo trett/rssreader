@@ -27,7 +27,7 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         new ChannelService(
             mock[ChannelRepository],
             mock[Client[IO]],
-            new ImportanceService(mock[Client[IO]], "")
+            new ImportanceService(mock[Client[IO]])
         ) {
             override def getChannelsAndFeeds(
                 user: User,
@@ -93,7 +93,7 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             new ChannelService(
                 mock[ChannelRepository],
                 mock[Client[IO]],
-                new ImportanceService(mock[Client[IO]], "")
+                new ImportanceService(mock[Client[IO]])
             ) {
                 override def updateChannelHighlight(
                     id: Long,

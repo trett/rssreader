@@ -10,11 +10,8 @@ case class AppConfig(
     oauth: OAuthConfig,
     cors: CorsConfig,
     jobs: JobConfig,
-    jwt: JwtConfig,
-    google: GoogleConfig
+    jwt: JwtConfig
 ) derives ConfigReader
-
-case class GoogleConfig(apiKey: String) derives ConfigReader
 
 case class ServerConfig(port: Int, host: String = "0.0.0.0") derives ConfigReader
 

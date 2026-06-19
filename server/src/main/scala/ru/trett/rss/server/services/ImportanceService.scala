@@ -33,7 +33,7 @@ private given Decoder[GeminiResponseContent] = deriveDecoder
 private given Decoder[GeminiCandidate] = deriveDecoder
 private given Decoder[GeminiResponse] = deriveDecoder
 
-class ImportanceService(client: Client[IO], apiKey: String)(using loggerFactory: LoggerFactory[IO]):
+class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[IO]):
 
     private val logger = loggerFactory.getLogger
     private val batchSize = 10
@@ -42,24 +42,29 @@ class ImportanceService(client: Client[IO], apiKey: String)(using loggerFactory:
         limitRetries[IO](3) |+| exponentialBackoff[IO](1.second)
 
     def score(user: User, highlightedChannelIds: Set[Long], feeds: List[Feed]): IO[List[Feed]] =
-        if apiKey.isEmpty then IO.pure(feeds)
-        else
-            val (preDecided, needsAI) = feeds.partition(f =>
-                highlightedChannelIds.contains(f.channelId) ||
-                    matchesKeywordRule(user.settings.keywordRules, f)
-            )
-            val decidedFeeds = preDecided.map(_.copy(important = true))
-            val aiIO = needsAI
-                .groupBy(_.channelId)
-                .values
-                .toList
-                .flatTraverse(channelFeeds =>
-                    channelFeeds.grouped(batchSize).toList.flatTraverse(classifyBatch)
+        user.settings.geminiApiKey.filter(_.nonEmpty) match
+            case None => IO.pure(feeds)
+            case Some(apiKey) =>
+                val (preDecided, needsAI) = feeds.partition(f =>
+                    highlightedChannelIds.contains(f.channelId) ||
+                        matchesKeywordRule(user.settings.keywordRules, f)
                 )
-            aiIO.map { aiFeeds =>
-                val resultMap = (decidedFeeds ++ aiFeeds).map(f => (f.link, f.userId) -> f).toMap
-                feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
-            }
+                val decidedFeeds = preDecided.map(_.copy(important = true))
+                val aiIO = needsAI
+                    .groupBy(_.channelId)
+                    .values
+                    .toList
+                    .flatTraverse(channelFeeds =>
+                        channelFeeds
+                            .grouped(batchSize)
+                            .toList
+                            .flatTraverse(classifyBatch(_, apiKey))
+                    )
+                aiIO.map { aiFeeds =>
+                    val resultMap =
+                        (decidedFeeds ++ aiFeeds).map(f => (f.link, f.userId) -> f).toMap
+                    feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
+                }
 
     private def matchesKeywordRule(rules: List[String], feed: Feed): Boolean =
         rules.exists { kw =>
@@ -67,7 +72,7 @@ class ImportanceService(client: Client[IO], apiKey: String)(using loggerFactory:
             feed.categories.exists(_.toLowerCase == kw.toLowerCase)
         }
 
-    private def classifyBatch(batch: List[Feed]): IO[List[Feed]] =
+    private def classifyBatch(batch: List[Feed], apiKey: String): IO[List[Feed]] =
         if batch.isEmpty then IO.pure(Nil)
         else
             val prompt = buildBatchPrompt(batch)
@@ -76,7 +81,7 @@ class ImportanceService(client: Client[IO], apiKey: String)(using loggerFactory:
                 isWorthRetrying = (e: Throwable) => IO.pure(isRetryable(e)),
                 onError = (e: Throwable, details: RetryDetails) =>
                     logger.warn(s"Gemini batch call failed ($details): ${e.getMessage}")
-            )(callGeminiBatch(prompt, batch)).handleError { _ =>
+            )(callGeminiBatch(prompt, batch, apiKey)).handleError { _ =>
                 batch.map(_.copy(important = false, isRead = true))
             }
 
@@ -93,7 +98,7 @@ class ImportanceService(client: Client[IO], apiKey: String)(using loggerFactory:
            |Items:
            |$items""".stripMargin
 
-    private def callGeminiBatch(prompt: String, batch: List[Feed]): IO[List[Feed]] =
+    private def callGeminiBatch(prompt: String, batch: List[Feed], apiKey: String): IO[List[Feed]] =
         for
             uri <- IO.fromEither(
                 Uri.fromString(

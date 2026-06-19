@@ -16,5 +16,6 @@ object User:
     case class Settings(
         hideRead: Boolean = false,
         bannedCategories: List[String] = List.empty,
-        keywordRules: List[String] = List.empty
+        keywordRules: List[String] = List.empty,
+        geminiApiKey: Option[String] = None
     )

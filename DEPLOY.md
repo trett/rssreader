@@ -23,7 +23,6 @@ export DB_PASSWORD="your-secure-password"
 export SERVICE_NAME="rss-reader"
 export JOB_TOKEN="your-secret-job-token" # Generate a strong random string
 export JWT_SECRET="your-secure-jwt-secret" # Generate a strong random string for token signing
-export GOOGLE_API_KEY="your-google-gemini-api-key"
 export OAUTH_CLIENT_ID="your-google-oauth-client-id"
 export OAUTH_CLIENT_SECRET="your-google-oauth-client-secret"
 ```
@@ -91,8 +90,6 @@ spec:
           value: "$JOB_TOKEN"
         - name: JWT_SECRET
           value: "$JWT_SECRET"
-        - name: GOOGLE_API_KEY
-          value: "$GOOGLE_API_KEY"
         - name: SERVER_URL
           value: "https://rss-reader-PROJECT_ID.REGION.run.app" # Update after first deploy if needed
         - name: CORS_URL
