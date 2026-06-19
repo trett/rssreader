@@ -48,7 +48,7 @@ class ImportanceService(client: Client[IO], apiKey: String)(using loggerFactory:
         if highlightedChannelIds.contains(feed.channelId) then IO.pure(feed.copy(important = true))
         else if matchesKeywordRule(user.settings.keywordRules, feed) then
             IO.pure(feed.copy(important = true))
-        else classifyWithGemini(feed).map(imp => feed.copy(important = imp))
+        else classifyWithGemini(feed).map(imp => feed.copy(important = imp, isRead = !imp))
 
     private def matchesKeywordRule(rules: List[String], feed: Feed): Boolean =
         rules.exists { kw =>
