@@ -18,9 +18,11 @@ import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
 import org.http4s.Status
 
-class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(using
-    loggerFactory: LoggerFactory[IO]
-):
+class ChannelService(
+    channelRepository: ChannelRepository,
+    client: Client[IO],
+    importanceService: ImportanceService
+)(using loggerFactory: LoggerFactory[IO]):
 
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     given Logger[IO] = logger
@@ -38,17 +40,21 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
     def updateFeeds(user: User): IO[List[Int]] =
         for {
             channels <- channelRepository.findUserChannelsWithHighlight(user)
+            highlightedIds = channels.collect { case (ch, true) => ch.id }.toSet
             result <- channels.parTraverse { (channel, _) =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
                     rows <- maybeUpdatedChannel match {
                         case Right(Some(updatedChannel)) =>
-                            channelRepository.insertFeeds(
-                                updatedChannel.feedItems,
-                                channel.id,
-                                user.id
-                            )
+                            for {
+                                scored <- importanceService.score(
+                                    user,
+                                    highlightedIds,
+                                    updatedChannel.feedItems
+                                )
+                                n <- channelRepository.insertFeeds(scored, channel.id, user.id)
+                            } yield n
                         case Right(None) =>
                             logger.error(
                                 s"Failed to update channel. ${channel.title}. Response is empty."
@@ -95,9 +101,15 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
             }
         }
 
-    def getChannelsAndFeeds(user: User, page: Int, limit: Int): IO[List[FeedItemData]] =
+    def getChannelsAndFeeds(
+        user: User,
+        page: Int,
+        limit: Int,
+        importantOnly: Boolean = false
+    ): IO[List[FeedItemData]] =
         val offset = (page - 1) * limit
-        val channels = channelRepository.getChannelsWithFeedsByUser(user, limit, offset)
+        val channels =
+            channelRepository.getChannelsWithFeedsByUser(user, limit, offset, importantOnly)
         channels.flatMap {
             _.traverse { case (channel, feed, highlighted) =>
                 IO.pure(
@@ -109,7 +121,8 @@ class ChannelService(channelRepository: ChannelRepository, client: Client[IO])(u
                         feed.pubDate.getOrElse(OffsetDateTime.now()),
                         feed.isRead,
                         highlighted,
-                        feed.imageUrl
+                        feed.imageUrl,
+                        feed.important
                     )
                 )
             }

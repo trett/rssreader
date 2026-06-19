@@ -21,6 +21,8 @@ object SettingsPage {
     private val openDialogBus: EventBus[Boolean] = new EventBus
     private val newChannelBus: EventBus[Unit] = new EventBus
     private val addChannelVar = Var[String]("")
+    private val bannedCategoryInputVar = Var[String]("")
+    private val keywordInputVar = Var[String]("")
     private val formBlockStyle = Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
     private val channelObserver = Observer[ChannelList](channelVar.set)
     private val updateChannelObserver = Observer[Try[Unit]] {
@@ -100,6 +102,39 @@ object SettingsPage {
                     settingsData --> settingsVar.writer,
                     settingsErrors --> errorObserver
                 ),
+                tagListSection(
+                    headerText = "Keyword rules",
+                    subText = "Items with these words in title or category are marked Important",
+                    inputVar = keywordInputVar,
+                    itemsSignal = settingsSignal.map(_.map(_.keywordRules).getOrElse(List.empty)),
+                    onAdd = kw =>
+                        settingsVar.update(
+                            _.map(s => s.copy(keywordRules = (s.keywordRules :+ kw).distinct))
+                        ),
+                    onRemove = kw =>
+                        settingsVar.update(
+                            _.map(s => s.copy(keywordRules = s.keywordRules.filterNot(_ == kw)))
+                        )
+                ),
+                tagListSection(
+                    headerText = "Banned categories",
+                    subText = "Items with these categories are hidden from the Important view",
+                    inputVar = bannedCategoryInputVar,
+                    itemsSignal =
+                        settingsSignal.map(_.map(_.bannedCategories).getOrElse(List.empty)),
+                    onAdd = cat =>
+                        settingsVar.update(
+                            _.map(s =>
+                                s.copy(bannedCategories = (s.bannedCategories :+ cat).distinct)
+                            )
+                        ),
+                    onRemove = cat =>
+                        settingsVar.update(
+                            _.map(s =>
+                                s.copy(bannedCategories = s.bannedCategories.filterNot(_ == cat))
+                            )
+                        )
+                ),
                 UList(
                     _.headerText := "Channels",
                     _.id := "channels-list",
@@ -123,6 +158,64 @@ object SettingsPage {
                         _.events.onClick.mapTo(true) --> openDialogBus
                     )
                 )
+            )
+        )
+
+    private def tagListSection(
+        headerText: String,
+        subText: String,
+        inputVar: Var[String],
+        itemsSignal: Signal[List[String]],
+        onAdd: String => Unit,
+        onRemove: String => Unit
+    ): HtmlElement =
+        div(
+            marginTop.px := 20,
+            Label(headerText, _.showColon := true),
+            p(fontSize := "0.85em", color := "#666", subText),
+            div(
+                display.flex,
+                alignItems.center,
+                gap.px := 8,
+                marginTop.px := 8,
+                Input(
+                    _.placeholder := s"Add $headerText...",
+                    _.events.onInput.mapToValue --> inputVar,
+                    value <-- inputVar.signal
+                ),
+                Button(
+                    _.design := ButtonDesign.Positive,
+                    _.icon := IconName.add,
+                    onClick --> { _ =>
+                        val text = inputVar.now().trim
+                        if text.nonEmpty then
+                            onAdd(text)
+                            inputVar.set("")
+                    }
+                )
+            ),
+            div(
+                marginTop.px := 8,
+                display.flex,
+                flexWrap.wrap,
+                gap.px := 6,
+                children <-- itemsSignal.split(identity) { (item, _, _) =>
+                    div(
+                        display.inlineFlex,
+                        alignItems.center,
+                        gap.px := 4,
+                        padding := "4px 8px",
+                        borderRadius.px := 16,
+                        backgroundColor := "#E8F4FD",
+                        fontSize := "0.85em",
+                        span(item),
+                        Button(
+                            _.design := ButtonDesign.Transparent,
+                            _.icon := IconName.decline,
+                            onClick --> { _ => onRemove(item) }
+                        )
+                    )
+                }
             )
         )
 

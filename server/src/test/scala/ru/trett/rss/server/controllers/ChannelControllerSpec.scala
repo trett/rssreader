@@ -15,6 +15,7 @@ import org.typelevel.log4cats.slf4j.Slf4jFactory
 import ru.trett.rss.models.{ChannelData, FeedItemData}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.ChannelService
+import ru.trett.rss.server.services.ImportanceService
 import org.scalamock.scalatest.MockFactory
 import ru.trett.rss.server.repositories.ChannelRepository
 
@@ -23,11 +24,16 @@ import java.time.OffsetDateTime
 class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
     private val mockChannelService: ChannelService =
-        new ChannelService(mock[ChannelRepository], mock[Client[IO]]) {
+        new ChannelService(
+            mock[ChannelRepository],
+            mock[Client[IO]],
+            new ImportanceService(mock[Client[IO]], "")
+        ) {
             override def getChannelsAndFeeds(
                 user: User,
                 page: Int,
-                limit: Int
+                limit: Int,
+                importantOnly: Boolean
             ): IO[List[FeedItemData]] =
                 IO.pure(
                     List(
@@ -84,7 +90,11 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
     test("PUT /api/channels/:id/highlight should update channel highlight status") {
         val mockChannelServiceWithHighlight =
-            new ChannelService(mock[ChannelRepository], mock[Client[IO]]) {
+            new ChannelService(
+                mock[ChannelRepository],
+                mock[Client[IO]],
+                new ImportanceService(mock[Client[IO]], "")
+            ) {
                 override def updateChannelHighlight(
                     id: Long,
                     user: User,

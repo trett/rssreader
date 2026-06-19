@@ -140,6 +140,7 @@ lazy val server = project
         // Dependencies
         libraryDependencies ++= Seq(
             "org.typelevel" %% "cats-effect" % "3.6.3",
+            "com.github.cb372" %% "cats-retry" % "3.1.3",
             "org.slf4j" % "slf4j-api" % "2.0.17",
             "org.slf4j" % "slf4j-simple" % "2.0.17",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",

@@ -21,6 +21,7 @@ object Home:
     val refreshFeedsBus: EventBus[Int] = new EventBus
     val markAllAsReadBus: EventBus[Unit] = new EventBus
     val refreshUnreadCountBus: EventBus[Unit] = new EventBus
+    private val importantFilterVar: Var[Boolean] = Var(false)
     private val pageLimit = 20
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
@@ -66,6 +67,7 @@ object Home:
     def render: Element =
         div(
             cls := "main-content",
+            filterBar(),
             div(
                 onMountBind(ctx =>
                     refreshFeedsBus --> { page =>
@@ -109,6 +111,39 @@ object Home:
                         feeds.isEmpty || !hasMore
                     }
                 )
+            )
+        )
+
+    private def filterBar(): Element =
+        div(
+            display.flex,
+            padding.px := 12,
+            gap.px := 8,
+            Button(
+                _.design <-- importantFilterVar.signal.map(imp =>
+                    if imp then ButtonDesign.Default else ButtonDesign.Emphasized
+                ),
+                "All",
+                onClick --> { _ =>
+                    if importantFilterVar.now() then
+                        importantFilterVar.set(false)
+                        feedVar.set(List.empty)
+                        hasMoreVar.set(true)
+                        Home.refreshFeedsBus.emit(1)
+                }
+            ),
+            Button(
+                _.design <-- importantFilterVar.signal.map(imp =>
+                    if imp then ButtonDesign.Emphasized else ButtonDesign.Default
+                ),
+                "Important",
+                onClick --> { _ =>
+                    if !importantFilterVar.now() then
+                        importantFilterVar.set(true)
+                        feedVar.set(List.empty)
+                        hasMoreVar.set(true)
+                        Home.refreshFeedsBus.emit(1)
+                }
             )
         )
 
@@ -197,9 +232,11 @@ object Home:
     )
 
     private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =
+        val filterParam =
+            if importantFilterVar.now() then "&filter=important" else ""
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
-            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}")
+            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}${filterParam}")
             .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =

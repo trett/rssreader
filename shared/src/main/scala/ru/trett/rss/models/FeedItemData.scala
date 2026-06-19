@@ -10,5 +10,6 @@ case class FeedItemData(
     pubDate: OffsetDateTime,
     isRead: Boolean,
     highlighted: Boolean = false,
-    imageUrl: Option[String] = None
+    imageUrl: Option[String] = None,
+    important: Boolean = false
 )

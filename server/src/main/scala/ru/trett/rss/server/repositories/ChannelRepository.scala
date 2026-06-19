@@ -16,6 +16,46 @@ class ChannelRepository(xa: Transactor[IO]):
         Channel(id, title, link)
     }
 
+    given Read[Feed] = Read[
+        (
+            String,
+            String,
+            Long,
+            String,
+            String,
+            Option[java.time.OffsetDateTime],
+            Boolean,
+            Option[String],
+            List[String],
+            Boolean
+        )
+    ].map {
+        case (
+                link,
+                userId,
+                channelId,
+                title,
+                description,
+                pubDate,
+                isRead,
+                imageUrl,
+                categories,
+                important
+            ) =>
+            Feed(
+                link,
+                userId,
+                channelId,
+                title,
+                description,
+                pubDate,
+                isRead,
+                imageUrl,
+                categories,
+                important
+            )
+    }
+
     def insertChannel(channel: Channel, user: User): IO[Long] =
         val insertChannelQuery =
             sql"""
@@ -43,12 +83,13 @@ class ChannelRepository(xa: Transactor[IO]):
     ): ConnectionIO[Int] =
         val sql =
             """
-            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read, image_url, categories)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO feeds (link, user_id, channel_id, title, description, pub_date, read, image_url, categories, important)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (link, user_id)
             DO UPDATE SET description = EXCLUDED.description,
             pub_date = EXCLUDED.pub_date, title = EXCLUDED.title, channel_id = EXCLUDED.channel_id,
-            image_url = EXCLUDED.image_url, categories = EXCLUDED.categories
+            image_url = EXCLUDED.image_url, categories = EXCLUDED.categories,
+            important = EXCLUDED.important
             """
         type FeedInfo =
             (
@@ -60,7 +101,8 @@ class ChannelRepository(xa: Transactor[IO]):
                 Option[OffsetDateTime],
                 Boolean,
                 Option[String],
-                List[String]
+                List[String],
+                Boolean
             )
         Update[FeedInfo](sql)
             .updateMany(
@@ -74,7 +116,8 @@ class ChannelRepository(xa: Transactor[IO]):
                         f.pubDate,
                         f.isRead,
                         f.imageUrl,
-                        f.categories
+                        f.categories,
+                        f.important
                     )
                 )
             )
@@ -93,23 +136,31 @@ class ChannelRepository(xa: Transactor[IO]):
     def getChannelsWithFeedsByUser(
         user: User,
         limit: Int,
-        offset: Int
+        offset: Int,
+        importantOnly: Boolean = false
     ): IO[List[(Channel, Feed, Boolean)]] = {
         val query = fr"""
           SELECT c.id, c.title, c.link,
-          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories,
+          f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
           uc.highlighted
           FROM channels c
           JOIN user_channels uc ON c.id = uc.channel_id
           JOIN feeds f ON c.id = f.channel_id AND f.user_id = ${user.id}
           WHERE uc.user_id = ${user.id}
         """
-        val condition =
-            if (user.settings.hideRead)
-                fr"AND f.read = false ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset"
-            else
+        val hideReadFilter =
+            if (user.settings.hideRead) fr"AND f.read = false"
+            else fr""
+        val importantFilter =
+            if (importantOnly) fr"AND (f.important = true OR uc.highlighted = true)"
+            else fr""
+        val bannedFilter =
+            if (importantOnly && user.settings.bannedCategories.nonEmpty)
+                fr"AND NOT (f.categories && ${user.settings.bannedCategories}::text[])"
+            else fr""
+        val finalQuery =
+            query ++ hideReadFilter ++ importantFilter ++ bannedFilter ++
                 fr"ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset"
-        val finalQuery = query ++ condition
         finalQuery
             .query[(Channel, Feed, Boolean)]
             .to[List]

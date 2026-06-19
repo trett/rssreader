@@ -11,5 +11,6 @@ case class Feed(
     pubDate: Option[OffsetDateTime] = None,
     isRead: Boolean = false,
     imageUrl: Option[String] = None,
-    categories: List[String] = List.empty
+    categories: List[String] = List.empty,
+    important: Boolean = false
 )

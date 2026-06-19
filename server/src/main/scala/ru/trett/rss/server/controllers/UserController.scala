@@ -31,10 +31,16 @@ object UserController {
             case req @ POST -> Root / "api" / "user" / "settings" as user =>
                 for {
                     settings <- req.req.as[UserSettings]
-                    updatedUser = user.copy(settings = User.Settings(settings.hideRead))
+                    updatedUser = user.copy(settings =
+                        User.Settings(
+                            settings.hideRead,
+                            settings.bannedCategories,
+                            settings.keywordRules
+                        )
+                    )
                     result <- userService.updateUserSettings(updatedUser)
                     _ <- logger.info(
-                        s"User: ${user.email} was updated with settings: hideRead: ${settings.hideRead}"
+                        s"User: ${user.email} was updated with settings: hideRead: ${settings.hideRead}, banned: ${settings.bannedCategories.size}, keywords: ${settings.keywordRules.size}"
                     )
                     _ <- cacheUpdater(updatedUser)
                     response <- Ok(s"User created with result: $result")

@@ -22,7 +22,8 @@ class FeedRepository(xa: Transactor[IO]):
                 Option[OffsetDateTime],
                 Boolean,
                 Option[String],
-                List[String]
+                List[String],
+                Boolean
             )
         ].map {
             case (
@@ -34,7 +35,8 @@ class FeedRepository(xa: Transactor[IO]):
                     pubDate,
                     isRead,
                     imageUrl,
-                    categories
+                    categories,
+                    important
                 ) =>
                 Feed(
                     link,
@@ -45,7 +47,8 @@ class FeedRepository(xa: Transactor[IO]):
                     pubDate,
                     isRead,
                     imageUrl,
-                    categories
+                    categories,
+                    important
                 )
         }
 
@@ -78,7 +81,7 @@ class FeedRepository(xa: Transactor[IO]):
 
     def getUnreadFeeds(user: User, limit: Int, offset: Int): IO[List[Feed]] =
         sql"""
-      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories
+      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important
       FROM feeds f
       WHERE f.user_id = ${user.id} AND f.read = false
       ORDER BY f.pub_date DESC

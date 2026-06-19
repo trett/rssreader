@@ -28,6 +28,7 @@ CREATE TABLE public.feeds
     channel_id INT,
     image_url TEXT,
     categories TEXT[] NOT NULL DEFAULT '{}',
+    important BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (link, user_id),
     CONSTRAINT FK_feeds_channels FOREIGN KEY (channel_id)
         REFERENCES public.channels(id) ON DELETE CASCADE,
@@ -52,3 +53,4 @@ CREATE INDEX idx_user_channels_user_channel ON public.user_channels(user_id, cha
 CREATE INDEX idx_feeds_user_channel ON public.feeds(user_id, channel_id);
 CREATE INDEX idx_feeds_channel_user_read ON public.feeds(channel_id, user_id, read);
 CREATE INDEX idx_feeds_categories ON public.feeds USING GIN (categories);
+CREATE INDEX idx_feeds_important ON public.feeds (user_id, important);

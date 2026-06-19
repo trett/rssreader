@@ -10,6 +10,7 @@ import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 import ru.trett.rss.server.config.JobConfig
 import ru.trett.rss.server.services.ChannelService
+import ru.trett.rss.server.services.ImportanceService
 import ru.trett.rss.server.services.UserService
 import org.scalamock.scalatest.MockFactory
 import org.http4s.headers.Authorization
@@ -24,7 +25,8 @@ class JobControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         }
         val channelService = new ChannelService(
             mock[ru.trett.rss.server.repositories.ChannelRepository],
-            mock[org.http4s.client.Client[IO]]
+            mock[org.http4s.client.Client[IO]],
+            new ImportanceService(mock[org.http4s.client.Client[IO]], "")
         ) {}
         (userService, channelService)
     }

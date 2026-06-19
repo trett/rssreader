@@ -45,6 +45,7 @@ import ru.trett.rss.server.repositories.FeedRepository
 import ru.trett.rss.server.repositories.UserRepository
 import ru.trett.rss.server.services.ChannelService
 import ru.trett.rss.server.services.FeedService
+import ru.trett.rss.server.services.ImportanceService
 import ru.trett.rss.server.services.UserService
 
 object Server extends IOApp:
@@ -83,7 +84,8 @@ object Server extends IOApp:
                     feedService = FeedService(feedRepository)
                     userRepository = UserRepository(xa)
                     userService = UserService(userRepository)
-                    channelService = ChannelService(channelRepository, client)
+                    importanceService = ImportanceService(client, appConfig.google.apiKey)
+                    channelService = ChannelService(channelRepository, client, importanceService)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes

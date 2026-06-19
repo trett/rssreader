@@ -13,4 +13,8 @@ object User:
     given Decoder[User.Settings] = deriveDecoder
     given Encoder[User.Settings] = deriveEncoder
 
-    case class Settings(hideRead: Boolean = false)
+    case class Settings(
+        hideRead: Boolean = false,
+        bannedCategories: List[String] = List.empty,
+        keywordRules: List[String] = List.empty
+    )
