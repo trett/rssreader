@@ -41,19 +41,29 @@ class ChannelService(
         for {
             channels <- channelRepository.findUserChannelsWithHighlight(user)
             highlightedIds = channels.collect { case (ch, true) => ch.id }.toSet
+            existingByChannel <- channelRepository.getExistingFeedLinksByChannels(
+                channels.map(_._1.id),
+                user.id
+            )
             result <- channels.parTraverse { (channel, _) =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
                     rows <- maybeUpdatedChannel match {
                         case Right(Some(updatedChannel)) =>
+                            val existing = existingByChannel.getOrElse(channel.id, Set.empty)
+                            val (oldFeeds, newFeeds) =
+                                updatedChannel.feedItems.partition(f => existing.contains(f.link))
                             for {
-                                scored <- importanceService.score(
-                                    user,
-                                    highlightedIds,
-                                    updatedChannel.feedItems
+                                _ <- logger.info(
+                                    s"Channel ${channel.title}: ${newFeeds.size} new, ${oldFeeds.size} existing (skipping AI)"
                                 )
-                                n <- channelRepository.insertFeeds(scored, channel.id, user.id)
+                                scored <- importanceService.score(user, highlightedIds, newFeeds)
+                                n <- channelRepository.insertFeeds(
+                                    oldFeeds ++ scored,
+                                    channel.id,
+                                    user.id
+                                )
                             } yield n
                         case Right(None) =>
                             logger.error(

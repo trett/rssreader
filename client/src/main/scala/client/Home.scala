@@ -21,7 +21,6 @@ object Home:
     val refreshFeedsBus: EventBus[Int] = new EventBus
     val markAllAsReadBus: EventBus[Unit] = new EventBus
     val refreshUnreadCountBus: EventBus[Unit] = new EventBus
-    private val importantFilterVar: Var[Boolean] = Var(false)
     private val pageLimit = 20
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
@@ -67,11 +66,22 @@ object Home:
     def render: Element =
         div(
             cls := "main-content",
-            filterBar(),
             div(
                 onMountBind(ctx =>
                     refreshFeedsBus --> { page =>
                         bindFeeds(getChannelsAndFeedsRequest(page), ctx.owner)
+                    }
+                ),
+                // Re-fetch page 1 the first time settings load so filterNews is applied correctly.
+                // On mount, settingsSignal may be None if the user navigated here before settings
+                // were fetched; this observer fires once when they arrive and refreshes the list.
+                onMountBind(ctx =>
+                    settingsSignal.changes
+                        .filter(_.isDefined)
+                        .take(1) --> Observer[Option[?]] { _ =>
+                        feedVar.set(List.empty)
+                        hasMoreVar.set(true)
+                        EventBus.emit(Home.refreshFeedsBus -> 1, Home.refreshUnreadCountBus -> ())
                     }
                 ),
                 div(
@@ -111,39 +121,6 @@ object Home:
                         feeds.isEmpty || !hasMore
                     }
                 )
-            )
-        )
-
-    private def filterBar(): Element =
-        div(
-            display.flex,
-            padding.px := 12,
-            gap.px := 8,
-            Button(
-                _.design <-- importantFilterVar.signal.map(imp =>
-                    if imp then ButtonDesign.Default else ButtonDesign.Emphasized
-                ),
-                "All",
-                onClick --> { _ =>
-                    if importantFilterVar.now() then
-                        importantFilterVar.set(false)
-                        feedVar.set(List.empty)
-                        hasMoreVar.set(true)
-                        Home.refreshFeedsBus.emit(1)
-                }
-            ),
-            Button(
-                _.design <-- importantFilterVar.signal.map(imp =>
-                    if imp then ButtonDesign.Emphasized else ButtonDesign.Default
-                ),
-                "Important",
-                onClick --> { _ =>
-                    if !importantFilterVar.now() then
-                        importantFilterVar.set(true)
-                        feedVar.set(List.empty)
-                        hasMoreVar.set(true)
-                        Home.refreshFeedsBus.emit(1)
-                }
             )
         )
 
@@ -231,9 +208,10 @@ object Home:
         )
     )
 
+    private def filterNews: Boolean = settingsSignal.now().exists(_.filterNews)
+
     private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =
-        val filterParam =
-            if importantFilterVar.now() then "&filter=important" else ""
+        val filterParam = if filterNews then "&filter=important" else ""
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
             .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}${filterParam}")
@@ -254,7 +232,8 @@ object Home:
                 .mapSuccess(_ => seen.map(_.link))
 
     private def getUnreadCountRequest(): EventStream[Try[Int]] =
+        val filterParam = if filterNews then "?filter=important" else ""
         FetchStream
             .withDecoder(responseDecoder[Int])
-            .get("/api/feeds/unread/total")
+            .get(s"/api/feeds/unread/total$filterParam")
             .mapSuccess(_.get)

@@ -9,51 +9,12 @@ import doobie.util.transactor.Transactor
 import ru.trett.rss.server.models.{Channel, Feed, User}
 
 import java.time.OffsetDateTime
+import FeedInstances.given
 
 class ChannelRepository(xa: Transactor[IO]):
 
     given Read[Channel] = Read[(Long, String, String)].map { case (id, title, link) =>
         Channel(id, title, link)
-    }
-
-    given Read[Feed] = Read[
-        (
-            String,
-            String,
-            Long,
-            String,
-            String,
-            Option[java.time.OffsetDateTime],
-            Boolean,
-            Option[String],
-            List[String],
-            Boolean
-        )
-    ].map {
-        case (
-                link,
-                userId,
-                channelId,
-                title,
-                description,
-                pubDate,
-                isRead,
-                imageUrl,
-                categories,
-                important
-            ) =>
-            Feed(
-                link,
-                userId,
-                channelId,
-                title,
-                description,
-                pubDate,
-                isRead,
-                imageUrl,
-                categories,
-                important
-            )
     }
 
     def insertChannel(channel: Channel, user: User): IO[Long] =
@@ -88,8 +49,7 @@ class ChannelRepository(xa: Transactor[IO]):
             ON CONFLICT (link, user_id)
             DO UPDATE SET description = EXCLUDED.description,
             pub_date = EXCLUDED.pub_date, title = EXCLUDED.title, channel_id = EXCLUDED.channel_id,
-            image_url = EXCLUDED.image_url, categories = EXCLUDED.categories,
-            important = EXCLUDED.important
+            image_url = EXCLUDED.image_url, categories = EXCLUDED.categories
             """
         type FeedInfo =
             (
@@ -138,7 +98,7 @@ class ChannelRepository(xa: Transactor[IO]):
         limit: Int,
         offset: Int,
         importantOnly: Boolean = false
-    ): IO[List[(Channel, Feed, Boolean)]] = {
+    ): IO[List[(Channel, Feed, Boolean)]] =
         val query = fr"""
           SELECT c.id, c.title, c.link,
           f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
@@ -149,29 +109,40 @@ class ChannelRepository(xa: Transactor[IO]):
           WHERE uc.user_id = ${user.id}
         """
         val hideReadFilter =
-            if (user.settings.hideRead) fr"AND f.read = false"
-            else fr""
+            if user.settings.hideRead then fr"AND f.read = false" else fr""
         val importantFilter =
-            if (importantOnly) fr"AND (f.important = true OR uc.highlighted = true)"
-            else fr""
+            if importantOnly then fr"AND (f.important = true OR uc.highlighted = true)" else fr""
+        // Banned categories do not apply to explicitly highlighted channels
         val bannedFilter =
-            if (importantOnly && user.settings.bannedCategories.nonEmpty)
-                fr"AND NOT (f.categories && ${user.settings.bannedCategories}::text[])"
+            if importantOnly && user.settings.bannedCategories.nonEmpty then
+                fr"AND (uc.highlighted = true OR NOT (f.categories && ${user.settings.bannedCategories}::text[]))"
             else fr""
-        val finalQuery =
-            query ++ hideReadFilter ++ importantFilter ++ bannedFilter ++
-                fr"ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset"
-        finalQuery
+        (query ++ hideReadFilter ++ importantFilter ++ bannedFilter ++
+            fr"ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset")
             .query[(Channel, Feed, Boolean)]
             .to[List]
             .transact(xa)
-    }
+
+    def getExistingFeedLinksByChannels(
+        channelIds: List[Long],
+        userId: String
+    ): IO[Map[Long, Set[String]]] =
+        channelIds match
+            case Nil => IO.pure(Map.empty)
+            case ids =>
+                (fr"SELECT channel_id, link FROM feeds WHERE" ++
+                    Fragments.in(fr"channel_id", cats.data.NonEmptyList.fromListUnsafe(ids)) ++
+                    fr"AND user_id = $userId")
+                    .query[(Long, String)]
+                    .to[List]
+                    .transact(xa)
+                    .map(_.groupBy(_._1).view.mapValues(_.map(_._2).toSet).toMap)
 
     def insertFeeds(feeds: List[Feed], channelId: Long, userId: String): IO[Int] =
         insertFeedItemsQuery(channelId, userId, feeds)
             .transact(xa)
 
-    def deleteChannel(id: Long, user: User): IO[Int] = {
+    def deleteChannel(id: Long, user: User): IO[Int] =
         val checkPermissionsQuery = sql"""
               SELECT COUNT(1)
               FROM user_channels
@@ -188,12 +159,10 @@ class ChannelRepository(xa: Transactor[IO]):
             }
         } yield deleted
         transaction.transact(xa)
-    }
 
-    def updateChannelHighlight(id: Long, user: User, highlighted: Boolean): IO[Int] = {
+    def updateChannelHighlight(id: Long, user: User, highlighted: Boolean): IO[Int] =
         sql"""
           UPDATE user_channels
           SET highlighted = $highlighted
           WHERE user_id = ${user.id} AND channel_id = $id
         """.update.run.transact(xa)
-    }

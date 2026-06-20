@@ -10,6 +10,9 @@ import ru.trett.rss.server.services.FeedService
 
 object FeedController:
 
+    private object FilterQueryParamMatcher
+        extends OptionalQueryParamDecoderMatcher[String]("filter")
+
     def routes(feedService: FeedService): AuthedRoutes[User, IO] =
         AuthedRoutes.of {
             case req @ POST -> Root / "api" / "feeds" / "read" as user =>
@@ -27,9 +30,11 @@ object FeedController:
                     response <- Ok(count)
                 } yield response
 
-            case GET -> Root / "api" / "feeds" / "unread" / "total" as user =>
+            case GET -> Root / "api" / "feeds" / "unread" / "total" :? FilterQueryParamMatcher(
+                    filter
+                ) as user =>
                 for {
-                    count <- feedService.getTotalUnreadCount(user.id)
+                    count <- feedService.getTotalUnreadCount(user.id, filter.contains("important"))
                     response <- Ok(count)
                 } yield response
         }

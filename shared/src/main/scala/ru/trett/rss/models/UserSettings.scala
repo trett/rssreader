@@ -5,5 +5,6 @@ final case class UserSettings(
     hideRead: Boolean,
     bannedCategories: List[String] = List.empty,
     keywordRules: List[String] = List.empty,
-    geminiApiKey: Option[String] = None
+    geminiApiKey: Option[String] = None,
+    filterNews: Boolean = false
 )

@@ -109,6 +109,61 @@ object SettingsPage {
                         )
                     ),
                     div(
+                        formBlockStyle,
+                        marginTop.px := 16,
+                        marginBottom.px := 16,
+                        Label("Filter news", _.forId := "filter-news-cb", _.showColon := true),
+                        CheckBox(
+                            _.id := "filter-news-cb",
+                            _.checked <-- settingsSignal.map(_.exists(_.filterNews)),
+                            _.disabled <-- settingsSignal
+                                .map(_.flatMap(_.geminiApiKey).forall(_.isEmpty)),
+                            _.events.onChange.mapToChecked --> settingsVar
+                                .updater[Boolean]((a, b) => a.map(x => x.copy(filterNews = b)))
+                        )
+                    ),
+                    tagListSection(
+                        headerText = "Keyword rules",
+                        subText =
+                            "Items with these words in title or category are marked Important.",
+                        inputVar = keywordInputVar,
+                        itemsSignal =
+                            settingsSignal.map(_.map(_.keywordRules).getOrElse(List.empty)),
+                        onAdd = kw =>
+                            val keywords = kw.split(",").map(_.trim).filter(_.nonEmpty).toList
+                            settingsVar.update(
+                                _.map(s =>
+                                    s.copy(keywordRules = (s.keywordRules ++ keywords).distinct)
+                                )
+                            )
+                        ,
+                        onRemove = kw =>
+                            settingsVar.update(
+                                _.map(s => s.copy(keywordRules = s.keywordRules.filterNot(_ == kw)))
+                            )
+                    ),
+                    tagListSection(
+                        headerText = "Banned categories",
+                        subText = "Items with these categories are hidden from the Important view",
+                        inputVar = bannedCategoryInputVar,
+                        itemsSignal =
+                            settingsSignal.map(_.map(_.bannedCategories).getOrElse(List.empty)),
+                        onAdd = cat =>
+                            settingsVar.update(
+                                _.map(s =>
+                                    s.copy(bannedCategories = (s.bannedCategories :+ cat).distinct)
+                                )
+                            ),
+                        onRemove = cat =>
+                            settingsVar.update(
+                                _.map(s =>
+                                    s.copy(bannedCategories =
+                                        s.bannedCategories.filterNot(_ == cat)
+                                    )
+                                )
+                            )
+                    ),
+                    div(
                         paddingTop.px := 10,
                         Button(
                             _.design := ButtonDesign.Emphasized,
@@ -119,39 +174,6 @@ object SettingsPage {
                     ),
                     settingsData --> settingsVar.writer,
                     settingsErrors --> errorObserver
-                ),
-                tagListSection(
-                    headerText = "Keyword rules",
-                    subText = "Items with these words in title or category are marked Important",
-                    inputVar = keywordInputVar,
-                    itemsSignal = settingsSignal.map(_.map(_.keywordRules).getOrElse(List.empty)),
-                    onAdd = kw =>
-                        settingsVar.update(
-                            _.map(s => s.copy(keywordRules = (s.keywordRules :+ kw).distinct))
-                        ),
-                    onRemove = kw =>
-                        settingsVar.update(
-                            _.map(s => s.copy(keywordRules = s.keywordRules.filterNot(_ == kw)))
-                        )
-                ),
-                tagListSection(
-                    headerText = "Banned categories",
-                    subText = "Items with these categories are hidden from the Important view",
-                    inputVar = bannedCategoryInputVar,
-                    itemsSignal =
-                        settingsSignal.map(_.map(_.bannedCategories).getOrElse(List.empty)),
-                    onAdd = cat =>
-                        settingsVar.update(
-                            _.map(s =>
-                                s.copy(bannedCategories = (s.bannedCategories :+ cat).distinct)
-                            )
-                        ),
-                    onRemove = cat =>
-                        settingsVar.update(
-                            _.map(s =>
-                                s.copy(bannedCategories = s.bannedCategories.filterNot(_ == cat))
-                            )
-                        )
                 ),
                 UList(
                     _.headerText := "Channels",

@@ -66,20 +66,6 @@ object NetworkUtils {
                 case Failure(err) => Failure(err)
             }
 
-    def saveSettings(settings: UserSettings): EventStream[Try[Unit]] =
-        import io.circe.generic.semiauto.deriveEncoder
-        import io.circe.Encoder
-        import io.circe.syntax.*
-        given Encoder[UserSettings] = deriveEncoder
-        FetchStream
-            .withDecoder(responseDecoder[String])
-            .post(
-                "/api/user/settings",
-                _.body(settings.asJson.toString),
-                _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE)
-            )
-            .mapSuccess(_ => ())
-
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())
 }

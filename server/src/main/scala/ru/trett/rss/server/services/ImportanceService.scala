@@ -3,10 +3,10 @@ package ru.trett.rss.server.services
 import cats.effect.IO
 import cats.syntax.all.*
 import io.circe.generic.semiauto.*
-import io.circe.syntax.*
 import io.circe.{Decoder, Encoder}
 import org.http4s.MediaType
 import org.http4s.circe.CirceEntityDecoder.*
+import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.client.Client
 import org.http4s.headers.`Content-Type`
 import org.http4s.{Method, Request, Uri}
@@ -43,27 +43,34 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
 
     def score(user: User, highlightedChannelIds: Set[Long], feeds: List[Feed]): IO[List[Feed]] =
         user.settings.geminiApiKey.filter(_.nonEmpty) match
-            case None => IO.pure(feeds)
+            case None =>
+                IO.pure(feeds)
+            case Some(_) if !user.settings.filterNews =>
+                IO.pure(feeds)
             case Some(apiKey) =>
                 val (preDecided, needsAI) = feeds.partition(f =>
                     highlightedChannelIds.contains(f.channelId) ||
                         matchesKeywordRule(user.settings.keywordRules, f)
                 )
-                val decidedFeeds = preDecided.map(_.copy(important = true))
-                val aiIO = needsAI
-                    .groupBy(_.channelId)
-                    .values
-                    .toList
-                    .flatTraverse(channelFeeds =>
-                        channelFeeds
-                            .grouped(batchSize)
-                            .toList
-                            .flatTraverse(classifyBatch(_, apiKey))
-                    )
-                aiIO.map { aiFeeds =>
-                    val resultMap =
-                        (decidedFeeds ++ aiFeeds).map(f => (f.link, f.userId) -> f).toMap
-                    feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
+                logger.info(
+                    s"[Importance] ${feeds.size} feeds for ${user.email}: ${preDecided.size} pre-decided, ${needsAI.size} → Gemini"
+                ) *> {
+                    val decidedFeeds = preDecided.map(_.copy(important = true))
+                    val aiIO = needsAI
+                        .groupBy(_.channelId)
+                        .values
+                        .toList
+                        .flatTraverse(channelFeeds =>
+                            channelFeeds
+                                .grouped(batchSize)
+                                .toList
+                                .flatTraverse(classifyBatch(_, apiKey))
+                        )
+                    aiIO.map { aiFeeds =>
+                        val resultMap =
+                            (decidedFeeds ++ aiFeeds).map(f => (f.link, f.userId) -> f).toMap
+                        feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
+                    }
                 }
 
     private def matchesKeywordRule(rules: List[String], feed: Feed): Boolean =
@@ -76,14 +83,22 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
         if batch.isEmpty then IO.pure(Nil)
         else
             val prompt = buildBatchPrompt(batch)
-            retryingOnSomeErrors(
-                policy = retryPolicy,
-                isWorthRetrying = (e: Throwable) => IO.pure(isRetryable(e)),
-                onError = (e: Throwable, details: RetryDetails) =>
-                    logger.warn(s"Gemini batch call failed ($details): ${e.getMessage}")
-            )(callGeminiBatch(prompt, batch, apiKey)).handleError { _ =>
-                batch.map(_.copy(important = false, isRead = true))
-            }
+            logger.info(
+                s"[Importance] Sending batch of ${batch.size} items to Gemini (channelId=${batch.head.channelId})"
+            ) *>
+                retryingOnSomeErrors(
+                    policy = retryPolicy,
+                    isWorthRetrying = (e: Throwable) => IO.pure(isRetryable(e)),
+                    onError = (e: Throwable, details: RetryDetails) =>
+                        logger.warn(
+                            s"[Importance] Gemini batch call failed ($details): ${e.getMessage}"
+                        )
+                )(callGeminiBatch(prompt, batch, apiKey))
+                    .handleErrorWith { e =>
+                        logger.warn(
+                            s"[Importance] Gemini batch permanently failed — defaulting to not-important: ${e.getMessage}"
+                        ) *> IO.pure(batch.map(_.copy(important = false, isRead = true)))
+                    }
 
     private def buildBatchPrompt(batch: List[Feed]): String =
         val items = batch.zipWithIndex
@@ -100,14 +115,15 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
 
     private def callGeminiBatch(prompt: String, batch: List[Feed], apiKey: String): IO[List[Feed]] =
         for
+            _ <- logger.info("[Importance] Calling Gemini API")
             uri <- IO.fromEither(
                 Uri.fromString(
-                    s"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=$apiKey"
+                    s"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=$apiKey"
                 )
             )
             requestBody = GeminiRequest(List(GeminiContent(List(GeminiPart(prompt)))))
             request = Request[IO](Method.POST, uri)
-                .withEntity(requestBody.asJson.noSpaces)
+                .withEntity(requestBody)
                 .withHeaders(`Content-Type`(MediaType.application.json))
             response <- client.expect[GeminiResponse](request)
             rawText = response.candidates
@@ -116,20 +132,18 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                 .map(_.text.trim)
                 .getOrElse("")
             answers = rawText.linesIterator.map(_.trim.toLowerCase).filter(_.nonEmpty).toList
-            _ <-
+            result <-
                 if answers.size != batch.size then
-                    logger.warn(
-                        s"Gemini returned ${answers.size} answers for ${batch.size} items — defaulting all to not-important"
-                    )
-                else IO.unit
-            result =
-                if answers.size != batch.size then
-                    batch.map(_.copy(important = false, isRead = true))
+                    logger
+                        .warn(
+                            s"[Importance] Gemini returned ${answers.size} answers for ${batch.size} items — defaulting all to not-important"
+                        )
+                        .as(batch.map(_.copy(important = false, isRead = true)))
                 else
-                    batch.zip(answers).map { case (feed, answer) =>
+                    IO.pure(batch.zip(answers).map { case (feed, answer) =>
                         val imp = answer.startsWith("yes")
                         feed.copy(important = imp, isRead = !imp)
-                    }
+                    })
         yield result
 
     private def isRetryable(e: Throwable): Boolean =

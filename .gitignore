@@ -26,4 +26,7 @@ project/project/
 dist
 **/node_modules/
 
+# Claude
+.claude/settings.local.json
+
 .DS_Store

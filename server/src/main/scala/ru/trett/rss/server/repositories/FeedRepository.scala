@@ -3,54 +3,12 @@ package ru.trett.rss.server.repositories
 import cats.effect.IO
 import doobie.*
 import doobie.implicits.*
-import doobie.postgres.implicits.*
 import doobie.util.transactor.Transactor
 import ru.trett.rss.server.models.{Feed, User}
 
-import java.time.OffsetDateTime
+import FeedInstances.given
 
 class FeedRepository(xa: Transactor[IO]):
-
-    given Read[Feed] =
-        Read[
-            (
-                String,
-                String,
-                Long,
-                String,
-                String,
-                Option[OffsetDateTime],
-                Boolean,
-                Option[String],
-                List[String],
-                Boolean
-            )
-        ].map {
-            case (
-                    link,
-                    userId,
-                    channelId,
-                    title,
-                    description,
-                    pubDate,
-                    isRead,
-                    imageUrl,
-                    categories,
-                    important
-                ) =>
-                Feed(
-                    link,
-                    userId,
-                    channelId,
-                    title,
-                    description,
-                    pubDate,
-                    isRead,
-                    imageUrl,
-                    categories,
-                    important
-                )
-        }
 
     def markFeedAsRead(links: List[String], user: User): IO[Int] =
         val sql = """
@@ -69,12 +27,12 @@ class FeedRepository(xa: Transactor[IO]):
       WHERE channel_id = $channelId AND user_id = $userId AND read = false
     """.query[Int].unique.transact(xa)
 
-    def getTotalUnreadCount(userId: String): IO[Int] =
-        sql"""
-      SELECT COUNT(*)
-      FROM feeds
-      WHERE user_id = $userId AND read = false
-    """.query[Int].unique.transact(xa)
+    def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
+        val importantFilter = if importantOnly then fr"AND important = true" else fr""
+        (fr"SELECT COUNT(*) FROM feeds WHERE user_id = $userId AND read = false" ++ importantFilter)
+            .query[Int]
+            .unique
+            .transact(xa)
 
     def getUnreadFeeds(user: User, limit: Int): IO[List[Feed]] =
         getUnreadFeeds(user, limit, 0)
