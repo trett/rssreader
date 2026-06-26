@@ -48,6 +48,7 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
             case Some(_) if !user.settings.filterNews =>
                 IO.pure(feeds)
             case Some(apiKey) =>
+                val bannedCategories = user.settings.bannedCategories
                 val (preDecided, needsAI) = feeds.partition(f =>
                     highlightedChannelIds.contains(f.channelId) ||
                         matchesKeywordRule(user.settings.keywordRules, f)
@@ -64,7 +65,7 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                             channelFeeds
                                 .grouped(batchSize)
                                 .toList
-                                .flatTraverse(classifyBatch(_, apiKey))
+                                .flatTraverse(classifyBatch(_, apiKey, bannedCategories))
                         )
                     aiIO.map { aiFeeds =>
                         val resultMap =
@@ -79,10 +80,14 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
             feed.categories.exists(_.toLowerCase == kw.toLowerCase)
         }
 
-    private def classifyBatch(batch: List[Feed], apiKey: String): IO[List[Feed]] =
+    private def classifyBatch(
+        batch: List[Feed],
+        apiKey: String,
+        bannedCategories: List[String]
+    ): IO[List[Feed]] =
         if batch.isEmpty then IO.pure(Nil)
         else
-            val prompt = buildBatchPrompt(batch)
+            val prompt = buildBatchPrompt(batch, bannedCategories)
             logger.info(
                 s"[Importance] Sending batch of ${batch.size} items to Gemini (channelId=${batch.head.channelId})"
             ) *>
@@ -93,27 +98,42 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                         logger.warn(
                             s"[Importance] Gemini batch call failed ($details): ${e.getMessage}"
                         )
-                )(callGeminiBatch(prompt, batch, apiKey))
+                )(callGeminiBatch(prompt, batch, apiKey, bannedCategories))
                     .handleErrorWith { e =>
                         logger.warn(
                             s"[Importance] Gemini batch permanently failed — defaulting to not-important: ${e.getMessage}"
                         ) *> IO.pure(batch.map(_.copy(important = false, isRead = true)))
                     }
 
-    private def buildBatchPrompt(batch: List[Feed]): String =
+    private def buildBatchPrompt(batch: List[Feed], bannedCategories: List[String]): String =
         val items = batch.zipWithIndex
             .map { case (f, i) =>
                 s"${i + 1}. Title: \"${f.title}\" | Categories: \"${f.categories.mkString(", ")}\""
             }
             .mkString("\n")
-        s"""Classify each RSS item as important or not. An item is important if it is a significant announcement, security vulnerability, major software release, or breaking news — judged by the standards of the article's own language and cultural context. Articles may be in any language; classify them accordingly.
-           |
+        val bannedNote =
+            if bannedCategories.nonEmpty then
+                s"""
+                   |
+                   |Always answer "no" for any item whose title or categories are related to: ${bannedCategories.mkString(", ")}.
+                   |""".stripMargin
+            else ""
+        s"""Classify each RSS item as important or not. An item is important if it is a significant announcement, security vulnerability, major software release, or breaking news — judged by the standards of the article's own language and cultural context. Articles may be in any language; classify them accordingly.$bannedNote
            |Reply with exactly one word per line — "yes" or "no" — in the same order as the items. No other text.
            |
            |Items:
            |$items""".stripMargin
 
-    private def callGeminiBatch(prompt: String, batch: List[Feed], apiKey: String): IO[List[Feed]] =
+    private def isInBannedCategory(feed: Feed, bannedCategories: List[String]): Boolean =
+        bannedCategories.nonEmpty &&
+            feed.categories.exists(c => bannedCategories.exists(_.equalsIgnoreCase(c)))
+
+    private def callGeminiBatch(
+        prompt: String,
+        batch: List[Feed],
+        apiKey: String,
+        bannedCategories: List[String]
+    ): IO[List[Feed]] =
         for
             _ <- logger.info("[Importance] Calling Gemini API")
             uri <- IO.fromEither(
@@ -141,7 +161,7 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                         .as(batch.map(_.copy(important = false, isRead = true)))
                 else
                     IO.pure(batch.zip(answers).map { case (feed, answer) =>
-                        val imp = answer.startsWith("yes")
+                        val imp = answer.startsWith("yes") && !isInBannedCategory(feed, bannedCategories)
                         feed.copy(important = imp, isRead = !imp)
                     })
         yield result
