@@ -128,13 +128,7 @@ object Home:
         val stream = getChannelsAndFeedsRequest(1)
         val unreadCountResponse = getUnreadCountRequest()
         UList(
-            onMountCallback { ctx =>
-                // Reset on every mount so stale feeds from a previous filter state don't
-                // accumulate in feedVar and get incorrectly marked as read.
-                feedVar.set(List.empty)
-                hasMoreVar.set(true)
-                bindFeeds(stream, ctx.owner)
-            },
+            onMountCallback(ctx => bindFeeds(stream, ctx.owner)),
             _.noDataText := "Nothing to read",
             children <-- feedSignal.split(_.link)(renderItem),
             unreadCountResponse --> unreadCountObserver
