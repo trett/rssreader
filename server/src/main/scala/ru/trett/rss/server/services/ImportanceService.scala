@@ -121,7 +121,8 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
             if bannedCategories.nonEmpty then
                 s"""
                    |
-                   |Always answer "no" for any item whose title or categories are related to: ${bannedCategories.mkString(", ")}.
+                   |Always answer "no" for any item whose title or categories are related to: ${bannedCategories
+                      .mkString(", ")}.
                    |""".stripMargin
             else ""
         s"""Classify each RSS item as important or not. An item is important if it is a significant announcement, security vulnerability, major software release, or breaking news — judged by the standards of the article's own language and cultural context. Articles may be in any language; classify them accordingly.$bannedNote
@@ -167,7 +168,8 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                         .as(batch.map(_.copy(important = false, isRead = true)))
                 else
                     IO.pure(batch.zip(answers).map { case (feed, answer) =>
-                        val imp = answer.startsWith("yes") && !isInBannedCategory(feed, bannedCategories)
+                        val imp =
+                            answer.startsWith("yes") && !isInBannedCategory(feed, bannedCategories)
                         feed.copy(important = imp, isRead = !imp)
                     })
         yield result
