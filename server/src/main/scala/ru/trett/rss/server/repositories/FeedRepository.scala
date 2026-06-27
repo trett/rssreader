@@ -45,3 +45,11 @@ class FeedRepository(xa: Transactor[IO]):
       ORDER BY f.pub_date DESC
       LIMIT $limit OFFSET $offset
     """.query[Feed].to[List].transact(xa)
+
+    def updateFeedImportance(feeds: List[Feed]): IO[Int] =
+        if feeds.isEmpty then IO.pure(0)
+        else
+            Update[(Boolean, Boolean, String, String)](
+                "UPDATE feeds SET important = ?, read = ? WHERE link = ? AND user_id = ?"
+            ).updateMany(feeds.map(f => (f.important, f.isRead, f.link, f.userId)))
+                .transact(xa)

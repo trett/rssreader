@@ -85,7 +85,8 @@ object Server extends IOApp:
                     userRepository = UserRepository(xa)
                     userService = UserService(userRepository)
                     importanceService = ImportanceService(client)
-                    channelService = ChannelService(channelRepository, client, importanceService)
+                    channelService =
+                        ChannelService(channelRepository, feedRepository, client, importanceService)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes

@@ -72,18 +72,6 @@ object Home:
                         bindFeeds(getChannelsAndFeedsRequest(page), ctx.owner)
                     }
                 ),
-                // Re-fetch page 1 the first time settings load so filterNews is applied correctly.
-                // On mount, settingsSignal may be None if the user navigated here before settings
-                // were fetched; this observer fires once when they arrive and refreshes the list.
-                onMountBind(ctx =>
-                    settingsSignal.changes
-                        .filter(_.isDefined)
-                        .take(1) --> Observer[Option[?]] { _ =>
-                        feedVar.set(List.empty)
-                        hasMoreVar.set(true)
-                        EventBus.emit(Home.refreshFeedsBus -> 1, Home.refreshUnreadCountBus -> ())
-                    }
-                ),
                 div(
                     onMountBind(ctx =>
                         markAllAsReadBus --> { _ =>

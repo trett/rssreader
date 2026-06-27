@@ -13,6 +13,7 @@ import ru.trett.rss.server.models.User
 import ru.trett.rss.server.parser.FeedParserRegistry
 import ru.trett.rss.server.parser.Parser
 import ru.trett.rss.server.repositories.ChannelRepository
+import ru.trett.rss.server.repositories.FeedRepository
 
 import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
@@ -20,6 +21,7 @@ import org.http4s.Status
 
 class ChannelService(
     channelRepository: ChannelRepository,
+    feedRepository: FeedRepository,
     client: Client[IO],
     importanceService: ImportanceService
 )(using loggerFactory: LoggerFactory[IO]):
@@ -45,37 +47,50 @@ class ChannelService(
                 channels.map(_._1.id),
                 user.id
             )
-            result <- channels.parTraverse { (channel, _) =>
+            // Step 1: fetch RSS and insert all feeds immediately so Gemini can't break the cycle
+            channelResults <- channels.parTraverse { (channel, _) =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
-                    rows <- maybeUpdatedChannel match {
+                    result <- maybeUpdatedChannel match {
                         case Right(Some(updatedChannel)) =>
                             val existing = existingByChannel.getOrElse(channel.id, Set.empty)
-                            val (oldFeeds, newFeeds) =
+                            val (oldFeeds, rawNewFeeds) =
                                 updatedChannel.feedItems.partition(f => existing.contains(f.link))
+                            val newFeeds =
+                                rawNewFeeds.map(_.copy(channelId = channel.id, userId = user.id))
                             for {
                                 _ <- logger.info(
-                                    s"Channel ${channel.title}: ${newFeeds.size} new, ${oldFeeds.size} existing (skipping AI)"
+                                    s"Channel ${channel.title}: ${newFeeds.size} new, ${oldFeeds.size} existing"
                                 )
-                                scored <- importanceService.score(user, highlightedIds, newFeeds)
                                 n <- channelRepository.insertFeeds(
-                                    oldFeeds ++ scored,
+                                    oldFeeds ++ newFeeds,
                                     channel.id,
                                     user.id
                                 )
-                            } yield n
+                            } yield (n, newFeeds)
                         case Right(None) =>
                             logger.error(
                                 s"Failed to update channel. ${channel.title}. Response is empty."
-                            ) *> IO.pure(0)
+                            ) *> IO.pure((0, Nil))
                         case Left(error) =>
                             logger.error(error)(s"Failed to update channel: ${channel.title}") *> IO
-                                .pure(0)
+                                .pure((0, Nil))
                     }
-                } yield rows
+                } yield result
             }
-        } yield result
+            allNewFeeds = channelResults.flatMap(_._2)
+            // Step 2: score new unread feeds and update the DB (separate step, inserts are already safe)
+            _ <-
+                if allNewFeeds.nonEmpty then
+                    importanceService
+                        .score(user, highlightedIds, allNewFeeds)
+                        .flatMap(feedRepository.updateFeedImportance)
+                        .handleErrorWith(e =>
+                            logger.warn(s"[Importance] Scoring step failed: ${e.getMessage}")
+                        )
+                else IO.unit
+        } yield channelResults.map(_._1)
 
     private def getChannel(link: String): IO[Option[Channel]] =
         for {

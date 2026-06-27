@@ -42,37 +42,43 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
         limitRetries[IO](3) |+| exponentialBackoff[IO](1.second)
 
     def score(user: User, highlightedChannelIds: Set[Long], feeds: List[Feed]): IO[List[Feed]] =
-        user.settings.geminiApiKey.filter(_.nonEmpty) match
-            case None =>
-                IO.pure(feeds)
-            case Some(_) if !user.settings.filterNews =>
-                IO.pure(feeds)
-            case Some(apiKey) =>
-                val bannedCategories = user.settings.bannedCategories
-                val (preDecided, needsAI) = feeds.partition(f =>
-                    highlightedChannelIds.contains(f.channelId) ||
-                        matchesKeywordRule(user.settings.keywordRules, f)
-                )
-                logger.info(
-                    s"[Importance] ${feeds.size} feeds for ${user.email}: ${preDecided.size} pre-decided, ${needsAI.size} → Gemini"
-                ) *> {
-                    val decidedFeeds = preDecided.map(_.copy(important = true))
-                    val aiIO = needsAI
-                        .groupBy(_.channelId)
-                        .values
-                        .toList
-                        .flatTraverse(channelFeeds =>
-                            channelFeeds
-                                .grouped(batchSize)
-                                .toList
-                                .flatTraverse(classifyBatch(_, apiKey, bannedCategories))
-                        )
-                    aiIO.map { aiFeeds =>
-                        val resultMap =
-                            (decidedFeeds ++ aiFeeds).map(f => (f.link, f.userId) -> f).toMap
+        if feeds.isEmpty then IO.pure(Nil)
+        else
+            val (preDecided, needsAI) = feeds.partition(f =>
+                highlightedChannelIds.contains(f.channelId) ||
+                    matchesKeywordRule(user.settings.keywordRules, f)
+            )
+            val decidedFeeds = preDecided.map(_.copy(important = true))
+            user.settings.geminiApiKey.filter(_.nonEmpty) match
+                case None =>
+                    // No AI key: keyword/highlighted pre-decisions only; rest unchanged
+                    logger.info(
+                        s"[Importance] ${feeds.size} feeds for ${user.email}: ${preDecided.size} pre-decided (no AI key)"
+                    ) *> IO.pure {
+                        val resultMap = decidedFeeds.map(f => (f.link, f.userId) -> f).toMap
                         feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
                     }
-                }
+                case Some(apiKey) =>
+                    val bannedCategories = user.settings.bannedCategories
+                    logger.info(
+                        s"[Importance] ${feeds.size} feeds for ${user.email}: ${preDecided.size} pre-decided, ${needsAI.size} → Gemini"
+                    ) *> {
+                        val aiIO = needsAI
+                            .groupBy(_.channelId)
+                            .values
+                            .toList
+                            .flatTraverse(channelFeeds =>
+                                channelFeeds
+                                    .grouped(batchSize)
+                                    .toList
+                                    .flatTraverse(classifyBatch(_, apiKey, bannedCategories))
+                            )
+                        aiIO.map { aiFeeds =>
+                            val resultMap =
+                                (decidedFeeds ++ aiFeeds).map(f => (f.link, f.userId) -> f).toMap
+                            feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
+                        }
+                    }
 
     private def matchesKeywordRule(rules: List[String], feed: Feed): Boolean =
         rules.exists { kw =>

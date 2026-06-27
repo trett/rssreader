@@ -18,6 +18,7 @@ import ru.trett.rss.server.services.ChannelService
 import ru.trett.rss.server.services.ImportanceService
 import org.scalamock.scalatest.MockFactory
 import ru.trett.rss.server.repositories.ChannelRepository
+import ru.trett.rss.server.repositories.FeedRepository
 
 import java.time.OffsetDateTime
 
@@ -26,6 +27,7 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
     private val mockChannelService: ChannelService =
         new ChannelService(
             mock[ChannelRepository],
+            mock[FeedRepository],
             mock[Client[IO]],
             new ImportanceService(mock[Client[IO]])
         ) {
@@ -92,6 +94,7 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val mockChannelServiceWithHighlight =
             new ChannelService(
                 mock[ChannelRepository],
+                mock[FeedRepository],
                 mock[Client[IO]],
                 new ImportanceService(mock[Client[IO]])
             ) {
