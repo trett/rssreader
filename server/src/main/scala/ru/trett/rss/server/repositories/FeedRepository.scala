@@ -49,7 +49,10 @@ class FeedRepository(xa: Transactor[IO]):
     def updateFeedImportance(feeds: List[Feed]): IO[Int] =
         if feeds.isEmpty then IO.pure(0)
         else
+            // Use (? OR read) so that a user's manual mark-as-read is never overwritten:
+            // - isRead=true (not important → auto-read): (true OR read) = true  ✓
+            // - isRead=false (important → keep unread): (false OR read) = read  ✓
             Update[(Boolean, Boolean, String, String)](
-                "UPDATE feeds SET important = ?, read = ? WHERE link = ? AND user_id = ?"
+                "UPDATE feeds SET important = ?, read = (? OR read) WHERE link = ? AND user_id = ?"
             ).updateMany(feeds.map(f => (f.important, f.isRead, f.link, f.userId)))
                 .transact(xa)

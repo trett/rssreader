@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Usage: driver.sh [--title "PR title"] [--body "PR body"] [--draft]
-# Pushes the current branch, creates a PR, waits for CI, then triggers the build.
+# Pushes the current branch, creates a PR, waits for CI, triggers the build,
+# waits for the build to complete, then prints the deployed image tag.
 set -euo pipefail
 
 PR_TITLE=""
@@ -52,7 +53,9 @@ else
 fi
 
 # --- 3. Wait for CI checks ---
-echo "==> Waiting for CI checks on PR #$PR_NUMBER (this takes a few minutes)..."
+echo "==> Waiting 60s before first CI check..."
+sleep 60
+echo "==> Waiting for CI checks on PR #$PR_NUMBER..."
 # --watch exits 0 on all-pass, non-zero on any failure
 if ! gh pr checks "$PR_NUMBER" --watch --interval 15; then
     echo "ERROR: One or more CI checks failed. Build not triggered." >&2
@@ -66,7 +69,62 @@ echo "==> All checks passed."
 echo "==> Triggering build.yml on branch $BRANCH..."
 gh workflow run build.yml --ref "$BRANCH"
 
+# Wait 4 minutes before first build check to let the run get queued and start
+echo "==> Waiting 4 minutes before first build check..."
+sleep 240
+
+# --- 5. Find the run that was just triggered ---
+# Retry up to 5 times in case the run hasn't appeared in the API yet
+RUN_ID=""
+for i in $(seq 1 5); do
+    RUN_ID=$(gh run list --workflow=build.yml --branch="$BRANCH" \
+        --limit=1 --json databaseId,status \
+        --jq '.[] | select(.status != "completed") | .databaseId' 2>/dev/null || true)
+    # Also accept if it completed very fast (unlikely but possible)
+    if [[ -z "$RUN_ID" ]]; then
+        RUN_ID=$(gh run list --workflow=build.yml --branch="$BRANCH" \
+            --limit=1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+    fi
+    [[ -n "$RUN_ID" ]] && break
+    echo "==> Waiting for run to appear (attempt $i/5)..."
+    sleep 6
+done
+
+if [[ -z "$RUN_ID" ]]; then
+    echo "WARNING: Could not find the workflow run. Check manually:" >&2
+    echo "    gh run list --workflow=build.yml --branch=$BRANCH" >&2
+    echo "    gh run watch" >&2
+    exit 1
+fi
+
+echo "==> Build run #$RUN_ID started. Watching for completion..."
+if ! gh run watch "$RUN_ID" --exit-status --interval 15; then
+    echo ""
+    echo "ERROR: Build workflow #$RUN_ID failed." >&2
+    echo "    Logs: gh run view $RUN_ID --log-failed" >&2
+    exit 1
+fi
+
+# --- 6. Report the deployed image tag ---
+# build.yml sets DOCKER_TAG=$(git rev-parse --short HEAD) on the runner at checkout,
+# which equals our local HEAD since we pushed before dispatching.
+DOCKER_TAG=$(git rev-parse --short HEAD)
+
+# Try to extract the full image reference from the run logs.
+# The "Build and Push Docker Image" step echoes IMAGE_TAG before docker build;
+# secrets are masked in CI logs so the prefix may show as *** but we try anyway.
+FULL_IMAGE=$(gh run view "$RUN_ID" --log 2>/dev/null \
+    | grep -oE '[a-z0-9_.-]+-docker\.pkg\.dev/[^[:space:]]+/rssreader:[a-f0-9]+' \
+    | tail -1 || true)
+
 echo ""
-echo "==> Done. Build workflow dispatched."
-echo "    Track it: gh run list --workflow=build.yml --branch=$BRANCH"
-echo "    or: gh run watch"
+echo "============================================"
+echo "  Build complete!"
+echo "  Image tag (short SHA): $DOCKER_TAG"
+if [[ -n "$FULL_IMAGE" ]]; then
+    echo "  Full image:            $FULL_IMAGE"
+else
+    echo "  Full image:            <GAR_LOCATION>-docker.pkg.dev/<PROJECT>/<REPO>/rssreader:$DOCKER_TAG"
+    echo "  (Secret values masked in logs; tag suffix is: $DOCKER_TAG)"
+fi
+echo "============================================"
