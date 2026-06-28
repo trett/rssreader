@@ -44,7 +44,8 @@
     --_ui5-v2-1-0_shellbar_button_focused_border: 0px transparent none;
 }
 
-.cards {
+.cards,
+.main-content {
     --_ui5-v2-1-0_card_border-radius: 0px 0px 2px 2px;
     --_ui5-v2-1-0_card_header_focus_border: 0px;
     --sapContent_FocusWidth: 0px;
