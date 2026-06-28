@@ -17,16 +17,18 @@ object ChannelController:
         AuthedRoutes.of {
             case GET -> Root / "api" / "channels" / "feeds" :? PageQueryParamMatcher(
                     page
-                ) +& LimitQueryParamMatcher(limit) as user =>
+                ) +& LimitQueryParamMatcher(limit) +& FilterQueryParamMatcher(filter) as user =>
                 val validatedPage = page.filter(_ > 0).getOrElse(1)
+                val importantOnly = filter.contains("important")
                 for {
                     _ <- logger.info(
-                        s"Fetching feeds for user: ${user.email}, settings: ${user.settings}, page: $validatedPage, limit: $limit"
+                        s"Fetching feeds for user: ${user.email}, settings: ${user.settings}, page: $validatedPage, limit: $limit, importantOnly: $importantOnly"
                     )
                     channels <- channelService.getChannelsAndFeeds(
                         user,
                         validatedPage,
-                        limit.getOrElse(20)
+                        limit.getOrElse(20),
+                        importantOnly
                     )
                     response <- Ok(channels)
                 } yield response
@@ -70,3 +72,5 @@ object ChannelController:
 
     private object PageQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("page")
     private object LimitQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("limit")
+    private object FilterQueryParamMatcher
+        extends OptionalQueryParamDecoderMatcher[String]("filter")

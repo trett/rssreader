@@ -196,10 +196,13 @@ object Home:
         )
     )
 
+    private def filterNews: Boolean = settingsSignal.now().exists(_.filterNews)
+
     private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =
+        val filterParam = if filterNews then "&filter=important" else ""
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
-            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}")
+            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}${filterParam}")
             .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =
@@ -217,7 +220,8 @@ object Home:
                 .mapSuccess(_ => seen.map(_.link))
 
     private def getUnreadCountRequest(): EventStream[Try[Int]] =
+        val filterParam = if filterNews then "?filter=important" else ""
         FetchStream
             .withDecoder(responseDecoder[Int])
-            .get("/api/feeds/unread/total")
+            .get(s"/api/feeds/unread/total$filterParam")
             .mapSuccess(_.get)

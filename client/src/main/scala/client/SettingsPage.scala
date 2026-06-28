@@ -21,6 +21,8 @@ object SettingsPage {
     private val openDialogBus: EventBus[Boolean] = new EventBus
     private val newChannelBus: EventBus[Unit] = new EventBus
     private val addChannelVar = Var[String]("")
+    private val bannedCategoryInputVar = Var[String]("")
+    private val keywordInputVar = Var[String]("")
     private val formBlockStyle = Seq(display.flex, alignItems.center, justifyContent.spaceBetween)
     private val channelObserver = Observer[ChannelList](channelVar.set)
     private val updateChannelObserver = Observer[Try[Unit]] {
@@ -67,9 +69,8 @@ object SettingsPage {
                     "Return to feeds",
                     _.icon := IconName.`nav-back`,
                     _.events.onClick.mapTo(()) --> { _ =>
-                        settingsSignal.now() match
-                            case Some(settings) => Router.toMainPage(settings)
-                            case None           => Router.currentPageVar.set(Some(LoginRoute))
+                        if settingsSignal.now().isDefined then Router.toMainPage()
+                        else Router.currentPageVar.set(Some(LoginRoute))
                     },
                     marginBottom.px := 20
                 ),
@@ -91,84 +92,76 @@ object SettingsPage {
                     ),
                     div(
                         formBlockStyle,
+                        marginTop.px := 16,
                         marginBottom.px := 16,
-                        Label(
-                            "Summary language",
-                            _.forId := "summary-language-cmb",
-                            _.showColon := true,
-                            _.wrappingType := WrappingType.None,
-                            paddingRight.px := 20
-                        ),
-                        Select(
-                            _.id := "summary-language-cmb",
-                            _.events.onChange
-                                .map(_.detail.selectedOption.textContent) --> settingsVar
-                                .updater[String]((a, b) =>
-                                    a.map(x => x.copy(summaryLanguage = Some(b)))
-                                ),
-                            SummaryLanguage.all.map(lang =>
-                                Select.option(
-                                    _.selected <-- settingsSignal.map(x =>
-                                        x.flatMap(_.summaryLanguage).contains(lang.displayName)
-                                    ),
-                                    lang.displayName
+                        Label("Gemini API key", _.forId := "gemini-key-input", _.showColon := true),
+                        Input(
+                            _.id := "gemini-key-input",
+                            _.tpe := InputType.Password,
+                            _.placeholder := "AIza...",
+                            _.value <-- settingsSignal.map(_.flatMap(_.geminiApiKey).getOrElse("")),
+                            _.events.onInput.mapToValue --> settingsVar
+                                .updater[String]((a, v) =>
+                                    a.map(s =>
+                                        s.copy(geminiApiKey = if v.isEmpty then None else Some(v))
+                                    )
                                 )
-                            )
                         )
                     ),
                     div(
                         formBlockStyle,
+                        marginTop.px := 16,
                         marginBottom.px := 16,
-                        Label(
-                            "App mode",
-                            _.forId := "app-mode-cmb",
-                            _.showColon := true,
-                            _.wrappingType := WrappingType.None,
-                            paddingRight.px := 20
-                        ),
-                        Select(
-                            _.id := "app-mode-cmb",
-                            _.events.onChange
-                                .map(_.detail.selectedOption.textContent) --> settingsVar
-                                .updater[String]((a, b) =>
-                                    a.map(x => x.copy(aiMode = Some(b == "AI Mode")))
-                                ),
-                            Select.option(
-                                _.selected <-- settingsSignal.map(_.exists(_.isAiMode)),
-                                "AI Mode"
+                        Label("Filter news", _.forId := "filter-news-cb", _.showColon := true),
+                        CheckBox(
+                            _.id := "filter-news-cb",
+                            _.checked <-- settingsSignal.map(_.exists(_.filterNews)),
+                            _.disabled <-- settingsSignal
+                                .map(_.flatMap(_.geminiApiKey).forall(_.isEmpty)),
+                            _.events.onChange.mapToChecked --> settingsVar
+                                .updater[Boolean]((a, b) => a.map(x => x.copy(filterNews = b)))
+                        )
+                    ),
+                    tagListSection(
+                        headerText = "Keyword rules",
+                        subText =
+                            "Items with these words in title or category are marked Important.",
+                        inputVar = keywordInputVar,
+                        itemsSignal =
+                            settingsSignal.map(_.map(_.keywordRules).getOrElse(List.empty)),
+                        onAdd = kw =>
+                            val keywords = kw.split(",").map(_.trim).filter(_.nonEmpty).toList
+                            settingsVar.update(
+                                _.map(s =>
+                                    s.copy(keywordRules = (s.keywordRules ++ keywords).distinct)
+                                )
+                            )
+                        ,
+                        onRemove = kw =>
+                            settingsVar.update(
+                                _.map(s => s.copy(keywordRules = s.keywordRules.filterNot(_ == kw)))
+                            )
+                    ),
+                    tagListSection(
+                        headerText = "Banned categories",
+                        subText = "Items with these categories are hidden from the Important view",
+                        inputVar = bannedCategoryInputVar,
+                        itemsSignal =
+                            settingsSignal.map(_.map(_.bannedCategories).getOrElse(List.empty)),
+                        onAdd = cat =>
+                            settingsVar.update(
+                                _.map(s =>
+                                    s.copy(bannedCategories = (s.bannedCategories :+ cat).distinct)
+                                )
                             ),
-                            Select.option(
-                                _.selected <-- settingsSignal.map(_.exists(!_.isAiMode)),
-                                "Regular Mode"
-                            )
-                        )
-                    ),
-                    div(
-                        formBlockStyle,
-                        marginBottom.px := 16,
-                        Label(
-                            "AI Model",
-                            _.forId := "summary-model-cmb",
-                            _.showColon := true,
-                            _.wrappingType := WrappingType.None,
-                            paddingRight.px := 20
-                        ),
-                        Select(
-                            _.id := "summary-model-cmb",
-                            _.events.onChange
-                                .map(_.detail.selectedOption.textContent) --> settingsVar
-                                .updater[String]((a, b) =>
-                                    a.map(x => x.copy(summaryModel = Some(b)))
-                                ),
-                            SummaryModel.all.map(model =>
-                                Select.option(
-                                    _.selected <-- settingsSignal.map(x =>
-                                        x.flatMap(_.summaryModel).contains(model.displayName)
-                                    ),
-                                    model.displayName
+                        onRemove = cat =>
+                            settingsVar.update(
+                                _.map(s =>
+                                    s.copy(bannedCategories =
+                                        s.bannedCategories.filterNot(_ == cat)
+                                    )
                                 )
                             )
-                        )
                     ),
                     div(
                         paddingTop.px := 10,
@@ -205,6 +198,64 @@ object SettingsPage {
                         _.events.onClick.mapTo(true) --> openDialogBus
                     )
                 )
+            )
+        )
+
+    private def tagListSection(
+        headerText: String,
+        subText: String,
+        inputVar: Var[String],
+        itemsSignal: Signal[List[String]],
+        onAdd: String => Unit,
+        onRemove: String => Unit
+    ): HtmlElement =
+        div(
+            marginTop.px := 20,
+            Label(headerText, _.showColon := true),
+            p(fontSize := "0.85em", color := "#666", subText),
+            div(
+                display.flex,
+                alignItems.center,
+                gap.px := 8,
+                marginTop.px := 8,
+                Input(
+                    _.placeholder := s"Add $headerText...",
+                    _.events.onInput.mapToValue --> inputVar,
+                    value <-- inputVar.signal
+                ),
+                Button(
+                    _.design := ButtonDesign.Positive,
+                    _.icon := IconName.add,
+                    onClick --> { _ =>
+                        val text = inputVar.now().trim
+                        if text.nonEmpty then
+                            onAdd(text)
+                            inputVar.set("")
+                    }
+                )
+            ),
+            div(
+                marginTop.px := 8,
+                display.flex,
+                flexWrap.wrap,
+                gap.px := 6,
+                children <-- itemsSignal.split(identity) { (item, _, _) =>
+                    div(
+                        display.inlineFlex,
+                        alignItems.center,
+                        gap.px := 4,
+                        padding := "4px 8px",
+                        borderRadius.px := 16,
+                        backgroundColor := "#E8F4FD",
+                        fontSize := "0.85em",
+                        span(item),
+                        Button(
+                            _.design := ButtonDesign.Transparent,
+                            _.icon := IconName.decline,
+                            onClick --> { _ => onRemove(item) }
+                        )
+                    )
+                }
             )
         )
 

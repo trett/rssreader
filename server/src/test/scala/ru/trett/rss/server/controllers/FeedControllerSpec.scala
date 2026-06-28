@@ -19,7 +19,7 @@ class FeedControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
     private val mockFeedService: FeedService =
         new FeedService(mock[FeedRepository]) {
-            override def getTotalUnreadCount(userId: String): IO[Int] =
+            override def getTotalUnreadCount(userId: String, importantOnly: Boolean): IO[Int] =
                 IO.pure(42)
 
             override def getUnreadCount(channelId: Long, userId: String): IO[Int] =

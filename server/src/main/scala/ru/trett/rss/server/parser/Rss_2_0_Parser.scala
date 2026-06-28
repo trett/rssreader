@@ -34,7 +34,8 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader] {
         description: String = "",
         contentEncoded: String = "",
         pubDate: Option[OffsetDateTime] = None,
-        imageUrl: Option[String] = None
+        imageUrl: Option[String] = None,
+        categories: List[String] = List.empty
     )
 
     private[parser] def parse(
@@ -152,6 +153,11 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader] {
                                     )
                                         loop(state.copy(imageUrl = Some(url)))
                                     else loop(state)
+                                case "category" =>
+                                    val cat = readElementText(reader).trim
+                                    if (cat.nonEmpty)
+                                        loop(state.copy(categories = state.categories :+ cat))
+                                    else loop(state)
                                 case _ => loop(state)
                             }
                         }
@@ -172,7 +178,8 @@ class Rss_2_0_Parser[F[_]: Sync: Logger] extends FeedParser[F, XMLEventReader] {
             finalState.title,
             finalState.description,
             finalState.pubDate,
-            imageUrl = imageUrl
+            imageUrl = imageUrl,
+            categories = finalState.categories.distinct
         )
     }
 
