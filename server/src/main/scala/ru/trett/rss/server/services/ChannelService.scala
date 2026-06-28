@@ -83,12 +83,20 @@ class ChannelService(
             // Step 2: score new unread feeds and update the DB (separate step, inserts are already safe)
             _ <-
                 if allNewFeeds.nonEmpty then
-                    importanceService
-                        .score(user, highlightedIds, allNewFeeds)
-                        .flatMap(feedRepository.updateFeedImportance)
-                        .handleErrorWith(e =>
-                            logger.warn(s"[Importance] Scoring step failed: ${e.getMessage}")
-                        )
+                    logger.info(s"[Importance] Scoring ${allNewFeeds.size} new feeds") *>
+                        importanceService
+                            .score(user, highlightedIds, allNewFeeds)
+                            .flatTap(scored =>
+                                val important = scored.count(_.important)
+                                val autoRead  = scored.count(f => f.isRead && !f.important)
+                                logger.info(
+                                    s"[Importance] Result: $important important, $autoRead auto-read, ${scored.size - important - autoRead} unclassified"
+                                )
+                            )
+                            .flatMap(feedRepository.updateFeedImportance)
+                            .handleErrorWith(e =>
+                                logger.warn(s"[Importance] Scoring step failed: ${e.getMessage}")
+                            )
                 else IO.unit
         } yield channelResults.map(_._1)
 
