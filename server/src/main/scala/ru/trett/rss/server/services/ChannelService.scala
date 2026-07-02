@@ -88,7 +88,7 @@ class ChannelService(
                             .score(user, highlightedIds, allNewFeeds)
                             .flatTap(scored =>
                                 val important = scored.count(_.important)
-                                val autoRead  = scored.count(f => f.isRead && !f.important)
+                                val autoRead = scored.count(f => f.isRead && !f.important)
                                 logger.info(
                                     s"[Importance] Result: $important important, $autoRead auto-read, ${scored.size - important - autoRead} unclassified"
                                 )
