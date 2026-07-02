@@ -111,17 +111,23 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                         ) *> IO.pure(batch.map(_.copy(important = false, isRead = true)))
                     }
 
+    private val maxDescriptionLength = 500
+
     private def buildBatchPrompt(batch: List[Feed], bannedCategories: List[String]): String =
         val items = batch.zipWithIndex
             .map { case (f, i) =>
-                s"${i + 1}. Title: \"${f.title}\" | Categories: \"${f.categories.mkString(", ")}\""
+                val desc =
+                    if f.description.length > maxDescriptionLength
+                    then f.description.take(maxDescriptionLength) + "…"
+                    else f.description
+                s"${i + 1}. Title: \"${f.title}\" | Description: \"$desc\" | Categories: \"${f.categories.mkString(", ")}\""
             }
             .mkString("\n")
         val bannedNote =
             if bannedCategories.nonEmpty then
                 s"""
                    |
-                   |Always answer "no" for any item whose title or categories are related to: ${bannedCategories
+                   |Always answer "no" for any item whose title, description, or categories are related to: ${bannedCategories
                       .mkString(", ")}.
                    |""".stripMargin
             else ""
