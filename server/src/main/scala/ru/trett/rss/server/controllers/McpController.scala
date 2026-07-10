@@ -53,16 +53,20 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private def handle(user: User, request: Json): IO[org.http4s.Response[IO]] =
         val cursor = request.hcursor
         val method = cursor.get[String]("method").getOrElse("")
-        // A JSON-RPC notification has no `id` and expects no response body.
-        if !cursor.downField("id").succeeded then Accepted()
-        else
-            val id = cursor.get[Json]("id").getOrElse(Json.Null)
-            method match
-                case "initialize" => Ok(success(id, initializeResult(request)))
-                case "ping"       => Ok(success(id, Json.obj()))
-                case "tools/list" => Ok(success(id, toolsListResult))
-                case "tools/call" => toolsCall(user, request).flatMap(r => Ok(success(id, r)))
-                case other        => Ok(error(id, -32601, s"Method not found: $other"))
+        logger.info(s"MCP request: method=$method, user=${user.email}") *> {
+            // A JSON-RPC notification has no `id` and expects no response body.
+            if !cursor.downField("id").succeeded then Accepted()
+            else
+                val id = cursor.get[Json]("id").getOrElse(Json.Null)
+                method match
+                    case "initialize" => Ok(success(id, initializeResult(request)))
+                    case "ping"       => Ok(success(id, Json.obj()))
+                    case "tools/list" => Ok(success(id, toolsListResult))
+                    case "tools/call" => toolsCall(user, request).flatMap(r => Ok(success(id, r)))
+                    case other =>
+                        logger.warn(s"MCP unknown method '$other' from ${user.email}") *>
+                            Ok(error(id, -32601, s"Method not found: $other"))
+        }
 
     private def initializeResult(request: Json): Json =
         val protocolVersion = request.hcursor
@@ -114,7 +118,9 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private def toolsCall(user: User, request: Json): IO[Json] =
         val params = request.hcursor.downField("params")
         val name = params.get[String]("name").getOrElse("")
-        if name != ToolName then IO.pure(toolError(s"Unknown tool: $name"))
+        if name != ToolName then
+            logger.warn(s"MCP unknown tool '$name' from ${user.email}") *>
+                IO.pure(toolError(s"Unknown tool: $name"))
         else
             val args = params.downField("arguments")
             val parsed = for
@@ -124,18 +130,28 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                 to <- parseDate(toStr, endOfDay = true)
             yield (from, to)
             parsed match
-                case Left(message) => IO.pure(toolError(message))
+                case Left(message) =>
+                    logger.warn(s"MCP $ToolName invalid arguments from ${user.email}: $message") *>
+                        IO.pure(toolError(message))
                 case Right((from, to)) =>
                     val limit =
                         args.get[Int]("limit").toOption.filter(_ > 0).getOrElse(DefaultLimit)
                     val importantOnly = args.get[Boolean]("importantOnly").getOrElse(false)
-                    feedService
-                        .getFeedsByDateRange(user, from, to, limit, importantOnly)
-                        .map(items => toolText(items.asJson.spaces2))
-                        .handleErrorWith { e =>
-                            logger.error(e)("MCP get_news_by_date failed") *>
-                                IO.pure(toolError(s"Failed to fetch news: ${e.getMessage}"))
-                        }
+                    logger.info(
+                        s"MCP $ToolName: user=${user.email}, from=$from, to=$to, limit=$limit, importantOnly=$importantOnly"
+                    ) *>
+                        feedService
+                            .getFeedsByDateRange(user, from, to, limit, importantOnly)
+                            .flatTap(items =>
+                                logger.info(
+                                    s"MCP $ToolName returned ${items.size} items for ${user.email}"
+                                )
+                            )
+                            .map(items => toolText(items.asJson.spaces2))
+                            .handleErrorWith { e =>
+                                logger.error(e)(s"MCP $ToolName failed for ${user.email}") *>
+                                    IO.pure(toolError(s"Failed to fetch news: ${e.getMessage}"))
+                            }
 
     /** Accepts a full ISO-8601 datetime, or a date-only value expanded to the start (or end) of day
       * in UTC so a date range is inclusive of the whole day.
