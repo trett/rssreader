@@ -83,6 +83,46 @@ This setup is for actively developing the application with hot-reloading where p
     ```
     The server will be running on `http://localhost`.
 
+## Claude Desktop (MCP)
+
+The server exposes a [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so
+Claude Desktop can query your news by date. It speaks JSON-RPC 2.0 over `POST /mcp` and offers a
+single tool:
+
+-   **`get_news_by_date`** — fetch your feed items published within a date range (`from`, `to`,
+    optional `limit` and `importantOnly`), newest first.
+
+Requests are authenticated with your JWT sent as an `Authorization: Bearer <token>` header. While
+logged in to the web app, mint a long-lived token from:
+
+```
+GET /api/user/mcp-token   ->   { "token": "<jwt>" }
+```
+
+Claude Desktop connects through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)
+bridge. Add this to `claude_desktop_config.json` (macOS:
+`~/Library/Application Support/Claude/claude_desktop_config.json`), then restart Claude Desktop:
+
+```jsonc
+{
+  "mcpServers": {
+    "rssreader": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-host>/mcp",
+        "--header",
+        "Authorization:Bearer ${RSS_MCP_TOKEN}"
+      ],
+      "env": { "RSS_MCP_TOKEN": "<token from /api/user/mcp-token>" }
+    }
+  }
+}
+```
+
+You can then ask Claude things like *"show me the important news from last week."*
+
 ## Configuration
 
 The application is configured using environment variables.

@@ -38,6 +38,7 @@ import ru.trett.rss.server.controllers.FeedController
 import ru.trett.rss.server.controllers.JobController
 import ru.trett.rss.server.controllers.LoginController
 import ru.trett.rss.server.controllers.LogoutController
+import ru.trett.rss.server.controllers.McpController
 import ru.trett.rss.server.controllers.UserController
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.repositories.ChannelRepository
@@ -89,6 +90,7 @@ object Server extends IOApp:
                         ChannelService(channelRepository, feedRepository, client, importanceService)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)
+                    mcpController = new McpController(feedService, userService, jwtManager)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
                     appRoutes <-
                         corsPolicy(
@@ -102,7 +104,8 @@ object Server extends IOApp:
                                     authFilter,
                                     client,
                                     new LogoutController[IO],
-                                    jobController
+                                    jobController,
+                                    mcpController
                                 )
                         )
                     exitCode <-
@@ -161,14 +164,23 @@ object Server extends IOApp:
         authFilter: AuthFilter[IO],
         client: Client[IO],
         logoutController: LogoutController[IO],
-        jobController: JobController
+        jobController: JobController,
+        mcpController: McpController
     ): HttpRoutes[IO] =
-        unprotectedRoutes(jwtManager, oauthConfig, userService, client, jobController) <+>
+        unprotectedRoutes(
+            jwtManager,
+            oauthConfig,
+            userService,
+            client,
+            jobController,
+            mcpController
+        ) <+>
             authFilter.middleware(jwtManager, userService)(
                 authedRoutes(
                     channelService,
                     userService,
                     feedService,
+                    jwtManager,
                     user => authFilter.updateCache(user),
                     logoutController
                 )
@@ -184,24 +196,26 @@ object Server extends IOApp:
         oauthConfig: OAuthConfig,
         userService: UserService,
         client: Client[IO],
-        jobController: JobController
+        jobController: JobController,
+        mcpController: McpController
     ): HttpRoutes[IO] =
         LoginController.routes(
             jwtManager,
             oauthConfig,
             userService,
             client
-        ) <+> indexRoute <+> jobController.routes
+        ) <+> indexRoute <+> jobController.routes <+> mcpController.routes
 
     private def authedRoutes(
         channelService: ChannelService,
         userService: UserService,
         feedService: FeedService,
+        jwtManager: JwtManager,
         cacheUpdater: User => IO[Unit],
         logoutController: LogoutController[IO]
     ): AuthedRoutes[User, IO] =
         ChannelController.routes(channelService)
-            <+> UserController.routes(userService, cacheUpdater)
+            <+> UserController.routes(userService, cacheUpdater, jwtManager)
             <+> FeedController.routes(feedService)
             <+> logoutController.routes
 

@@ -3,9 +3,11 @@ package ru.trett.rss.server.repositories
 import cats.effect.IO
 import doobie.*
 import doobie.implicits.*
+import doobie.postgres.implicits.*
 import doobie.util.transactor.Transactor
 import ru.trett.rss.server.models.{Feed, User}
 
+import java.time.OffsetDateTime
 import FeedInstances.given
 
 class FeedRepository(xa: Transactor[IO]):
@@ -45,6 +47,25 @@ class FeedRepository(xa: Transactor[IO]):
       ORDER BY f.pub_date DESC
       LIMIT $limit OFFSET $offset
     """.query[Feed].to[List].transact(xa)
+
+    def getFeedsByDateRange(
+        user: User,
+        from: OffsetDateTime,
+        to: OffsetDateTime,
+        limit: Int,
+        importantOnly: Boolean = false
+    ): IO[List[(Feed, String)]] =
+        val importantFilter = if importantOnly then fr"AND f.important = true" else fr""
+        (fr"""
+      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
+             c.title
+      FROM feeds f
+      JOIN channels c ON c.id = f.channel_id
+      WHERE f.user_id = ${user.id} AND f.pub_date >= $from AND f.pub_date <= $to
+    """ ++ importantFilter ++ fr"ORDER BY f.pub_date DESC LIMIT $limit")
+            .query[(Feed, String)]
+            .to[List]
+            .transact(xa)
 
     def updateFeedImportance(feeds: List[Feed]): IO[Int] =
         if feeds.isEmpty then IO.pure(0)
