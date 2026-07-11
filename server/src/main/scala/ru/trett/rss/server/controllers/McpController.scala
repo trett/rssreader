@@ -17,10 +17,11 @@ import ru.trett.rss.server.services.{FeedService, UserService}
 import java.time.{LocalDate, LocalTime, OffsetDateTime, ZoneOffset}
 import scala.util.Try
 
-/** Minimal Model Context Protocol (JSON-RPC 2.0) endpoint so Claude Desktop can query news by date.
-  * Reached through the `mcp-remote` bridge, which forwards an `Authorization: Bearer <jwt>` header.
-  * Lives in the unprotected route group because it authenticates itself (header-based) rather than
-  * via the browser session cookie.
+/** Minimal Model Context Protocol (JSON-RPC 2.0) endpoint so Claude can query news by date. Two
+  * ways in, both carrying a per-user JWT: Claude Desktop reaches `/mcp` through the `mcp-remote`
+  * bridge, which forwards an `Authorization: Bearer <jwt>` header; the claude.ai web custom
+  * connector cannot set a header, so it hits `/mcp/<jwt>` with the token in the path. Lives in the
+  * unprotected route group because it authenticates itself rather than via the session cookie.
   */
 class McpController(feedService: FeedService, userService: UserService, jwtManager: JwtManager)(
     using loggerFactory: LoggerFactory[IO]
@@ -33,22 +34,42 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private val ToolName = "get_news_by_date"
     private val DefaultLimit = 50
 
-    def routes: HttpRoutes[IO] = HttpRoutes.of[IO] { case req @ POST -> Root / "mcp" =>
-        authenticate(req).flatMap {
+    def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
+        // Desktop path: token is forwarded as `Authorization: Bearer <jwt>` by `mcp-remote`.
+        case req @ POST -> Root / "mcp" =>
+            respond(bearerToken(req), req)
+        // Web path: the claude.ai custom connector cannot set a header, so the per-user token
+        // is carried in the URL itself (e.g. `/mcp/<jwt>`).
+        case req @ POST -> Root / "mcp" / token =>
+            respond(Some(token), req)
+    }
+
+    private def respond(
+        token: Option[String],
+        req: org.http4s.Request[IO]
+    ): IO[org.http4s.Response[IO]] =
+        resolveUser(token).flatMap {
             case None =>
                 logger.warn("Unauthorized MCP request") *> Forbidden("Invalid or missing token")
             case Some(user) =>
                 req.as[Json].flatMap(handle(user, _))
         }
-    }
 
-    private def authenticate(req: org.http4s.Request[IO]): IO[Option[User]] =
-        req.headers.get(ci"Authorization").map(_.head.value) match
-            case Some(header) if header.startsWith("Bearer ") =>
-                jwtManager.verifyToken(header.stripPrefix("Bearer ")) match
+    private def bearerToken(req: org.http4s.Request[IO]): Option[String] =
+        req.headers
+            .get(ci"Authorization")
+            .map(_.head.value)
+            .collect {
+                case header if header.startsWith("Bearer ") => header.stripPrefix("Bearer ")
+            }
+
+    private def resolveUser(token: Option[String]): IO[Option[User]] =
+        token match
+            case Some(t) =>
+                jwtManager.verifyToken(t) match
                     case Right(session) => userService.getUserByEmail(session.userEmail)
                     case Left(_)        => IO.none
-            case _ => IO.none
+            case None => IO.none
 
     private def handle(user: User, request: Json): IO[org.http4s.Response[IO]] =
         val cursor = request.hcursor

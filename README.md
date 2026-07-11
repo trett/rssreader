@@ -123,6 +123,21 @@ bridge. Add this to `claude_desktop_config.json` (macOS:
 
 You can then ask Claude things like *"show me the important news from last week."*
 
+### Claude.ai (web) custom connector
+
+The web app's custom connectors cannot set an `Authorization` header, so the same endpoint
+also accepts the token **in the URL path**: `POST /mcp/<token>`. Mint a token from
+`GET /api/user/mcp-token` as above, then in Claude.ai go to **Settings → Connectors → Add
+custom connector** and paste:
+
+```
+https://<your-host>/mcp/<token from /api/user/mcp-token>
+```
+
+No header or OAuth flow is required. Note the token is embedded in the URL, so treat it as a
+secret (it can appear in logs and browser history); revoke it by rotating `JWT_SECRET` if it
+leaks.
+
 ## Configuration
 
 The application is configured using environment variables.

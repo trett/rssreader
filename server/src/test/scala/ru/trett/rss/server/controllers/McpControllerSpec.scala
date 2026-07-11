@@ -81,6 +81,28 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         controller.routes.orNotFound.run(request).unsafeRunSync().status shouldBe Status.Forbidden
     }
 
+    test("authenticates via a token in the URL path (web custom connector)") {
+        val request = Request[IO](Method.POST, uri"/mcp" / token).withEntity(rpc("tools/list"))
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val names = response
+            .as[Json]
+            .unsafeRunSync()
+            .hcursor
+            .downField("result")
+            .downField("tools")
+            .values
+            .toList
+            .flatten
+            .flatMap(_.hcursor.get[String]("name").toOption)
+        names should contain("get_news_by_date")
+    }
+
+    test("rejects an invalid token in the URL path") {
+        val request = Request[IO](Method.POST, uri"/mcp" / "garbage").withEntity(rpc("tools/list"))
+        controller.routes.orNotFound.run(request).unsafeRunSync().status shouldBe Status.Forbidden
+    }
+
     test("initialize returns server info and echoes the protocol version") {
         val response =
             post(rpc("initialize", Json.obj("protocolVersion" -> Json.fromString("2025-06-18"))))
