@@ -36,6 +36,7 @@ class McpController(
     private val DefaultProtocolVersion = "2025-06-18"
     private val NewsToolName = "get_news_by_date"
     private val ChannelsToolName = "list_channels"
+    private val CurrentTimeToolName = "get_current_time"
     private val DefaultLimit = 100
     private val MaxRange = Duration.ofHours(24)
 
@@ -109,6 +110,13 @@ class McpController(
         Json.obj(
             "tools" -> Json.arr(
                 Json.obj(
+                    "name" -> CurrentTimeToolName.asJson,
+                    "description" -> ("Get the server's current time as an ISO-8601 datetime in " +
+                        "UTC. Use it to resolve relative dates like 'today' or 'last 24 hours' " +
+                        "before calling " + NewsToolName + ".").asJson,
+                    "inputSchema" -> Json.obj("type" -> "object".asJson, "properties" -> Json.obj())
+                ),
+                Json.obj(
                     "name" -> ChannelsToolName.asJson,
                     "description" -> ("List this user's subscribed channels (feeds) with their " +
                         "id and title. Call this first, then call " + NewsToolName + " once per " +
@@ -156,11 +164,19 @@ class McpController(
         val params = request.hcursor.downField("params")
         val args = params.downField("arguments")
         params.get[String]("name").getOrElse("") match
-            case ChannelsToolName => listChannels(user)
-            case NewsToolName     => getNewsByDate(user, args)
+            case CurrentTimeToolName => currentTime(user)
+            case ChannelsToolName    => listChannels(user)
+            case NewsToolName        => getNewsByDate(user, args)
             case other =>
                 logger.warn(s"MCP unknown tool '$other' from ${user.email}") *>
                     IO.pure(toolError(s"Unknown tool: $other"))
+
+    private def currentTime(user: User): IO[Json] =
+        IO.realTimeInstant.flatMap { instant =>
+            val now = instant.atOffset(ZoneOffset.UTC)
+            logger.info(s"MCP $CurrentTimeToolName: user=${user.email}, now=$now") *>
+                IO.pure(toolText(now.toString))
+        }
 
     private def listChannels(user: User): IO[Json] =
         logger.info(s"MCP $ChannelsToolName: user=${user.email}") *>

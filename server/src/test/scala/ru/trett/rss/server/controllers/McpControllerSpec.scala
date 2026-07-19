@@ -124,7 +124,7 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         result.downField("serverInfo").get[String]("name").toOption shouldBe Some("rssreader")
     }
 
-    test("tools/list advertises list_channels and get_news_by_date") {
+    test("tools/list advertises get_current_time, list_channels and get_news_by_date") {
         val body = post(rpc("tools/list")).as[Json].unsafeRunSync()
         val names = body.hcursor
             .downField("result")
@@ -133,7 +133,18 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             .toList
             .flatten
             .flatMap(_.hcursor.get[String]("name").toOption)
-        (names should contain).allOf("list_channels", "get_news_by_date")
+        (names should contain).allOf("get_current_time", "list_channels", "get_news_by_date")
+    }
+
+    test("tools/call get_current_time returns a UTC datetime as text content") {
+        val params = Json.obj("name" -> Json.fromString("get_current_time"))
+        val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
+        val content = body.hcursor.downField("result").downField("content").downArray
+        content.get[String]("type").toOption shouldBe Some("text")
+        val text = content.get[String]("text").toOption.get
+        // Parses as an offset datetime and is expressed in UTC (trailing Z).
+        text should endWith("Z")
+        noException should be thrownBy OffsetDateTime.parse(text)
     }
 
     test("tools/call list_channels returns the user's channels as text content") {

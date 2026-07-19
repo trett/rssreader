@@ -86,8 +86,11 @@ This setup is for actively developing the application with hot-reloading where p
 ## Claude Desktop (MCP)
 
 The server exposes a [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so
-Claude can query your news by date. It speaks JSON-RPC 2.0 over `POST /mcp` and offers two tools:
+Claude can query your news by date. It speaks JSON-RPC 2.0 over `POST /mcp` and offers three
+tools:
 
+-   **`get_current_time`** — the server's current time as an ISO-8601 UTC datetime, so Claude can
+    resolve relative dates like "today" or "last 24 hours".
 -   **`list_channels`** — list your subscribed channels with their `id` and `title`.
 -   **`get_news_by_date`** — fetch the **important** items (flagged important, or from a
     highlighted channel) for a **single channel** (`channelId`) published within a date range
