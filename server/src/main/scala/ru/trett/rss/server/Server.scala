@@ -90,7 +90,8 @@ object Server extends IOApp:
                         ChannelService(channelRepository, feedRepository, client, importanceService)
                     authFilter <- AuthFilter[IO]
                     jobController = new JobController(channelService, userService, appConfig.jobs)
-                    mcpController = new McpController(feedService, userService, jwtManager)
+                    mcpController =
+                        new McpController(feedService, channelService, userService, jwtManager)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
                     appRoutes <-
                         corsPolicy(

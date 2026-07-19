@@ -20,12 +20,12 @@ class FeedService(feedRepository: FeedRepository):
 
     def getFeedsByDateRange(
         user: User,
+        channelId: Long,
         from: OffsetDateTime,
         to: OffsetDateTime,
-        limit: Int,
-        importantOnly: Boolean = false
+        limit: Int
     ): IO[List[FeedItemData]] =
-        feedRepository.getFeedsByDateRange(user, from, to, limit, importantOnly).map {
+        feedRepository.getFeedsByDateRange(user, channelId, from, to, limit).map {
             _.map { case (feed, channelTitle) =>
                 FeedItemData(
                     feed.link,

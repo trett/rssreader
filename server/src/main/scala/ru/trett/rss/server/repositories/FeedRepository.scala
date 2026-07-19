@@ -50,19 +50,22 @@ class FeedRepository(xa: Transactor[IO]):
 
     def getFeedsByDateRange(
         user: User,
+        channelId: Long,
         from: OffsetDateTime,
         to: OffsetDateTime,
-        limit: Int,
-        importantOnly: Boolean = false
+        limit: Int
     ): IO[List[(Feed, String)]] =
-        val importantFilter = if importantOnly then fr"AND f.important = true" else fr""
-        (fr"""
+        sql"""
       SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
              c.title
       FROM feeds f
       JOIN channels c ON c.id = f.channel_id
-      WHERE f.user_id = ${user.id} AND f.pub_date >= $from AND f.pub_date <= $to
-    """ ++ importantFilter ++ fr"ORDER BY f.pub_date DESC LIMIT $limit")
+      JOIN user_channels uc ON uc.channel_id = f.channel_id AND uc.user_id = ${user.id}
+      WHERE f.user_id = ${user.id} AND f.channel_id = $channelId
+        AND f.pub_date >= $from AND f.pub_date <= $to
+        AND (f.important = true OR uc.highlighted = true)
+      ORDER BY f.pub_date DESC LIMIT $limit
+    """
             .query[(Feed, String)]
             .to[List]
             .transact(xa)

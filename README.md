@@ -86,11 +86,17 @@ This setup is for actively developing the application with hot-reloading where p
 ## Claude Desktop (MCP)
 
 The server exposes a [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so
-Claude Desktop can query your news by date. It speaks JSON-RPC 2.0 over `POST /mcp` and offers a
-single tool:
+Claude can query your news by date. It speaks JSON-RPC 2.0 over `POST /mcp` and offers two tools:
 
--   **`get_news_by_date`** — fetch your feed items published within a date range (`from`, `to`,
-    optional `limit` and `importantOnly`), newest first.
+-   **`list_channels`** — list your subscribed channels with their `id` and `title`.
+-   **`get_news_by_date`** — fetch the **important** items (flagged important, or from a
+    highlighted channel) for a **single channel** (`channelId`) published within a date range
+    (`from`, `to`, optional `limit`, default 100), newest first. The range must span at most
+    **24 hours**.
+
+The intended flow is: call `list_channels`, then call `get_news_by_date` once per channel. Because
+each response contains a single feed's items, Claude can detect that feed's language and translate
+accurately.
 
 Requests are authenticated with your JWT sent as an `Authorization: Bearer <token>` header. While
 logged in to the web app, mint a long-lived token from:
@@ -121,7 +127,7 @@ bridge. Add this to `claude_desktop_config.json` (macOS:
 }
 ```
 
-You can then ask Claude things like *"show me the important news from last week."*
+You can then ask Claude things like *"summarize today's important news from each of my feeds."*
 
 ### Claude.ai (web) custom connector
 

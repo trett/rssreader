@@ -13,11 +13,11 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
-import ru.trett.rss.models.FeedItemData
+import ru.trett.rss.models.{ChannelData, FeedItemData}
 import ru.trett.rss.server.authorization.{JwtManager, SessionData}
 import ru.trett.rss.server.models.User
-import ru.trett.rss.server.repositories.{FeedRepository, UserRepository}
-import ru.trett.rss.server.services.{FeedService, UserService}
+import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}
+import ru.trett.rss.server.services.{ChannelService, FeedService, ImportanceService, UserService}
 
 import java.time.OffsetDateTime
 
@@ -38,6 +38,9 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         isRead = false
     )
 
+    private val sampleChannel =
+        ChannelData(id = 12, title = "Channel", link = "https://example.com")
+
     private def controller: McpController =
         val userService = new UserService(mock[UserRepository]) {
             override def getUserByEmail(email: String): IO[Option[User]] =
@@ -46,13 +49,21 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val feedService = new FeedService(mock[FeedRepository]) {
             override def getFeedsByDateRange(
                 u: User,
+                channelId: Long,
                 from: OffsetDateTime,
                 to: OffsetDateTime,
-                limit: Int,
-                importantOnly: Boolean
+                limit: Int
             ): IO[List[FeedItemData]] = IO.pure(List(sampleItem))
         }
-        new McpController(feedService, userService, jwtManager)
+        val channelService = new ChannelService(
+            mock[ChannelRepository],
+            mock[FeedRepository],
+            mock[org.http4s.client.Client[IO]],
+            new ImportanceService(mock[org.http4s.client.Client[IO]])
+        ) {
+            override def getChannels(u: User): IO[List[ChannelData]] = IO.pure(List(sampleChannel))
+        }
+        new McpController(feedService, channelService, userService, jwtManager)
 
     private def post(body: Json, withToken: Boolean = true): Response[IO] =
         val base = Request[IO](Method.POST, uri"/mcp").withEntity(body)
@@ -113,7 +124,7 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         result.downField("serverInfo").get[String]("name").toOption shouldBe Some("rssreader")
     }
 
-    test("tools/list advertises get_news_by_date") {
+    test("tools/list advertises list_channels and get_news_by_date") {
         val body = post(rpc("tools/list")).as[Json].unsafeRunSync()
         val names = body.hcursor
             .downField("result")
@@ -122,15 +133,24 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             .toList
             .flatten
             .flatMap(_.hcursor.get[String]("name").toOption)
-        names should contain("get_news_by_date")
+        (names should contain).allOf("list_channels", "get_news_by_date")
+    }
+
+    test("tools/call list_channels returns the user's channels as text content") {
+        val params = Json.obj("name" -> Json.fromString("list_channels"))
+        val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
+        val content = body.hcursor.downField("result").downField("content").downArray
+        content.get[String]("type").toOption shouldBe Some("text")
+        content.get[String]("text").toOption.get should include("\"id\" : 12")
     }
 
     test("tools/call get_news_by_date returns feed items as text content") {
         val params = Json.obj(
             "name" -> Json.fromString("get_news_by_date"),
             "arguments" -> Json.obj(
-                "from" -> Json.fromString("2026-07-01"),
-                "to" -> Json.fromString("2026-07-10")
+                "channelId" -> Json.fromInt(12),
+                "from" -> Json.fromString("2026-07-01T00:00:00Z"),
+                "to" -> Json.fromString("2026-07-01T12:00:00Z")
             )
         )
         val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
@@ -139,13 +159,33 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         content.get[String]("text").toOption.get should include("https://example.com/item1")
     }
 
-    test("tools/call with a missing argument returns an error result") {
+    test("tools/call get_news_by_date without channelId returns an error result") {
         val params = Json.obj(
             "name" -> Json.fromString("get_news_by_date"),
-            "arguments" -> Json.obj("to" -> Json.fromString("2026-07-10"))
+            "arguments" -> Json.obj(
+                "from" -> Json.fromString("2026-07-01"),
+                "to" -> Json.fromString("2026-07-01")
+            )
         )
         val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
         body.hcursor.downField("result").get[Boolean]("isError").toOption shouldBe Some(true)
+    }
+
+    test("tools/call get_news_by_date rejects a range wider than 24 hours") {
+        val params = Json.obj(
+            "name" -> Json.fromString("get_news_by_date"),
+            "arguments" -> Json.obj(
+                "channelId" -> Json.fromInt(12),
+                "from" -> Json.fromString("2026-07-01"),
+                "to" -> Json.fromString("2026-07-10")
+            )
+        )
+        val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
+        val result = body.hcursor.downField("result")
+        result.get[Boolean]("isError").toOption shouldBe Some(true)
+        result.downField("content").downArray.get[String]("text").toOption.get should include(
+            "24 hours"
+        )
     }
 
     test("a notification (no id) is accepted with no body") {
