@@ -12,7 +12,7 @@ import org.typelevel.ci.*
 import org.typelevel.log4cats.{Logger, LoggerFactory}
 import ru.trett.rss.server.authorization.JwtManager
 import ru.trett.rss.server.models.User
-import ru.trett.rss.server.services.{ChannelService, FeedService, UserService}
+import ru.trett.rss.server.services.{FeedService, UserService}
 
 import java.time.{Duration, LocalDate, LocalTime, OffsetDateTime, ZoneOffset}
 import scala.util.Try
@@ -23,29 +23,22 @@ import scala.util.Try
   * connector cannot set a header, so it hits `/mcp/<jwt>` with the token in the path. Lives in the
   * unprotected route group because it authenticates itself rather than via the session cookie.
   */
-class McpController(
-    feedService: FeedService,
-    channelService: ChannelService,
-    userService: UserService,
-    jwtManager: JwtManager
-)(using loggerFactory: LoggerFactory[IO]):
+class McpController(feedService: FeedService, userService: UserService, jwtManager: JwtManager)(
+    using loggerFactory: LoggerFactory[IO]
+):
     private val logger: Logger[IO] = loggerFactory.getLogger
 
     private val ServerName = "rssreader"
     private val ServerVersion = "1.0.0"
     private val DefaultProtocolVersion = "2025-06-18"
     private val NewsToolName = "get_news_by_date"
-    private val ChannelsToolName = "list_channels"
     private val CurrentTimeToolName = "get_current_time"
     private val DefaultLimit = 100
     private val MaxRange = Duration.ofHours(24)
 
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
-        // Desktop path: token is forwarded as `Authorization: Bearer <jwt>` by `mcp-remote`.
         case req @ POST -> Root / "mcp" =>
             respond(bearerToken(req), req)
-        // Web path: the claude.ai custom connector cannot set a header, so the per-user token
-        // is carried in the URL itself (e.g. `/mcp/<jwt>`).
         case req @ POST -> Root / "mcp" / token =>
             respond(Some(token), req)
     }
@@ -106,55 +99,54 @@ class McpController(
             "serverInfo" -> Json.obj("name" -> ServerName.asJson, "version" -> ServerVersion.asJson)
         )
 
+    private def prop(tpe: String, description: String): Json =
+        Json.obj("type" -> tpe.asJson, "description" -> description.asJson)
+
+    private def tool(name: String, description: String, properties: Json): Json =
+        Json.obj(
+            "name" -> name.asJson,
+            "description" -> description.asJson,
+            "inputSchema" -> Json.obj(
+                "type" -> "object".asJson,
+                "properties" -> properties,
+                "required" -> Json.arr()
+            )
+        )
+
     private val toolsListResult: Json =
         Json.obj(
             "tools" -> Json.arr(
-                Json.obj(
-                    "name" -> CurrentTimeToolName.asJson,
-                    "description" -> ("Get the server's current time as an ISO-8601 datetime in " +
-                        "UTC. Use it to resolve relative dates like 'today' or 'last 24 hours' " +
-                        "before calling " + NewsToolName + ".").asJson,
-                    "inputSchema" -> Json.obj("type" -> "object".asJson, "properties" -> Json.obj())
+                tool(
+                    CurrentTimeToolName,
+                    "Get the server's current time as an ISO-8601 datetime in UTC. Use it to " +
+                        "resolve relative dates like 'today' or 'last 24 hours' before calling " +
+                        NewsToolName + ".",
+                    Json.obj()
                 ),
-                Json.obj(
-                    "name" -> ChannelsToolName.asJson,
-                    "description" -> ("List this user's subscribed channels (feeds) with their " +
-                        "id and title. Call this first, then call " + NewsToolName + " once per " +
-                        "channel using the returned id.").asJson,
-                    "inputSchema" -> Json.obj("type" -> "object".asJson, "properties" -> Json.obj())
-                ),
-                Json.obj(
-                    "name" -> NewsToolName.asJson,
-                    "description" -> ("Fetch important news items for a single channel published " +
-                        "within a date range (max 24 hours), newest first. Query one channel at a " +
-                        "time: because every item in the response comes from the same feed, detect " +
-                        "that feed's language and translate accordingly. Use " + ChannelsToolName +
-                        " to discover channel ids.").asJson,
-                    "inputSchema" -> Json.obj(
-                        "type" -> "object".asJson,
-                        "properties" -> Json.obj(
-                            "channelId" -> Json.obj(
-                                "type" -> "integer".asJson,
-                                "description" -> ("Id of the channel to query, as returned by " +
-                                    ChannelsToolName + ".").asJson
-                            ),
-                            "from" -> Json.obj(
-                                "type" -> "string".asJson,
-                                "description" -> ("Start of the range, inclusive. ISO-8601 date " +
-                                    "(2026-07-01) or datetime (2026-07-01T00:00:00Z).").asJson
-                            ),
-                            "to" -> Json.obj(
-                                "type" -> "string".asJson,
-                                "description" -> ("End of the range, inclusive. ISO-8601 date " +
-                                    "(2026-07-10) or datetime. A date-only value covers the whole " +
-                                    "day. Must be within 24 hours of `from`.").asJson
-                            ),
-                            "limit" -> Json.obj(
-                                "type" -> "integer".asJson,
-                                "description" -> s"Maximum number of items (default $DefaultLimit).".asJson
-                            )
+                tool(
+                    NewsToolName,
+                    "Fetch important news items (flagged important, or from a highlighted " +
+                        "channel) within a date range, newest first. Returns items across ALL your " +
+                        "channels in one call, grouped by channel — you never need to query " +
+                        "channels individually. Each group is a single feed, so detect that feed's " +
+                        "language and translate accordingly. For the latest news, call with NO " +
+                        "arguments: it returns the last 24 hours. The range spans at most 24 hours " +
+                        "and defaults to the last 24 hours.",
+                    Json.obj(
+                        "from" -> prop(
+                            "string",
+                            "Optional start of the range, inclusive. ISO-8601 date (2026-07-01) or " +
+                                "datetime (2026-07-01T00:00:00Z). Defaults to 24 hours before `to`."
                         ),
-                        "required" -> Json.arr("channelId".asJson, "from".asJson, "to".asJson)
+                        "to" -> prop(
+                            "string",
+                            "Optional end of the range, inclusive. ISO-8601 date or datetime. " +
+                                "Defaults to now (UTC). Must be within 24 hours of `from`."
+                        ),
+                        "limit" -> prop(
+                            "integer",
+                            s"Maximum items per channel (default $DefaultLimit)."
+                        )
                     )
                 )
             )
@@ -165,7 +157,6 @@ class McpController(
         val args = params.downField("arguments")
         params.get[String]("name").getOrElse("") match
             case CurrentTimeToolName => currentTime(user)
-            case ChannelsToolName    => listChannels(user)
             case NewsToolName        => getNewsByDate(user, args)
             case other =>
                 logger.warn(s"MCP unknown tool '$other' from ${user.email}") *>
@@ -178,54 +169,52 @@ class McpController(
                 IO.pure(toolText(now.toString))
         }
 
-    private def listChannels(user: User): IO[Json] =
-        logger.info(s"MCP $ChannelsToolName: user=${user.email}") *>
-            channelService
-                .getChannels(user)
-                .flatTap(channels =>
+    private def getNewsByDate(user: User, args: io.circe.ACursor): IO[Json] =
+        IO.realTimeInstant.flatMap { instant =>
+            val now = instant.atOffset(ZoneOffset.UTC)
+            def bound(field: String, default: OffsetDateTime, endOfDay: Boolean) =
+                args
+                    .get[String](field)
+                    .toOption
+                    .fold[Either[String, OffsetDateTime]](Right(default))(parseDate(_, endOfDay))
+            val parsed = for
+                to <- bound("to", now, endOfDay = true)
+                from <- bound("from", to.minus(MaxRange), endOfDay = false)
+                _ <- validateRange(from, to)
+            yield (from, to)
+            parsed match
+                case Left(message) =>
+                    logger.warn(
+                        s"MCP $NewsToolName invalid arguments from ${user.email}: $message"
+                    ) *> IO.pure(toolError(message))
+                case Right((from, to)) =>
+                    val limit =
+                        args.get[Int]("limit").toOption.filter(_ > 0).getOrElse(DefaultLimit)
+                    allChannels(user, from, to, limit)
+        }
+
+    private def allChannels(
+        user: User,
+        from: OffsetDateTime,
+        to: OffsetDateTime,
+        limit: Int
+    ): IO[Json] =
+        logger.info(
+            s"MCP $NewsToolName: user=${user.email}, channelId=all, from=$from, to=$to, limit=$limit"
+        ) *>
+            feedService
+                .getNewsByDateGrouped(user, from, to, limit)
+                .flatTap(groups =>
                     logger.info(
-                        s"MCP $ChannelsToolName returned ${channels.size} channels for ${user.email}"
+                        s"MCP $NewsToolName returned ${groups.map(_.items.size).sum} items across " +
+                            s"${groups.size} channels for ${user.email}"
                     )
                 )
-                .map(channels => toolText(channels.asJson.spaces2))
+                .map(groups => toolText(groups.asJson.noSpaces))
                 .handleErrorWith { e =>
-                    logger.error(e)(s"MCP $ChannelsToolName failed for ${user.email}") *>
-                        IO.pure(toolError(s"Failed to list channels: ${e.getMessage}"))
+                    logger.error(e)(s"MCP $NewsToolName failed for ${user.email}") *>
+                        IO.pure(toolError(s"Failed to fetch news: ${e.getMessage}"))
                 }
-
-    private def getNewsByDate(user: User, args: io.circe.ACursor): IO[Json] =
-        val parsed = for
-            channelId <- args
-                .get[Long]("channelId")
-                .left
-                .map(_ => "Missing required argument: channelId")
-            fromStr <- args.get[String]("from").left.map(_ => "Missing required argument: from")
-            toStr <- args.get[String]("to").left.map(_ => "Missing required argument: to")
-            from <- parseDate(fromStr, endOfDay = false)
-            to <- parseDate(toStr, endOfDay = true)
-            _ <- validateRange(from, to)
-        yield (channelId, from, to)
-        parsed match
-            case Left(message) =>
-                logger.warn(s"MCP $NewsToolName invalid arguments from ${user.email}: $message") *>
-                    IO.pure(toolError(message))
-            case Right((channelId, from, to)) =>
-                val limit = args.get[Int]("limit").toOption.filter(_ > 0).getOrElse(DefaultLimit)
-                logger.info(
-                    s"MCP $NewsToolName: user=${user.email}, channelId=$channelId, from=$from, to=$to, limit=$limit"
-                ) *>
-                    feedService
-                        .getFeedsByDateRange(user, channelId, from, to, limit)
-                        .flatTap(items =>
-                            logger.info(
-                                s"MCP $NewsToolName returned ${items.size} items for ${user.email}"
-                            )
-                        )
-                        .map(items => toolText(items.asJson.spaces2))
-                        .handleErrorWith { e =>
-                            logger.error(e)(s"MCP $NewsToolName failed for ${user.email}") *>
-                                IO.pure(toolError(s"Failed to fetch news: ${e.getMessage}"))
-                        }
 
     /** The range must be ordered and span at most 24 hours. */
     private def validateRange(from: OffsetDateTime, to: OffsetDateTime): Either[String, Unit] =

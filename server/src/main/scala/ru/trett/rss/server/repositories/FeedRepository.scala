@@ -48,23 +48,32 @@ class FeedRepository(xa: Transactor[IO]):
       LIMIT $limit OFFSET $offset
     """.query[Feed].to[List].transact(xa)
 
-    def getFeedsByDateRange(
+    /** Important-or-highlighted feeds across all of the user's channels within the date range,
+      * capped to `limitPerChannel` items per channel (newest first) so a busy feed can't dominate.
+      * Returned ordered by channel, then newest first, ready to group by channel.
+      */
+    def getFeedsByDateRangeAllChannels(
         user: User,
-        channelId: Long,
         from: OffsetDateTime,
         to: OffsetDateTime,
-        limit: Int
+        limitPerChannel: Int
     ): IO[List[(Feed, String)]] =
         sql"""
-      SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
-             c.title
-      FROM feeds f
-      JOIN channels c ON c.id = f.channel_id
-      JOIN user_channels uc ON uc.channel_id = f.channel_id AND uc.user_id = ${user.id}
-      WHERE f.user_id = ${user.id} AND f.channel_id = $channelId
-        AND f.pub_date >= $from AND f.pub_date <= $to
-        AND (f.important = true OR uc.highlighted = true)
-      ORDER BY f.pub_date DESC LIMIT $limit
+      SELECT link, user_id, channel_id, title, description, pub_date, read, image_url, categories, important,
+             channel_title
+      FROM (
+        SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
+               c.title AS channel_title,
+               ROW_NUMBER() OVER (PARTITION BY f.channel_id ORDER BY f.pub_date DESC) AS rn
+        FROM feeds f
+        JOIN channels c ON c.id = f.channel_id
+        JOIN user_channels uc ON uc.channel_id = f.channel_id AND uc.user_id = ${user.id}
+        WHERE f.user_id = ${user.id}
+          AND f.pub_date >= $from AND f.pub_date <= $to
+          AND (f.important = true OR uc.highlighted = true)
+      ) ranked
+      WHERE rn <= $limitPerChannel
+      ORDER BY channel_id, pub_date DESC
     """
             .query[(Feed, String)]
             .to[List]

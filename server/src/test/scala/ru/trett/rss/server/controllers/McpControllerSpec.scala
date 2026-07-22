@@ -13,11 +13,11 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
-import ru.trett.rss.models.{ChannelData, FeedItemData}
+import ru.trett.rss.models.{ChannelNews, FeedItemData}
 import ru.trett.rss.server.authorization.{JwtManager, SessionData}
 import ru.trett.rss.server.models.User
-import ru.trett.rss.server.repositories.{ChannelRepository, FeedRepository, UserRepository}
-import ru.trett.rss.server.services.{ChannelService, FeedService, ImportanceService, UserService}
+import ru.trett.rss.server.repositories.{FeedRepository, UserRepository}
+import ru.trett.rss.server.services.{FeedService, UserService}
 
 import java.time.OffsetDateTime
 
@@ -38,8 +38,8 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         isRead = false
     )
 
-    private val sampleChannel =
-        ChannelData(id = 12, title = "Channel", link = "https://example.com")
+    private val sampleGroup =
+        ChannelNews(channelId = 12, channelTitle = "Channel", items = List(sampleItem))
 
     private def controller: McpController =
         val userService = new UserService(mock[UserRepository]) {
@@ -47,23 +47,14 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
                 IO.pure(if email == user.email then Some(user) else None)
         }
         val feedService = new FeedService(mock[FeedRepository]) {
-            override def getFeedsByDateRange(
+            override def getNewsByDateGrouped(
                 u: User,
-                channelId: Long,
                 from: OffsetDateTime,
                 to: OffsetDateTime,
-                limit: Int
-            ): IO[List[FeedItemData]] = IO.pure(List(sampleItem))
+                limitPerChannel: Int
+            ): IO[List[ChannelNews]] = IO.pure(List(sampleGroup))
         }
-        val channelService = new ChannelService(
-            mock[ChannelRepository],
-            mock[FeedRepository],
-            mock[org.http4s.client.Client[IO]],
-            new ImportanceService(mock[org.http4s.client.Client[IO]])
-        ) {
-            override def getChannels(u: User): IO[List[ChannelData]] = IO.pure(List(sampleChannel))
-        }
-        new McpController(feedService, channelService, userService, jwtManager)
+        new McpController(feedService, userService, jwtManager)
 
     private def post(body: Json, withToken: Boolean = true): Response[IO] =
         val base = Request[IO](Method.POST, uri"/mcp").withEntity(body)
@@ -124,7 +115,7 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         result.downField("serverInfo").get[String]("name").toOption shouldBe Some("rssreader")
     }
 
-    test("tools/list advertises get_current_time, list_channels and get_news_by_date") {
+    test("tools/list advertises get_current_time and get_news_by_date only") {
         val body = post(rpc("tools/list")).as[Json].unsafeRunSync()
         val names = body.hcursor
             .downField("result")
@@ -133,7 +124,8 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             .toList
             .flatten
             .flatMap(_.hcursor.get[String]("name").toOption)
-        (names should contain).allOf("get_current_time", "list_channels", "get_news_by_date")
+        (names should contain).allOf("get_current_time", "get_news_by_date")
+        names should not contain "list_channels"
     }
 
     test("tools/call get_current_time returns a UTC datetime as text content") {
@@ -142,51 +134,31 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val content = body.hcursor.downField("result").downField("content").downArray
         content.get[String]("type").toOption shouldBe Some("text")
         val text = content.get[String]("text").toOption.get
-        // Parses as an offset datetime and is expressed in UTC (trailing Z).
         text should endWith("Z")
         noException should be thrownBy OffsetDateTime.parse(text)
     }
 
-    test("tools/call list_channels returns the user's channels as text content") {
-        val params = Json.obj("name" -> Json.fromString("list_channels"))
+    test("tools/call get_news_by_date returns all channels grouped by channel") {
+        val params = Json.obj("name" -> Json.fromString("get_news_by_date"))
         val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
         val content = body.hcursor.downField("result").downField("content").downArray
         content.get[String]("type").toOption shouldBe Some("text")
-        content.get[String]("text").toOption.get should include("\"id\" : 12")
+        val text = content.get[String]("text").toOption.get
+        text should include("\"channelId\":12")
+        text should include("\"items\"")
+        text should include("https://example.com/item1")
     }
 
-    test("tools/call get_news_by_date returns feed items as text content") {
-        val params = Json.obj(
-            "name" -> Json.fromString("get_news_by_date"),
-            "arguments" -> Json.obj(
-                "channelId" -> Json.fromInt(12),
-                "from" -> Json.fromString("2026-07-01T00:00:00Z"),
-                "to" -> Json.fromString("2026-07-01T12:00:00Z")
-            )
-        )
+    test("tools/call get_news_by_date with no arguments defaults to the last 24 hours") {
+        val params = Json.obj("name" -> Json.fromString("get_news_by_date"))
         val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
-        val content = body.hcursor.downField("result").downField("content").downArray
-        content.get[String]("type").toOption shouldBe Some("text")
-        content.get[String]("text").toOption.get should include("https://example.com/item1")
-    }
-
-    test("tools/call get_news_by_date without channelId returns an error result") {
-        val params = Json.obj(
-            "name" -> Json.fromString("get_news_by_date"),
-            "arguments" -> Json.obj(
-                "from" -> Json.fromString("2026-07-01"),
-                "to" -> Json.fromString("2026-07-01")
-            )
-        )
-        val body = post(rpc("tools/call", params)).as[Json].unsafeRunSync()
-        body.hcursor.downField("result").get[Boolean]("isError").toOption shouldBe Some(true)
+        body.hcursor.downField("result").get[Boolean]("isError").toOption shouldBe None
     }
 
     test("tools/call get_news_by_date rejects a range wider than 24 hours") {
         val params = Json.obj(
             "name" -> Json.fromString("get_news_by_date"),
             "arguments" -> Json.obj(
-                "channelId" -> Json.fromInt(12),
                 "from" -> Json.fromString("2026-07-01"),
                 "to" -> Json.fromString("2026-07-10")
             )

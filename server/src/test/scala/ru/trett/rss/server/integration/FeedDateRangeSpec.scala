@@ -12,9 +12,9 @@ import ru.trett.rss.server.utils.TestDatabase
 
 import java.time.OffsetDateTime
 
-/** Integration tests for [[FeedRepository.getFeedsByDateRange]] using Testcontainers PostgreSQL.
-  * Backs the MCP `get_news_by_date` tool: results are scoped to a single channel and limited to
-  * items that are important or belong to a highlighted channel.
+/** Integration tests for [[FeedRepository.getFeedsByDateRangeAllChannels]] using Testcontainers
+  * PostgreSQL. Backs the MCP `get_news_by_date` tool: all channels in one query, limited to items
+  * that are important or belong to a highlighted channel, capped per channel.
   */
 class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
@@ -22,7 +22,6 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
     private var transactor: Option[HikariTransactor[IO]] = None
     private var cleanup: Option[IO[Unit]] = None
     private var feedRepository: Option[FeedRepository] = None
-    // A regular channel (not highlighted) and a highlighted one.
     private var plainChannelId: Long = 0
     private var highlightedChannelId: Long = 0
     // scalafix:on DisableSyntax.var
@@ -87,19 +86,21 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
         super.afterAll()
     }
 
-    private def range(channelId: Long, from: String, to: String, limit: Int = 50) =
+    private def allChannels(from: String, to: String, limitPerChannel: Int = 50) =
         feedRepository.get
-            .getFeedsByDateRange(
+            .getFeedsByDateRangeAllChannels(
                 user,
-                channelId,
                 OffsetDateTime.parse(from),
                 OffsetDateTime.parse(to),
-                limit
+                limitPerChannel
             )
             .unsafeRunSync()
 
-    test("returns only the channel's important items within the range, newest first") {
-        val result = range(plainChannelId, "2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z")
+    private def channelItems(channelId: Long, from: String, to: String, limitPerChannel: Int = 50) =
+        allChannels(from, to, limitPerChannel).filter(_._1.channelId == channelId)
+
+    test("returns only a channel's important items within the range, newest first") {
+        val result = channelItems(plainChannelId, "2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z")
         result.map(_._1.link) shouldBe List(
             "https://example.com/plain/item3",
             "https://example.com/plain/item2"
@@ -108,33 +109,47 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
     }
 
     test("a highlighted channel returns all its items regardless of importance") {
-        val result = range(highlightedChannelId, "2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z")
+        val result =
+            channelItems(highlightedChannelId, "2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z")
         result.map(_._1.link) shouldBe List(
             "https://example.com/highlighted/item2",
             "https://example.com/highlighted/item1"
         )
     }
 
-    test("results are scoped to the requested channel") {
-        val result = range(plainChannelId, "2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z")
-        result.map(_._1.channelId).distinct shouldBe List(plainChannelId)
-    }
-
     test("boundaries are inclusive") {
-        val result = range(plainChannelId, "2026-07-05T10:00:00Z", "2026-07-10T10:00:00Z")
+        val result = channelItems(plainChannelId, "2026-07-05T10:00:00Z", "2026-07-10T10:00:00Z")
         result.map(_._1.link) shouldBe List(
             "https://example.com/plain/item3",
             "https://example.com/plain/item2"
         )
     }
 
-    test("limit caps the number of results, keeping newest") {
-        val result =
-            range(plainChannelId, "2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z", limit = 1)
-        result.map(_._1.link) shouldBe List("https://example.com/plain/item3")
+    test("empty range returns nothing") {
+        allChannels("2026-08-01T00:00:00Z", "2026-08-31T00:00:00Z") shouldBe empty
     }
 
-    test("empty range returns nothing") {
-        range(plainChannelId, "2026-08-01T00:00:00Z", "2026-08-31T00:00:00Z") shouldBe empty
+    test("all-channels query spans every channel, applying the important/highlighted filter") {
+        val result = allChannels("2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z")
+        result.map(_._1.link).toSet shouldBe Set(
+            "https://example.com/plain/item2",
+            "https://example.com/plain/item3",
+            "https://example.com/highlighted/item1",
+            "https://example.com/highlighted/item2"
+        )
+        result.map(_._1.channelId).toSet shouldBe Set(plainChannelId, highlightedChannelId)
+    }
+
+    test("all-channels limit is applied per channel, keeping newest") {
+        val result =
+            allChannels("2026-07-01T00:00:00Z", "2026-07-20T00:00:00Z", limitPerChannel = 1)
+        result.groupBy(_._1.channelId).view.mapValues(_.size).toMap shouldBe Map(
+            plainChannelId -> 1,
+            highlightedChannelId -> 1
+        )
+        result.map(_._1.link).toSet shouldBe Set(
+            "https://example.com/plain/item3",
+            "https://example.com/highlighted/item2"
+        )
     }
 }
