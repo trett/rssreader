@@ -3,9 +3,11 @@ package ru.trett.rss.server.repositories
 import cats.effect.IO
 import doobie.*
 import doobie.implicits.*
+import doobie.postgres.implicits.*
 import doobie.util.transactor.Transactor
 import ru.trett.rss.server.models.{Feed, User}
 
+import java.time.OffsetDateTime
 import FeedInstances.given
 
 class FeedRepository(xa: Transactor[IO]):
@@ -45,6 +47,37 @@ class FeedRepository(xa: Transactor[IO]):
       ORDER BY f.pub_date DESC
       LIMIT $limit OFFSET $offset
     """.query[Feed].to[List].transact(xa)
+
+    /** Important-or-highlighted feeds across all of the user's channels within the date range,
+      * capped to `limitPerChannel` items per channel (newest first) so a busy feed can't dominate.
+      * Returned ordered by channel, then newest first, ready to group by channel.
+      */
+    def getFeedsByDateRangeAllChannels(
+        user: User,
+        from: OffsetDateTime,
+        to: OffsetDateTime,
+        limitPerChannel: Int
+    ): IO[List[(Feed, String)]] =
+        sql"""
+      SELECT link, user_id, channel_id, title, description, pub_date, read, image_url, categories, important,
+             channel_title
+      FROM (
+        SELECT f.link, f.user_id, f.channel_id, f.title, f.description, f.pub_date, f.read, f.image_url, f.categories, f.important,
+               c.title AS channel_title,
+               ROW_NUMBER() OVER (PARTITION BY f.channel_id ORDER BY f.pub_date DESC) AS rn
+        FROM feeds f
+        JOIN channels c ON c.id = f.channel_id
+        JOIN user_channels uc ON uc.channel_id = f.channel_id AND uc.user_id = ${user.id}
+        WHERE f.user_id = ${user.id}
+          AND f.pub_date >= $from AND f.pub_date <= $to
+          AND (f.important = true OR uc.highlighted = true)
+      ) ranked
+      WHERE rn <= $limitPerChannel
+      ORDER BY channel_id, pub_date DESC
+    """
+            .query[(Feed, String)]
+            .to[List]
+            .transact(xa)
 
     def updateFeedImportance(feeds: List[Feed]): IO[Int] =
         if feeds.isEmpty then IO.pure(0)

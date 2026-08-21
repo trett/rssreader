@@ -9,19 +9,32 @@ import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
 import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 import ru.trett.rss.models.UserSettings
+import ru.trett.rss.server.authorization.{JwtManager, SessionData}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.UserService
+
+import scala.concurrent.duration.*
 
 object UserController {
 
     given Decoder[UserSettings] = deriveDecoder[UserSettings]
     given Encoder[UserSettings] = deriveEncoder[UserSettings]
 
-    def routes(userService: UserService, cacheUpdater: User => IO[Unit])(using
-        LoggerFactory[IO]
+    private case class McpTokenResponse(token: String)
+    private given Encoder[McpTokenResponse] = deriveEncoder[McpTokenResponse]
+
+    // Long-lived token for pasting into a Claude Desktop MCP config
+    private val McpTokenTtl: FiniteDuration = 365.days
+
+    def routes(userService: UserService, cacheUpdater: User => IO[Unit], jwtManager: JwtManager)(
+        using LoggerFactory[IO]
     ): AuthedRoutes[User, IO] =
         val logger: SelfAwareStructuredLogger[IO] = LoggerFactory[IO].getLogger
         AuthedRoutes.of {
+            case GET -> Root / "api" / "user" / "mcp-token" as user =>
+                val token = jwtManager.createToken(SessionData(user.email), McpTokenTtl)
+                Ok(McpTokenResponse(token))
+
             case GET -> Root / "api" / "user" / "settings" as user =>
                 for {
                     settings <- userService.getUserSettings(user.id)

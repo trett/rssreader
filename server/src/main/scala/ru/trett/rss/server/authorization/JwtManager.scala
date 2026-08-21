@@ -19,10 +19,13 @@ class JwtManager(secret: String):
     private val clock: Clock = Clock.systemUTC()
 
     def createToken(data: SessionData): String =
+        createToken(data, 1.day)
+
+    def createToken(data: SessionData, ttl: FiniteDuration): String =
         val claim =
             JwtClaim(data.asJson.noSpaces)
                 .issuedNow(clock)
-                .expiresIn(1.day.toSeconds)(clock) // 1 day
+                .expiresIn(ttl.toSeconds)(clock)
         JwtCirce.encode(claim, secret, algorithm)
 
     def verifyToken(token: String): Either[Throwable, SessionData] =

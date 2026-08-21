@@ -83,6 +83,70 @@ This setup is for actively developing the application with hot-reloading where p
     ```
     The server will be running on `http://localhost`.
 
+## Claude Desktop (MCP)
+
+The server exposes a [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so
+Claude can query your news by date. It speaks JSON-RPC 2.0 over `POST /mcp` and offers three
+tools:
+
+-   **`get_current_time`** — the server's current time as an ISO-8601 UTC datetime, so Claude can
+    resolve relative dates like "today" or "last 24 hours".
+-   **`get_news_by_date`** — fetch the **important** items (flagged important, or from a
+    highlighted channel) across **all your channels in one call, grouped by channel**, newest
+    first. **All arguments are optional:**
+    - with no arguments it returns the **last 24 hours** (this is the way to get "latest news");
+    - `from`/`to` set the range (defaults to `now − 24h … now`, max span **24 hours**);
+    - `limit` caps items **per channel** (default 100).
+
+Because results are grouped per channel — each group a single feed — Claude can detect that feed's
+language and translate accurately, all from one call, so it never queries channels individually.
+
+Requests are authenticated with your JWT sent as an `Authorization: Bearer <token>` header. While
+logged in to the web app, mint a long-lived token from:
+
+```
+GET /api/user/mcp-token   ->   { "token": "<jwt>" }
+```
+
+Claude Desktop connects through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)
+bridge. Add this to `claude_desktop_config.json` (macOS:
+`~/Library/Application Support/Claude/claude_desktop_config.json`), then restart Claude Desktop:
+
+```jsonc
+{
+  "mcpServers": {
+    "rssreader": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-host>/mcp",
+        "--header",
+        "Authorization:Bearer ${RSS_MCP_TOKEN}"
+      ],
+      "env": { "RSS_MCP_TOKEN": "<token from /api/user/mcp-token>" }
+    }
+  }
+}
+```
+
+You can then ask Claude things like *"summarize today's important news from each of my feeds."*
+
+### Claude.ai (web) custom connector
+
+The web app's custom connectors cannot set an `Authorization` header, so the same endpoint
+also accepts the token **in the URL path**: `POST /mcp/<token>`. Mint a token from
+`GET /api/user/mcp-token` as above, then in Claude.ai go to **Settings → Connectors → Add
+custom connector** and paste:
+
+```
+https://<your-host>/mcp/<token from /api/user/mcp-token>
+```
+
+No header or OAuth flow is required. Note the token is embedded in the URL, so treat it as a
+secret (it can appear in logs and browser history); revoke it by rotating `JWT_SECRET` if it
+leaks.
+
 ## Configuration
 
 The application is configured using environment variables.
