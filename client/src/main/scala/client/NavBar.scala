@@ -8,7 +8,6 @@ import be.doeraene.webcomponents.ui5.UList
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
-import client.NetworkUtils.{responseDecoder}
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L.*
 import com.raquo.laminar.api.features.unitArrows
@@ -57,7 +56,7 @@ object NavBar {
                         "Update feeds",
                         onClick
                             .mapTo(())
-                            .flatMap(_ => refreshFeedsRequest()) --> { _ =>
+                            .flatMap(_ => NetworkUtils.refreshFeeds()) --> { _ =>
                             EventBus.emit(
                                 Home.refreshFeedsBus -> 1,
                                 Home.refreshUnreadCountBus -> (),
@@ -76,10 +75,4 @@ object NavBar {
             )
         )
     )
-
-    private def refreshFeedsRequest(): EventStream[Unit] =
-        FetchStream
-            .withDecoder(responseDecoder[Unit])
-            .post("/api/channels/refresh")
-            .mapTo(())
 }

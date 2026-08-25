@@ -17,18 +17,26 @@ object ChannelController:
         AuthedRoutes.of {
             case GET -> Root / "api" / "channels" / "feeds" :? PageQueryParamMatcher(
                     page
-                ) +& LimitQueryParamMatcher(limit) +& FilterQueryParamMatcher(filter) as user =>
+                ) +& LimitQueryParamMatcher(limit) +& FilterQueryParamMatcher(
+                    filter
+                ) +& StateQueryParamMatcher(state) as user =>
                 val validatedPage = page.filter(_ > 0).getOrElse(1)
                 val importantOnly = filter.contains("important")
+                // The requested view decides what is sent, and nothing else: "All items" includes
+                // read items, every other view is unread-only. `settings.hideRead` deliberately
+                // does not take part — it now means "drop a row once you have read it", which is
+                // client-side behaviour within a view, not a filter on what the view contains.
+                val hideRead = !state.contains("all")
                 for {
                     _ <- logger.info(
-                        s"Fetching feeds for user: ${user.email}, settings: ${user.settings}, page: $validatedPage, limit: $limit, importantOnly: $importantOnly"
+                        s"Fetching feeds for user: ${user.email}, settings: ${user.settings}, page: $validatedPage, limit: $limit, importantOnly: $importantOnly, hideRead: $hideRead"
                     )
                     channels <- channelService.getChannelsAndFeeds(
                         user,
                         validatedPage,
                         limit.getOrElse(20),
-                        importantOnly
+                        importantOnly,
+                        hideRead
                     )
                     response <- Ok(channels)
                 } yield response
@@ -68,9 +76,18 @@ object ChannelController:
                     result <- channelService.updateChannelHighlight(id, user, highlighted)
                     response <- Ok(result)
                 } yield response
+
+            // Body is the folder name, or JSON null to take the channel out of its folder.
+            case req @ PUT -> Root / "api" / "channels" / LongVar(id) / "folder" as user =>
+                for {
+                    folder <- req.req.as[Option[String]]
+                    result <- channelService.updateChannelFolder(id, user, folder)
+                    response <- Ok(result)
+                } yield response
         }
 
     private object PageQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("page")
     private object LimitQueryParamMatcher extends OptionalQueryParamDecoderMatcher[Int]("limit")
     private object FilterQueryParamMatcher
         extends OptionalQueryParamDecoderMatcher[String]("filter")
+    private object StateQueryParamMatcher extends OptionalQueryParamDecoderMatcher[String]("state")

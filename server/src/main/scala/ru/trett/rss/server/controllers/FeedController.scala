@@ -30,11 +30,31 @@ object FeedController:
                     response <- Ok(count)
                 } yield response
 
+            // Every channel's unread count in one call, so the sidebar doesn't fan out N requests.
+            case GET -> Root / "api" / "feeds" / "unread" / "by-channel" :?
+                FilterQueryParamMatcher(filter) as user =>
+                for {
+                    counts <- feedService.getUnreadCountByChannel(
+                        user.id,
+                        filter.contains("important")
+                    )
+                    response <- Ok(counts.map { case (id, count) => id.toString -> count })
+                } yield response
+
             case GET -> Root / "api" / "feeds" / "unread" / "total" :? FilterQueryParamMatcher(
                     filter
                 ) as user =>
                 for {
                     count <- feedService.getTotalUnreadCount(user.id, filter.contains("important"))
+                    response <- Ok(count)
+                } yield response
+
+            // Read and unread together — the count beside the sidebar's "All items".
+            case GET -> Root / "api" / "feeds" / "total" :? FilterQueryParamMatcher(
+                    filter
+                ) as user =>
+                for {
+                    count <- feedService.getTotalCount(user.id, filter.contains("important"))
                     response <- Ok(count)
                 } yield response
         }

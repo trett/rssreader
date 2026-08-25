@@ -14,7 +14,7 @@ import org.scalajs.dom
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
-import ru.trett.rss.models.UserSettings
+import ru.trett.rss.models.{ChannelData, UserSettings}
 
 object NetworkUtils {
 
@@ -36,11 +36,18 @@ object NetworkUtils {
                             .`then`(data => Success(decode[A](data).toOption))
                     )
 
+    /** Auth failures are a navigation, not a message. Everything else is translated out of
+      * exception-speak by [[Failures]] before it reaches a human; the original text stays in the
+      * console and in the notification's tooltip.
+      */
     def handleError(ex: Throwable): Unit = ex.getMessage match
         case "Unauthorized" | "Session expired" => Router.currentPageVar.set(Some(LoginRoute))
-        case _                                  => errorMessage(ex)
+        case _ =>
+            val described = Failures.describe(ex)
+            dom.console.error(ex)
+            errorMessage(described.message, described.detail)
 
-    AirstreamError.registerUnhandledErrorCallback(err => errorMessage(err))
+    AirstreamError.registerUnhandledErrorCallback(handleError)
 
     def unsafeParseToHtmlFragment(html: String): HtmlElement = div(
         DomApi
@@ -68,4 +75,16 @@ object NetworkUtils {
 
     def logout(): EventStream[Unit] =
         FetchStream.post("/api/logout", _.body("")).mapTo(())
+
+    def getChannels(): EventStream[Try[List[ChannelData]]] =
+        FetchStream
+            .withDecoder(responseDecoder[List[ChannelData]])
+            .get("/api/channels")
+            .mapSuccess(_.getOrElse(List.empty))
+
+    def refreshFeeds(): EventStream[Unit] =
+        FetchStream
+            .withDecoder(responseDecoder[Unit])
+            .post("/api/channels/refresh")
+            .mapTo(())
 }

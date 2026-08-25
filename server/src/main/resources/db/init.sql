@@ -42,6 +42,8 @@ CREATE TABLE public.user_channels
     channel_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     highlighted BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Sidebar grouping. NULL means the channel is not in any folder.
+    folder VARCHAR(100),
     PRIMARY KEY (user_id, channel_id),
     CONSTRAINT FK_user_channels_user FOREIGN KEY (user_id) 
         REFERENCES public.users(id) ON DELETE CASCADE,

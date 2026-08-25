@@ -168,11 +168,11 @@ class MultiUserIntegrationSpec
             channelId1 <- channelRepository.get.insertChannel(channel1, user1)
             channelId2 <- channelRepository.get.insertChannel(channel2, user2)
             user1Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user1)
-                .map(_.map(_._1))
+                .findUserChannels(user1)
+                .map(_.map(_.channel))
             user2Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user2)
-                .map(_.map(_._1))
+                .findUserChannels(user2)
+                .map(_.map(_.channel))
         } yield (channelId1, channelId2, user1Channels, user2Channels)
 
         val (cid1, cid2, u1Channels, u2Channels) = result.unsafeRunSync()
@@ -208,14 +208,14 @@ class MultiUserIntegrationSpec
             _ <- setupUsers(user1, user2, user3)
             _ <- channelRepository.get.insertChannel(channel1, user1)
             user1Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user1)
-                .map(_.map(_._1))
+                .findUserChannels(user1)
+                .map(_.map(_.channel))
             user2Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user2)
-                .map(_.map(_._1))
+                .findUserChannels(user2)
+                .map(_.map(_.channel))
             user3Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user3)
-                .map(_.map(_._1))
+                .findUserChannels(user3)
+                .map(_.map(_.channel))
         } yield (user1Channels, user2Channels, user3Channels)
 
         val (u1Channels, u2Channels, u3Channels) = result.unsafeRunSync()
@@ -266,8 +266,20 @@ class MultiUserIntegrationSpec
             _ <- setupUsers(user1, user2)
             _ <- channelRepository.get.insertChannel(channel1, user1)
             _ <- channelRepository.get.insertChannel(channel2, user2)
-            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 10, 0)
-            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user2, 10, 0)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user1,
+                10,
+                0,
+                false,
+                user1.settings.hideRead
+            )
+            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user2,
+                10,
+                0,
+                false,
+                user2.settings.hideRead
+            )
         } yield (user1Feeds, user2Feeds)
 
         val (u1Feeds, u2Feeds) = result.unsafeRunSync()
@@ -315,8 +327,20 @@ class MultiUserIntegrationSpec
             markedCount <- feedRepository.get.markFeedAsRead(List(user1FeedLink), user1)
 
             // Get feeds for both users
-            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 20, 0)
-            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user2, 20, 0)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user1,
+                20,
+                0,
+                false,
+                user1.settings.hideRead
+            )
+            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user2,
+                20,
+                0,
+                false,
+                user2.settings.hideRead
+            )
         } yield (markedCount, user1Feeds, user2Feeds)
 
         val (marked, u1Feeds, u2Feeds) = result.unsafeRunSync()
@@ -363,8 +387,20 @@ class MultiUserIntegrationSpec
             markedCount <- feedRepository.get.markFeedAsRead(List(sharedFeedLink), user1)
 
             // Get feeds for both users
-            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 50, 0)
-            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user2, 50, 0)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user1,
+                50,
+                0,
+                false,
+                user1.settings.hideRead
+            )
+            user2Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user2,
+                50,
+                0,
+                false,
+                user2.settings.hideRead
+            )
         } yield (markedCount, user1Feeds, user2Feeds)
 
         val (marked, u1Feeds, u2Feeds) = result.unsafeRunSync()
@@ -430,7 +466,13 @@ class MultiUserIntegrationSpec
             _ <- setupUsers(user1)
             _ <- channelRepository.get.insertChannel(channel5, user1)
             markedCount <- feedRepository.get.markFeedAsRead(feedLinks, user1)
-            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user1, 50, 0)
+            user1Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user1,
+                50,
+                0,
+                false,
+                user1.settings.hideRead
+            )
         } yield (markedCount, user1Feeds)
 
         val (marked, feeds) = result.unsafeRunSync()
@@ -487,7 +529,13 @@ class MultiUserIntegrationSpec
                 user3
             )
             // user3 has hideRead = true in settings
-            user3Feeds <- channelRepository.get.getChannelsWithFeedsByUser(user3, 50, 0)
+            user3Feeds <- channelRepository.get.getChannelsWithFeedsByUser(
+                user3,
+                50,
+                0,
+                false,
+                user3.settings.hideRead
+            )
         } yield user3Feeds
 
         val feeds = result.unsafeRunSync()
@@ -505,13 +553,13 @@ class MultiUserIntegrationSpec
             _ <- setupUsers(user1, user2)
             channelId <- channelRepository.get.insertChannel(channel7, user2)
             user1Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user1)
-                .map(_.map(_._1))
+                .findUserChannels(user1)
+                .map(_.map(_.channel))
             // Try to delete user2's channel as user1
             deleted <- channelRepository.get.deleteChannel(channelId, user1)
             user2Channels <- channelRepository.get
-                .findUserChannelsWithHighlight(user2)
-                .map(_.map(_._1))
+                .findUserChannels(user2)
+                .map(_.map(_.channel))
         } yield (channelId, deleted, user2Channels)
 
         val (cid, deleted, u2Channels) = result.unsafeRunSync()
@@ -528,12 +576,12 @@ class MultiUserIntegrationSpec
             _ <- setupUsers(user2)
             channelId <- channelRepository.get.insertChannel(channel8, user2)
             channelsBeforeDelete <- channelRepository.get
-                .findUserChannelsWithHighlight(user2)
-                .map(_.map(_._1))
+                .findUserChannels(user2)
+                .map(_.map(_.channel))
             deleted <- channelRepository.get.deleteChannel(channelId, user2)
             channelsAfterDelete <- channelRepository.get
-                .findUserChannelsWithHighlight(user2)
-                .map(_.map(_._1))
+                .findUserChannels(user2)
+                .map(_.map(_.channel))
         } yield (channelId, deleted, channelsBeforeDelete, channelsAfterDelete)
 
         val (cid, deleted, before, after) = result.unsafeRunSync()
@@ -635,8 +683,8 @@ class MultiUserIntegrationSpec
             )
 
             // Get channels for both users
-            user1Channels <- channelRepository.get.findUserChannelsWithHighlight(user1)
-            user2Channels <- channelRepository.get.findUserChannelsWithHighlight(user2)
+            user1Channels <- channelRepository.get.findUserChannels(user1)
+            user2Channels <- channelRepository.get.findUserChannels(user2)
         } yield (updated, user1Channels, user2Channels)
 
         val (updatedCount, u1Channels, u2Channels) = result.unsafeRunSync()
@@ -644,13 +692,97 @@ class MultiUserIntegrationSpec
         updatedCount shouldBe 1
 
         // User1's channel should be highlighted
-        val u1HighlightedChannel = u1Channels.find(_._1.link == channel1.link)
+        val u1HighlightedChannel = u1Channels.find(_.channel.link == channel1.link)
         u1HighlightedChannel shouldBe defined
-        u1HighlightedChannel.get._2 shouldBe true
+        u1HighlightedChannel.get.highlighted shouldBe true
 
         // User2's same channel should NOT be highlighted (different user)
-        val u2HighlightedChannel = u2Channels.find(_._1.link == channel1.link)
+        val u2HighlightedChannel = u2Channels.find(_.channel.link == channel1.link)
         u2HighlightedChannel shouldBe defined
-        u2HighlightedChannel.get._2 shouldBe false
+        u2HighlightedChannel.get.highlighted shouldBe false
+    }
+
+    test("Unread counts by channel are grouped per channel and scoped to the user") {
+        val now = OffsetDateTime.now()
+
+        def feed(link: String, userId: String, read: Boolean, important: Boolean = false) =
+            Feed(
+                link = link,
+                userId = userId,
+                channelId = 0,
+                title = "Item",
+                description = "Desc",
+                pubDate = Some(now),
+                isRead = read,
+                important = important
+            )
+
+        // user1: two unread (one important) + one read; user2: one unread in its own channel.
+        val channel1 = Channel(
+            0,
+            "Channel One",
+            "https://example.com/counts/one",
+            List(
+                feed("https://example.com/counts/one/1", user1.id, read = false, important = true),
+                feed("https://example.com/counts/one/2", user1.id, read = false),
+                feed("https://example.com/counts/one/3", user1.id, read = true)
+            )
+        )
+
+        val channel2 = Channel(
+            0,
+            "Channel Two",
+            "https://example.com/counts/two",
+            List(feed("https://example.com/counts/two/1", user2.id, read = false))
+        )
+
+        val result = for {
+            _ <- setupUsers(user1, user2)
+            channel1Id <- channelRepository.get.insertChannel(channel1, user1)
+            channel2Id <- channelRepository.get.insertChannel(channel2, user2)
+            allCounts <- feedRepository.get.getUnreadCountByChannel(user1.id)
+            importantCounts <- feedRepository.get.getUnreadCountByChannel(
+                user1.id,
+                importantOnly = true
+            )
+            otherUserCounts <- feedRepository.get.getUnreadCountByChannel(user2.id)
+        } yield (channel1Id, channel2Id, allCounts, importantCounts, otherUserCounts)
+
+        val (channel1Id, channel2Id, allCounts, importantCounts, otherUserCounts) =
+            result.unsafeRunSync()
+
+        // Read items are excluded, and the other user's channel is not counted here.
+        allCounts shouldBe Map(channel1Id -> 2)
+        importantCounts shouldBe Map(channel1Id -> 1)
+        otherUserCounts shouldBe Map(channel2Id -> 1)
+    }
+
+    test("Unread counts by channel omit channels with nothing unread") {
+        val now = OffsetDateTime.now()
+
+        val channel = Channel(
+            0,
+            "Fully Read Channel",
+            "https://example.com/counts/read",
+            List(
+                Feed(
+                    link = "https://example.com/counts/read/1",
+                    userId = user1.id,
+                    channelId = 0,
+                    title = "Item",
+                    description = "Desc",
+                    pubDate = Some(now),
+                    isRead = true
+                )
+            )
+        )
+
+        val result = for {
+            _ <- setupUsers(user1)
+            _ <- channelRepository.get.insertChannel(channel, user1)
+            counts <- feedRepository.get.getUnreadCountByChannel(user1.id)
+        } yield counts
+
+        result.unsafeRunSync() shouldBe empty
     }
 }

@@ -22,6 +22,9 @@ class FeedControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             override def getTotalUnreadCount(userId: String, importantOnly: Boolean): IO[Int] =
                 IO.pure(42)
 
+            override def getTotalCount(userId: String, importantOnly: Boolean): IO[Int] =
+                if importantOnly then IO.pure(70) else IO.pure(128)
+
             override def getUnreadCount(channelId: Long, userId: String): IO[Int] =
                 if (channelId == 1L) IO.pure(10)
                 else IO.pure(0)
@@ -39,6 +42,30 @@ class FeedControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val response = authedRoutes.run(request).value.unsafeRunSync().get
 
         response.status.shouldBe(Status.Ok)
+        response.as[Int].unsafeRunSync().shouldBe(42)
+    }
+
+    test("GET /api/feeds/total should return read and unread together") {
+        val request = AuthedRequest(user, Request[IO](Method.GET, uri"/api/feeds/total"))
+        val response = authedRoutes.run(request).value.unsafeRunSync().get
+
+        response.status.shouldBe(Status.Ok)
+        response.as[Int].unsafeRunSync().shouldBe(128)
+    }
+
+    test("GET /api/feeds/total honours the important filter") {
+        val request =
+            AuthedRequest(user, Request[IO](Method.GET, uri"/api/feeds/total?filter=important"))
+        val response = authedRoutes.run(request).value.unsafeRunSync().get
+
+        response.status.shouldBe(Status.Ok)
+        response.as[Int].unsafeRunSync().shouldBe(70)
+    }
+
+    test("GET /api/feeds/total does not shadow GET /api/feeds/unread/total") {
+        val request = AuthedRequest(user, Request[IO](Method.GET, uri"/api/feeds/unread/total"))
+        val response = authedRoutes.run(request).value.unsafeRunSync().get
+
         response.as[Int].unsafeRunSync().shouldBe(42)
     }
 

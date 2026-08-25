@@ -6,7 +6,7 @@ import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
 import doobie.util.transactor.Transactor
-import ru.trett.rss.server.models.{Channel, Feed, User}
+import ru.trett.rss.server.models.{Channel, Feed, User, UserChannel}
 
 import java.time.OffsetDateTime
 import FeedInstances.given
@@ -82,22 +82,28 @@ class ChannelRepository(xa: Transactor[IO]):
                 )
             )
 
-    def findUserChannelsWithHighlight(user: User): IO[List[(Channel, Boolean)]] =
+    def findUserChannels(user: User): IO[List[UserChannel]] =
         sql"""
-          SELECT c.id, c.title, c.link, uc.highlighted
+          SELECT c.id, c.title, c.link, uc.highlighted, uc.folder
           FROM channels c
           JOIN user_channels uc ON c.id = uc.channel_id
           WHERE uc.user_id = ${user.id}
          """
-            .query[(Channel, Boolean)]
+            .query[(Channel, Boolean, Option[String])]
             .to[List]
             .transact(xa)
+            .map(_.map(UserChannel.apply.tupled))
 
+    /** `hideRead` is resolved by the caller — the user's saved preference, unless the request
+      * overrode it. This method does not consult `user.settings` for it, so read-state has exactly
+      * one input here rather than two that have to be ANDed together.
+      */
     def getChannelsWithFeedsByUser(
         user: User,
         limit: Int,
         offset: Int,
-        importantOnly: Boolean = false
+        importantOnly: Boolean,
+        hideRead: Boolean
     ): IO[List[(Channel, Feed, Boolean)]] =
         val query = fr"""
           SELECT c.id, c.title, c.link,
@@ -108,8 +114,7 @@ class ChannelRepository(xa: Transactor[IO]):
           JOIN feeds f ON c.id = f.channel_id AND f.user_id = ${user.id}
           WHERE uc.user_id = ${user.id}
         """
-        val hideReadFilter =
-            if user.settings.hideRead then fr"AND f.read = false" else fr""
+        val hideReadFilter = if hideRead then fr"AND f.read = false" else fr""
         val importantFilter =
             if importantOnly then fr"AND (f.important = true OR uc.highlighted = true)" else fr""
         // Banned categories do not apply to explicitly highlighted channels
@@ -164,5 +169,13 @@ class ChannelRepository(xa: Transactor[IO]):
         sql"""
           UPDATE user_channels
           SET highlighted = $highlighted
+          WHERE user_id = ${user.id} AND channel_id = $id
+        """.update.run.transact(xa)
+
+    /** `None` files the channel back under no folder. */
+    def updateChannelFolder(id: Long, user: User, folder: Option[String]): IO[Int] =
+        sql"""
+          UPDATE user_channels
+          SET folder = $folder
           WHERE user_id = ${user.id} AND channel_id = $id
         """.update.run.transact(xa)

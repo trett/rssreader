@@ -29,12 +29,39 @@ class FeedRepository(xa: Transactor[IO]):
       WHERE channel_id = $channelId AND user_id = $userId AND read = false
     """.query[Int].unique.transact(xa)
 
+    /** One definition of "important" for every count query, so they cannot drift apart. */
+    private def importantFilter(importantOnly: Boolean): Fragment =
+        if importantOnly then fr"AND important = true" else fr""
+
     def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
-        val importantFilter = if importantOnly then fr"AND important = true" else fr""
-        (fr"SELECT COUNT(*) FROM feeds WHERE user_id = $userId AND read = false" ++ importantFilter)
+        (fr"SELECT COUNT(*) FROM feeds WHERE user_id = $userId AND read = false"
+            ++ importantFilter(importantOnly))
             .query[Int]
             .unique
             .transact(xa)
+
+    /** Every item the user has, read or not — the count beside the sidebar's "All items". */
+    def getTotalCount(userId: String, importantOnly: Boolean = false): IO[Int] =
+        (fr"SELECT COUNT(*) FROM feeds WHERE user_id = $userId" ++ importantFilter(importantOnly))
+            .query[Int]
+            .unique
+            .transact(xa)
+
+    /** One GROUP BY instead of one request per channel: the sidebar needs every count at once.
+      * Channels with nothing unread are simply absent from the map.
+      */
+    def getUnreadCountByChannel(
+        userId: String,
+        importantOnly: Boolean = false
+    ): IO[Map[Long, Int]] =
+        (fr"SELECT channel_id, COUNT(*) FROM feeds"
+            ++ fr"WHERE user_id = $userId AND read = false AND channel_id IS NOT NULL"
+            ++ importantFilter(importantOnly)
+            ++ fr"GROUP BY channel_id")
+            .query[(Long, Int)]
+            .to[List]
+            .transact(xa)
+            .map(_.toMap)
 
     def getUnreadFeeds(user: User, limit: Int): IO[List[Feed]] =
         getUnreadFeeds(user, limit, 0)

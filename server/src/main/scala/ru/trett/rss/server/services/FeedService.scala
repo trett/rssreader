@@ -18,6 +18,16 @@ class FeedService(feedRepository: FeedRepository):
     def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
         feedRepository.getTotalUnreadCount(userId, importantOnly)
 
+    def getTotalCount(userId: String, importantOnly: Boolean = false): IO[Int] =
+        feedRepository.getTotalCount(userId, importantOnly)
+
+    /** Every channel's unread count in one call, for the reader's sidebar. */
+    def getUnreadCountByChannel(
+        userId: String,
+        importantOnly: Boolean = false
+    ): IO[Map[Long, Int]] =
+        feedRepository.getUnreadCountByChannel(userId, importantOnly)
+
     /** All channels' important news in the range, grouped by channel (newest first within each),
       * capped to `limitPerChannel` items per channel. Channels are ordered by their newest item.
       */

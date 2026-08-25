@@ -19,12 +19,18 @@ import java.time.OffsetDateTime
 import scala.concurrent.duration.DurationInt
 import org.http4s.Status
 
+object ChannelService:
+    /** Matches `user_channels.folder VARCHAR(100)` in db/init.sql. */
+    private val FolderNameMaxLength = 100
+
 class ChannelService(
     channelRepository: ChannelRepository,
     feedRepository: FeedRepository,
     client: Client[IO],
     importanceService: ImportanceService
 )(using loggerFactory: LoggerFactory[IO]):
+
+    import ChannelService.FolderNameMaxLength
 
     private val logger: Logger[IO] = LoggerFactory[IO].getLogger
     given Logger[IO] = logger
@@ -41,14 +47,14 @@ class ChannelService(
 
     def updateFeeds(user: User): IO[List[Int]] =
         for {
-            channels <- channelRepository.findUserChannelsWithHighlight(user)
-            highlightedIds = channels.collect { case (ch, true) => ch.id }.toSet
+            userChannels <- channelRepository.findUserChannels(user)
+            highlightedIds = userChannels.filter(_.highlighted).map(_.channel.id).toSet
             existingByChannel <- channelRepository.getExistingFeedLinksByChannels(
-                channels.map(_._1.id),
+                userChannels.map(_.channel.id),
                 user.id
             )
             // Step 1: fetch RSS and insert all feeds immediately so Gemini can't break the cycle
-            channelResults <- channels.parTraverse { (channel, _) =>
+            channelResults <- userChannels.map(_.channel).parTraverse { channel =>
                 for {
                     _ <- logger.info(s"Updating channel: ${channel.title}")
                     maybeUpdatedChannel <- getChannel(channel.link).timeout(30.seconds).attempt
@@ -128,9 +134,15 @@ class ChannelService(
         } yield channel
 
     def getChannels(user: User): IO[List[ChannelData]] =
-        channelRepository.findUserChannelsWithHighlight(user).flatMap {
-            _.traverse { case (channel, highlighted) =>
-                IO.pure(ChannelData(channel.id, channel.title, channel.link, highlighted))
+        channelRepository.findUserChannels(user).map {
+            _.map { uc =>
+                ChannelData(
+                    uc.channel.id,
+                    uc.channel.title,
+                    uc.channel.link,
+                    uc.highlighted,
+                    uc.folder
+                )
             }
         }
 
@@ -138,11 +150,18 @@ class ChannelService(
         user: User,
         page: Int,
         limit: Int,
-        importantOnly: Boolean = false
+        importantOnly: Boolean,
+        hideRead: Boolean
     ): IO[List[FeedItemData]] =
         val offset = (page - 1) * limit
         val channels =
-            channelRepository.getChannelsWithFeedsByUser(user, limit, offset, importantOnly)
+            channelRepository.getChannelsWithFeedsByUser(
+                user,
+                limit,
+                offset,
+                importantOnly,
+                hideRead
+            )
         channels.flatMap {
             _.traverse { case (channel, feed, highlighted) =>
                 IO.pure(
@@ -169,3 +188,10 @@ class ChannelService(
 
     def updateChannelHighlight(id: Long, user: User, highlighted: Boolean): IO[Int] =
         channelRepository.updateChannelHighlight(id, user, highlighted)
+
+    /** A blank name clears the folder rather than creating one called "". Truncated to the column
+      * width so an over-long name is a no-op rather than a database error.
+      */
+    def updateChannelFolder(id: Long, user: User, folder: Option[String]): IO[Int] =
+        val name = folder.map(_.trim).filter(_.nonEmpty).map(_.take(FolderNameMaxLength))
+        channelRepository.updateChannelFolder(id, user, name)

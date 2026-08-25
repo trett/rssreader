@@ -51,11 +51,14 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
             val decidedFeeds = preDecided.map(_.copy(important = true))
             user.settings.geminiApiKey.filter(_.nonEmpty) match
                 case None =>
-                    // No AI key: keyword/highlighted pre-decisions only; rest unchanged
+                    // No AI key: keyword/highlighted pre-decisions, then the deterministic
+                    // fallback for the rest — the filter degrades to "off", not to "empty".
                     logger.info(
                         s"[Importance] ${feeds.size} feeds for ${user.email}: ${preDecided.size} pre-decided (no AI key)"
                     ) *> IO.pure {
-                        val resultMap = decidedFeeds.map(f => (f.link, f.userId) -> f).toMap
+                        val fallenBack = withoutAI(needsAI, user.settings.bannedCategories)
+                        val resultMap =
+                            (decidedFeeds ++ fallenBack).map(f => (f.link, f.userId) -> f).toMap
                         feeds.map(f => resultMap.getOrElse((f.link, f.userId), f))
                     }
                 case Some(apiKey) =>
@@ -106,9 +109,9 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                         )
                 )(callGeminiBatch(prompt, batch, apiKey, bannedCategories))
                     .handleErrorWith { e =>
-                        logger.warn(
-                            s"[Importance] Gemini batch permanently failed — defaulting to not-important: ${e.getMessage}"
-                        ) *> IO.pure(batch.map(_.copy(important = false, isRead = true)))
+                        logger.error(
+                            s"[Importance] Gemini batch permanently failed — falling back to category rules, items left unread: ${e.getMessage}"
+                        ) *> IO.pure(withoutAI(batch, bannedCategories))
                     }
 
     private val maxDescriptionLength = 500
@@ -136,6 +139,19 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
            |
            |Items:
            |$items""".stripMargin
+
+    /** What importance means when Gemini cannot answer — no key, a permanent API failure, or a
+      * malformed reply.
+      *
+      * Only the deterministic rules are left, so they are all that is applied: a banned category
+      * still excludes an item, and everything else is kept. Marking these not-important would
+      * remove them from the Important view, which is the only view a user with `filterNews` on ever
+      * sees — a dead API key would silently empty the reader. `isRead` is deliberately untouched:
+      * whether an item has been read is the user's state, and a failed classification is not
+      * evidence about it.
+      */
+    private def withoutAI(batch: List[Feed], bannedCategories: List[String]): List[Feed] =
+        batch.map(f => f.copy(important = !isInBannedCategory(f, bannedCategories)))
 
     private def isInBannedCategory(feed: Feed, bannedCategories: List[String]): Boolean =
         bannedCategories.nonEmpty &&
@@ -169,9 +185,9 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
                 if answers.size != batch.size then
                     logger
                         .warn(
-                            s"[Importance] Gemini returned ${answers.size} answers for ${batch.size} items — defaulting all to not-important"
+                            s"[Importance] Gemini returned ${answers.size} answers for ${batch.size} items — falling back to category rules"
                         )
-                        .as(batch.map(_.copy(important = false, isRead = true)))
+                        .as(withoutAI(batch, bannedCategories))
                 else
                     IO.pure(batch.zip(answers).map { case (feed, answer) =>
                         val imp =

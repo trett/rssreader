@@ -135,3 +135,11 @@ gcloud scheduler jobs create http rss-update-job \
 ## 6. Database Schema
 
 The database schema should be applied manually using the `db/init.sql` file provided in the resources.
+
+For a database created before a schema change, apply the files in `db/migrations/` in numeric order
+instead — `init.sql` only creates tables and will fail against an existing schema. Each migration is
+written to be safe to run more than once.
+
+| Migration | Change |
+| --- | --- |
+| `001_user_channels_folder.sql` | Adds `user_channels.folder` for sidebar grouping |

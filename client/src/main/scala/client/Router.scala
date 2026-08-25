@@ -1,11 +1,12 @@
 package client
 
-import be.doeraene.webcomponents.ui5.{Text, BusyIndicator}
+import be.doeraene.webcomponents.ui5.{BusyIndicator, Text}
 import be.doeraene.webcomponents.ui5.configkeys.BusyIndicatorSize
 import com.raquo.airstream.state.Var
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom
-import scala.util.{Success, Failure}
+
+import scala.util.{Failure, Success}
 
 @main
 def createApp(): Unit =
@@ -24,7 +25,6 @@ object Router:
     def toMainPage(): Unit = currentPageVar.set(Some(HomeRoute))
 
     private def login = LoginPage.render
-    private def navbar = NavBar.render
     private def notifications = NotifyComponent.render
     def home: Element = Home.render
     def settings: Element = SettingsPage.render
@@ -54,10 +54,12 @@ object Router:
             case Failure(err) => NetworkUtils.handleError(err)
         },
         child <-- currentPageVar.signal.map {
-            case None                => loadingComponent
-            case Some(LoginRoute)    => login
-            case Some(HomeRoute)     => div(navbar, notifications, home)
-            case Some(SettingsRoute) => div(navbar, notifications, settings)
+            case None             => loadingComponent
+            case Some(LoginRoute) => login
+            // Home and Settings each own the full viewport now: their own sidebar replaces the
+            // ShellBar, so neither is wrapped in a NavBar any more.
+            case Some(HomeRoute)     => div(cls := "rr-shell", notifications, home)
+            case Some(SettingsRoute) => div(cls := "rr-shell", notifications, settings)
             case Some(ErrorRoute)    => div(Text("An error occured"))
             case Some(NotFoundRoute) => div(Text("Not Found"))
         },
