@@ -67,6 +67,13 @@ object Home:
         div(
             cls := "main-content",
             div(
+                onMountBind(_ =>
+                    feedFilterSignal.changes --> { _ =>
+                        feedVar.set(Nil)
+                        hasMoreVar.set(true)
+                        EventBus.emit(refreshFeedsBus -> 1, refreshUnreadCountBus -> ())
+                    }
+                ),
                 onMountBind(ctx =>
                     refreshFeedsBus --> { page =>
                         bindFeeds(getChannelsAndFeedsRequest(page), ctx.owner)
@@ -127,17 +134,14 @@ object Home:
         item: FeedItemData,
         itemSignal: Signal[FeedItemData]
     ): HtmlElement = div(
-        padding.px := 2,
-        borderRadius.px := 4,
         Card(
             styleAttr <-- itemSignal.map(x =>
                 if (x.highlighted)
-                    "--sapTile_Background: #F9F9DF;"
+                    "--sapTile_Background: var(--reader-highlight);"
                 else
                     ""
             ),
             _.slots.header := CardHeader(
-                _.slots.avatar := Icon(_.name := IconName.feed),
                 _.titleText <-- itemSignal.map(_.title),
                 _.subtitleText <-- itemSignal.map(_.channelTitle),
                 _.slots.action <-- itemSignal.map(x =>
@@ -153,7 +157,7 @@ object Home:
                 child <-- itemSignal.map(x =>
                     CustomListItem(
                         backgroundColor <-- itemSignal.map(x =>
-                            if (x.highlighted) "#F9F9DF" else ""
+                            if (x.highlighted) "var(--reader-highlight)" else ""
                         ),
                         div(
                             cls("feed-content"),
@@ -164,7 +168,10 @@ object Home:
                                 x.imageUrl.fold(emptyNode)(url =>
                                     img(cls := "feed-image", src := url, alt := "")
                                 ),
-                                div(cls := "feed-text", unsafeParseToHtmlFragment(x.description))
+                                div(
+                                    cls := "feed-text",
+                                    unsafeParseToHtmlFragment(x.description, x.imageUrl)
+                                )
                             ),
                             div(flexBasis.percent := 100),
                             div(
@@ -198,11 +205,21 @@ object Home:
 
     private def filterNews: Boolean = settingsSignal.now().exists(_.filterNews)
 
+    private def importantOnly: Boolean =
+        feedFilterSignal.now() == FeedFilter.Important || filterNews
+
+    /** Query parameters describing the sidebar selection, shared by feed and unread requests. */
+    private def filterParams: String =
+        val important = if importantOnly then "&filter=important" else ""
+        val channel = feedFilterSignal.now() match
+            case FeedFilter.Channel(id, _) => s"&channel=$id"
+            case _                         => ""
+        important + channel
+
     private def getChannelsAndFeedsRequest(page: Int): EventStream[Try[FeedItemList]] =
-        val filterParam = if filterNews then "&filter=important" else ""
         FetchStream
             .withDecoder(responseDecoder[FeedItemList])
-            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}${filterParam}")
+            .get(s"/api/channels/feeds?page=${page}&limit=${pageLimit}${filterParams}")
             .mapSuccess(_.get)
 
     private def updateFeedRequest(links: List[String]): EventStream[Try[List[String]]] =
@@ -220,8 +237,12 @@ object Home:
                 .mapSuccess(_ => seen.map(_.link))
 
     private def getUnreadCountRequest(): EventStream[Try[Int]] =
-        val filterParam = if filterNews then "?filter=important" else ""
+        val url = feedFilterSignal.now() match
+            case FeedFilter.Channel(id, _) => s"/api/feeds/channel/$id/unread"
+            case _ =>
+                val filterParam = if importantOnly then "?filter=important" else ""
+                s"/api/feeds/unread/total$filterParam"
         FetchStream
             .withDecoder(responseDecoder[Int])
-            .get(s"/api/feeds/unread/total$filterParam")
+            .get(url)
             .mapSuccess(_.get)

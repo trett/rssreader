@@ -1,10 +1,12 @@
 package client
 
 import be.doeraene.webcomponents.ui5.Avatar
+import be.doeraene.webcomponents.ui5.Button
 import be.doeraene.webcomponents.ui5.Icon
 import be.doeraene.webcomponents.ui5.Popover
 import be.doeraene.webcomponents.ui5.ShellBar
 import be.doeraene.webcomponents.ui5.UList
+import be.doeraene.webcomponents.ui5.configkeys.ButtonDesign
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
@@ -30,7 +32,14 @@ object NavBar {
             ),
             _.showNotifications <-- unreadCountSignal.map(_ > 0),
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
-            _.slots.logo := Icon(_.name := IconName.home),
+            _.slots.logo := Icon(_.name := IconName.feed),
+            _.slots.startButton := Button(
+                cls := "sidebar-toggle",
+                _.design := ButtonDesign.Transparent,
+                _.icon := IconName.menu2,
+                _.tooltip := "Show feeds",
+                onClick.mapTo(!sidebarOpenSignal.now()) --> sidebarOpenVar
+            ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
             _.events.onLogoClick.mapTo(()) --> { _ =>
                 if settingsSignal.now().isDefined then Router.toMainPage()
@@ -41,6 +50,7 @@ object NavBar {
             }
         ),
         Popover(
+            cls := "nav-menu",
             _.openerId := profileId,
             _.showAtAndCloseFromEvents(popoverBus.events),
             _.placement := PopoverPlacementType.Bottom,

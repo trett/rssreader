@@ -138,11 +138,18 @@ class ChannelService(
         user: User,
         page: Int,
         limit: Int,
-        importantOnly: Boolean = false
+        importantOnly: Boolean = false,
+        channelId: Option[Long] = None
     ): IO[List[FeedItemData]] =
         val offset = (page - 1) * limit
         val channels =
-            channelRepository.getChannelsWithFeedsByUser(user, limit, offset, importantOnly)
+            channelRepository.getChannelsWithFeedsByUser(
+                user,
+                limit,
+                offset,
+                importantOnly,
+                channelId
+            )
         channels.flatMap {
             _.traverse { case (channel, feed, highlighted) =>
                 IO.pure(

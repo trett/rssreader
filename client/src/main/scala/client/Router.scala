@@ -26,6 +26,7 @@ object Router:
     private def login = LoginPage.render
     private def navbar = NavBar.render
     private def notifications = NotifyComponent.render
+    private def sidebar = Sidebar.render
     def home: Element = Home.render
     def settings: Element = SettingsPage.render
 
@@ -54,9 +55,10 @@ object Router:
             case Failure(err) => NetworkUtils.handleError(err)
         },
         child <-- currentPageVar.signal.map {
-            case None                => loadingComponent
-            case Some(LoginRoute)    => login
-            case Some(HomeRoute)     => div(navbar, notifications, home)
+            case None             => loadingComponent
+            case Some(LoginRoute) => login
+            case Some(HomeRoute) =>
+                div(navbar, notifications, div(cls := "app-shell", sidebar, home))
             case Some(SettingsRoute) => div(navbar, notifications, settings)
             case Some(ErrorRoute)    => div(Text("An error occured"))
             case Some(NotFoundRoute) => div(Text("Not Found"))
