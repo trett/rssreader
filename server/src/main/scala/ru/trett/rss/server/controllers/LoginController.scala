@@ -59,21 +59,7 @@ object LoginController:
                         oauthConfig.redirectUri + "/signin_callback"
                     )
                     userInfo <- getUserInfo(client, token.access_token)
-                    sessionData = SessionData(userInfo.email)
-                    jwtToken = jwtManager.createToken(sessionData)
-                    response <- SeeOther(Location(uri"/"))
-                        .map(
-                            _.addCookie(
-                                ResponseCookie(
-                                    "sessionId",
-                                    jwtToken,
-                                    path = Some("/"),
-                                    httpOnly = true,
-                                    secure = true,
-                                    maxAge = Some(1.day.toSeconds) // 1 day
-                                )
-                            )
-                        )
+                    response <- signedInResponse(jwtManager, userInfo.email)
                 } yield response
 
             case GET -> Root / "signup_callback" :? CodeQueryParamMatcher(code) =>
@@ -85,14 +71,30 @@ object LoginController:
                         oauthConfig.redirectUri + "/signup_callback"
                     )
                     userInfo <- getUserInfo(client, token.access_token)
-                    response <- userService
-                        .createUser(userInfo.id, userInfo.name, userInfo.email)
-                        .flatMap {
-                            case Right(_) => MovedPermanently(Location(uri"/"), "Session expired")
-                            case Left(_)  => BadRequest("Failed to create user")
-                        }
+                    created <- userService.createUser(userInfo.id, userInfo.name, userInfo.email)
+                    response <- created match
+                        // The insert is a no-op for an existing account, so signing up twice
+                        // simply signs the user in instead of dead-ending on an error.
+                        case Right(_)  => signedInResponse(jwtManager, userInfo.email)
+                        case Left(err) => InternalServerError(s"Failed to create user: $err")
                 } yield response
         }
+
+    /** Starts a session for the authenticated user and sends them to the reader. */
+    private def signedInResponse(jwtManager: JwtManager, email: String): IO[Response[IO]] =
+        val jwtToken = jwtManager.createToken(SessionData(email))
+        SeeOther(Location(uri"/")).map(
+            _.addCookie(
+                ResponseCookie(
+                    "sessionId",
+                    jwtToken,
+                    path = Some("/"),
+                    httpOnly = true,
+                    secure = true,
+                    maxAge = Some(1.day.toSeconds) // 1 day
+                )
+            )
+        )
 
     private def getToken(
         client: Client[IO],

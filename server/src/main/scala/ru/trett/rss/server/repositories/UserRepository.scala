@@ -21,8 +21,10 @@ class UserRepository(xa: HikariTransactor[IO]):
     }
 
     def insertUser(user: User): IO[Either[Throwable, Int]] =
+        // Signing up with an account that already exists is a sign-in, not an error.
         sql"""INSERT INTO users (id, name, email, settings) VALUES
-        (${user.id}, ${user.name}, ${user.email}, ${user.settings.asJson})""".update.run
+        (${user.id}, ${user.name}, ${user.email}, ${user.settings.asJson})
+        ON CONFLICT (id) DO NOTHING""".update.run
             .transact(xa)
             .attempt
 
