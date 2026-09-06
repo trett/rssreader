@@ -7,7 +7,7 @@ This is a web-based RSS reader application. It consists of a Scala-based backend
 The project uses a hybrid build system:
 - **sbt (Simple Build Tool)** is the primary build tool for the Scala projects (server, client, and shared modules). The main build configuration is in `build.sbt`.
 - **npm/Vite** is used for the frontend development workflow. `package.json` in the `client` directory defines frontend dependencies and scripts. Vite is used for the development server and for bundling frontend assets for production.
-- building the frontend is integrated into the sbt build process using the `@scala-js/vite-plugin-scalajs` plugin. `sbt client/fullOptJS`command uses to build the optimized frontend assets.
+- building the frontend is integrated into the sbt build process using the `@scala-js/vite-plugin-scalajs` plugin. Use `sbt client/fullLinkJS` to produce the optimized Scala.js output — not the legacy `fullOptJS` task, which fails here because the client links as ES modules with module splitting and so emits more than one file. The complete production bundle (Scala.js + Vite) is built by `sbt server/Compile/compile`, which runs the `generateFrontendAssets` task: it calls `npm run build` and copies `client/dist` into the server's resources.
 - there are Scalafmt and Scalastyle configurations for code formatting and style checking.
 
 ## Language
