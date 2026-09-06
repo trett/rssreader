@@ -4,7 +4,6 @@ import be.doeraene.webcomponents.ui5.configkeys.*
 import be.doeraene.webcomponents.ui5.{Button, *}
 import client.NetworkUtils.*
 import com.raquo.laminar.api.L.*
-import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.Decoder
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*
