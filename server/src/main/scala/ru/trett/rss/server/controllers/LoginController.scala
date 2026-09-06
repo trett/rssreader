@@ -91,6 +91,7 @@ object LoginController:
                     path = Some("/"),
                     httpOnly = true,
                     secure = true,
+                    sameSite = Some(SameSite.Lax),
                     maxAge = Some(1.day.toSeconds) // 1 day
                 )
             )
