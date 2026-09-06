@@ -256,11 +256,10 @@ object Home:
                 .mapSuccess(_ => seen.map(_.link))
 
     private def getUnreadCountRequest(): EventStream[Try[Int]] =
+        val filterParam = if importantOnly then "?filter=important" else ""
         val url = feedFilterSignal.now() match
-            case FeedFilter.Channel(id, _) => s"/api/feeds/channel/$id/unread"
-            case _ =>
-                val filterParam = if importantOnly then "?filter=important" else ""
-                s"/api/feeds/unread/total$filterParam"
+            case FeedFilter.Channel(id, _) => s"/api/feeds/channel/$id/unread$filterParam"
+            case _                         => s"/api/feeds/unread/total$filterParam"
         FetchStream
             .withDecoder(responseDecoder[Int])
             .get(url)

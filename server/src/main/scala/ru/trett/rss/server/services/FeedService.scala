@@ -12,8 +12,8 @@ class FeedService(feedRepository: FeedRepository):
     def markAsRead(links: List[String], user: User): IO[Int] =
         feedRepository.markFeedAsRead(links, user)
 
-    def getUnreadCount(channelId: Long, userId: String): IO[Int] =
-        feedRepository.getUnreadCount(channelId, userId)
+    def getUnreadCount(channelId: Long, userId: String, importantOnly: Boolean = false): IO[Int] =
+        feedRepository.getUnreadCount(channelId, userId, importantOnly)
 
     def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
         feedRepository.getTotalUnreadCount(userId, importantOnly)

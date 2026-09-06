@@ -22,19 +22,33 @@ class FeedRepository(xa: Transactor[IO]):
             .updateMany(links.map(link => (link, user.id)))
             .transact(xa)
 
-    def getUnreadCount(channelId: Long, userId: String): IO[Int] =
-        sql"""
-      SELECT COUNT(*)
-      FROM feeds
-      WHERE channel_id = $channelId AND user_id = $userId AND read = false
-    """.query[Int].unique.transact(xa)
+    def getUnreadCount(channelId: Long, userId: String, importantOnly: Boolean = false): IO[Int] =
+        if !importantOnly then sql"""
+              SELECT COUNT(*)
+              FROM feeds
+              WHERE channel_id = $channelId AND user_id = $userId AND read = false
+            """.query[Int].unique.transact(xa)
+        else sql"""
+              SELECT COUNT(*)
+              FROM feeds f
+              JOIN user_channels uc ON f.channel_id = uc.channel_id AND uc.user_id = $userId
+              WHERE f.channel_id = $channelId AND f.user_id = $userId AND f.read = false
+                AND (f.important = true OR uc.highlighted = true)
+            """.query[Int].unique.transact(xa)
 
     def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
-        val importantFilter = if importantOnly then fr"AND important = true" else fr""
-        (fr"SELECT COUNT(*) FROM feeds WHERE user_id = $userId AND read = false" ++ importantFilter)
-            .query[Int]
-            .unique
-            .transact(xa)
+        if !importantOnly then sql"""
+              SELECT COUNT(*)
+              FROM feeds
+              WHERE user_id = $userId AND read = false
+            """.query[Int].unique.transact(xa)
+        else sql"""
+              SELECT COUNT(*)
+              FROM feeds f
+              JOIN user_channels uc ON f.channel_id = uc.channel_id AND uc.user_id = $userId
+              WHERE f.user_id = $userId AND f.read = false
+                AND (f.important = true OR uc.highlighted = true)
+            """.query[Int].unique.transact(xa)
 
     def getUnreadFeeds(user: User, limit: Int): IO[List[Feed]] =
         getUnreadFeeds(user, limit, 0)

@@ -152,4 +152,22 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
             "https://example.com/highlighted/item2"
         )
     }
+
+    test("channel unread count respects important filter for plain and highlighted channels") {
+        val repo = feedRepository.get
+        repo.getUnreadCount(plainChannelId, user.id, importantOnly = false)
+            .unsafeRunSync() shouldBe 4
+        repo.getUnreadCount(plainChannelId, user.id, importantOnly = true)
+            .unsafeRunSync() shouldBe 2
+        repo.getUnreadCount(highlightedChannelId, user.id, importantOnly = false)
+            .unsafeRunSync() shouldBe 2
+        repo.getUnreadCount(highlightedChannelId, user.id, importantOnly = true)
+            .unsafeRunSync() shouldBe 2
+    }
+
+    test("total unread count respects important filter including highlighted channels") {
+        val repo = feedRepository.get
+        repo.getTotalUnreadCount(user.id, importantOnly = false).unsafeRunSync() shouldBe 6
+        repo.getTotalUnreadCount(user.id, importantOnly = true).unsafeRunSync() shouldBe 4
+    }
 }
