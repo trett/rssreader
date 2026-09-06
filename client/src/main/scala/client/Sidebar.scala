@@ -52,7 +52,7 @@ object Sidebar:
                         Icon(cls := "sidebar-icon", _.name := IconName.feed),
                         "All Feeds"
                     ),
-                    children <-- visibleChannels.map(_.map(channelItem))
+                    children <-- visibleChannels.split(_.id)(channelItem)
                 ),
                 div(cls := "sidebar-section-title", "Labels"),
                 div(
@@ -75,8 +75,20 @@ object Sidebar:
             matching.sortBy(_.title.toLowerCase)
         }
 
-    private def channelItem(channel: ChannelData): Element =
-        navItem(FeedFilter.Channel(channel.id, channel.title), favicon(channel.link), channel.title)
+    private def channelItem(
+        id: Long,
+        initial: ChannelData,
+        itemSignal: Signal[ChannelData]
+    ): Element =
+        a(
+            cls := "sidebar-item",
+            cls("is-active") <-- feedFilterSignal.map(
+                sameFilter(_, FeedFilter.Channel(id, initial.title))
+            ),
+            favicon(initial.link),
+            span(cls := "sidebar-item-label", child <-- itemSignal.map(_.title)),
+            onClick.preventDefault.mapTo(FeedFilter.Channel(id, initial.title)) --> selectFilter
+        )
 
     /** Site icon taken straight from the feed's own host, falling back to a generic RSS glyph. */
     private def favicon(link: String): Element =
