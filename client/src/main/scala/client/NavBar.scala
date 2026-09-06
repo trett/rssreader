@@ -38,10 +38,14 @@ object NavBar {
                 _.design := ButtonDesign.Transparent,
                 _.icon := IconName.menu2,
                 _.tooltip := "Show feeds",
-                onClick.mapTo(!sidebarOpenSignal.now()) --> sidebarOpenVar
+                hidden <-- Router.currentPageVar.signal.map(!_.contains(HomeRoute)),
+                onClick
+                    .filter(_ => Router.currentPageVar.now().contains(HomeRoute))
+                    .mapTo(!sidebarOpenSignal.now()) --> sidebarOpenVar
             ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
             _.events.onLogoClick.mapTo(()) --> { _ =>
+                sidebarOpenVar.set(false)
                 if settingsSignal.now().isDefined then Router.toMainPage()
                 else Router.currentPageVar.set(Some(LoginRoute))
             },
@@ -60,7 +64,10 @@ object NavBar {
                     _.item(
                         _.icon := IconName.settings,
                         "Settings",
-                        onClick.mapTo(()) --> { Router.currentPageVar.set(Some(SettingsRoute)) }
+                        onClick.mapTo(()) --> {
+                            sidebarOpenVar.set(false)
+                            Router.currentPageVar.set(Some(SettingsRoute))
+                        }
                     ),
                     _.item(
                         _.icon := IconName.refresh,
@@ -79,6 +86,7 @@ object NavBar {
                         _.icon := IconName.log,
                         "Sign out",
                         onClick.flatMap(_ => NetworkUtils.logout()) --> { _ =>
+                            sidebarOpenVar.set(false)
                             Router.currentPageVar.set(Some(LoginRoute))
                         }
                     )
