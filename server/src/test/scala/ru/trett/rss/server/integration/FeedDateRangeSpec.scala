@@ -28,7 +28,12 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
 
     private val user = User("date-user", "Date User", "date@example.com", User.Settings())
 
-    private def feed(link: String, date: String, important: Boolean = false): Feed =
+    private def feed(
+        link: String,
+        date: String,
+        important: Boolean = false,
+        categories: List[String] = List.empty
+    ): Feed =
         Feed(
             link = link,
             userId = user.id,
@@ -37,7 +42,8 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
             description = s"Description $link",
             pubDate = Some(OffsetDateTime.parse(date)),
             isRead = false,
-            important = important
+            important = important,
+            categories = categories
         )
 
     override def beforeAll(): Unit = {
@@ -55,7 +61,12 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
             "https://example.com/plain/feed",
             List(
                 feed("https://example.com/plain/item1", "2026-07-01T10:00:00Z"),
-                feed("https://example.com/plain/item2", "2026-07-05T10:00:00Z", important = true),
+                feed(
+                    "https://example.com/plain/item2",
+                    "2026-07-05T10:00:00Z",
+                    important = true,
+                    categories = List("sports")
+                ),
                 feed("https://example.com/plain/item3", "2026-07-10T10:00:00Z", important = true),
                 feed("https://example.com/plain/item4", "2026-07-15T10:00:00Z")
             )
@@ -66,7 +77,11 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
             "Highlighted Channel",
             "https://example.com/highlighted/feed",
             List(
-                feed("https://example.com/highlighted/item1", "2026-07-05T10:00:00Z"),
+                feed(
+                    "https://example.com/highlighted/item1",
+                    "2026-07-05T10:00:00Z",
+                    categories = List("sports")
+                ),
                 feed("https://example.com/highlighted/item2", "2026-07-06T10:00:00Z")
             )
         )
@@ -155,19 +170,42 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
 
     test("channel unread count respects important filter for plain and highlighted channels") {
         val repo = feedRepository.get
-        repo.getUnreadCount(plainChannelId, user.id, importantOnly = false)
+        repo.getUnreadCount(plainChannelId, user, importantOnly = false)
             .unsafeRunSync() shouldBe 4
-        repo.getUnreadCount(plainChannelId, user.id, importantOnly = true)
+        repo.getUnreadCount(plainChannelId, user, importantOnly = true)
             .unsafeRunSync() shouldBe 2
-        repo.getUnreadCount(highlightedChannelId, user.id, importantOnly = false)
+        repo.getUnreadCount(highlightedChannelId, user, importantOnly = false)
             .unsafeRunSync() shouldBe 2
-        repo.getUnreadCount(highlightedChannelId, user.id, importantOnly = true)
+        repo.getUnreadCount(highlightedChannelId, user, importantOnly = true)
             .unsafeRunSync() shouldBe 2
     }
 
     test("total unread count respects important filter including highlighted channels") {
         val repo = feedRepository.get
-        repo.getTotalUnreadCount(user.id, importantOnly = false).unsafeRunSync() shouldBe 6
-        repo.getTotalUnreadCount(user.id, importantOnly = true).unsafeRunSync() shouldBe 4
+        repo.getTotalUnreadCount(user, importantOnly = false).unsafeRunSync() shouldBe 6
+        repo.getTotalUnreadCount(user, importantOnly = true).unsafeRunSync() shouldBe 4
+    }
+
+    test(
+        "channel and total unread count respect banned categories for plain channel but not highlighted channel"
+    ) {
+        val repo = feedRepository.get
+        val userWithBanned = user.copy(settings = User.Settings(bannedCategories = List("sports")))
+
+        // Plain channel: item2 has category "sports", so only item3 remains when importantOnly = true
+        repo.getUnreadCount(plainChannelId, userWithBanned, importantOnly = false)
+            .unsafeRunSync() shouldBe 4
+        repo.getUnreadCount(plainChannelId, userWithBanned, importantOnly = true)
+            .unsafeRunSync() shouldBe 1
+
+        // Highlighted channel: item1 has category "sports", but channel is highlighted, so both remain
+        repo.getUnreadCount(highlightedChannelId, userWithBanned, importantOnly = false)
+            .unsafeRunSync() shouldBe 2
+        repo.getUnreadCount(highlightedChannelId, userWithBanned, importantOnly = true)
+            .unsafeRunSync() shouldBe 2
+
+        // Total unread: plain (1) + highlighted (2) = 3 when importantOnly = true
+        repo.getTotalUnreadCount(userWithBanned, importantOnly = false).unsafeRunSync() shouldBe 6
+        repo.getTotalUnreadCount(userWithBanned, importantOnly = true).unsafeRunSync() shouldBe 3
     }
 }

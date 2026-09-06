@@ -28,7 +28,7 @@ object FeedController:
                 for {
                     count <- feedService.getUnreadCount(
                         channelId,
-                        user.id,
+                        user,
                         filter.contains("important")
                     )
                     response <- Ok(count)
@@ -38,7 +38,7 @@ object FeedController:
                     filter
                 ) as user =>
                 for {
-                    count <- feedService.getTotalUnreadCount(user.id, filter.contains("important"))
+                    count <- feedService.getTotalUnreadCount(user, filter.contains("important"))
                     response <- Ok(count)
                 } yield response
         }
