@@ -43,23 +43,31 @@ object Home:
         case Failure(err) => handleError(err)
     }
 
-    private val feedsObserver =
-        feedVar.updater[FeedItemList]((xs1, xs2) => (xs1 ++: xs2).distinctBy(_.link))
+    private val activeFilterGeneration: Var[Long] = Var(0L)
 
-    private val hasMoreObserver = Observer[FeedItemList] { xs =>
-        hasMoreVar.set(xs.size == pageLimit)
-    }
+    private def bindFeeds(
+        stream: EventStream[Try[FeedItemList]],
+        generation: Long,
+        page: Int,
+        owner: Owner
+    ): Unit =
+        val data = stream.collectSuccess.filter(_ => generation == activeFilterGeneration.now())
+        val errors = stream.collectFailure.filter(_ => generation == activeFilterGeneration.now())
+        data.addObserver(Observer[FeedItemList] { items =>
+            if page == 1 then feedVar.set(items)
+            else feedVar.update(xs => (xs ++: items).distinctBy(_.link))
+            hasMoreVar.set(items.size == pageLimit)
+        })(owner)
+        errors.addObserver(errorObserver)(owner)
 
-    private val unreadCountObserver = Observer[Try[Int]] {
-        case Success(count) => unreadCountVar.set(count)
-        case Failure(err)   => handleError(err)
-    }
-
-    private def bindFeeds(stream: EventStream[Try[FeedItemList]], owner: Owner): Unit =
-        val data = stream.collectSuccess
-        val errors = stream.collectFailure
-        data.addObserver(feedsObserver)(owner)
-        data.addObserver(hasMoreObserver)(owner)
+    private def bindUnreadCount(
+        stream: EventStream[Try[Int]],
+        generation: Long,
+        owner: Owner
+    ): Unit =
+        val data = stream.collectSuccess.filter(_ => generation == activeFilterGeneration.now())
+        val errors = stream.collectFailure.filter(_ => generation == activeFilterGeneration.now())
+        data.addObserver(unreadCountVar.writer)(owner)
         errors.addObserver(errorObserver)(owner)
 
     def render: Element =
@@ -68,6 +76,7 @@ object Home:
             div(
                 onMountBind(_ =>
                     feedFilterSignal.changes --> { _ =>
+                        activeFilterGeneration.update(_ + 1)
                         feedVar.set(Nil)
                         hasMoreVar.set(true)
                         EventBus.emit(refreshFeedsBus -> 1, refreshUnreadCountBus -> ())
@@ -75,7 +84,12 @@ object Home:
                 ),
                 onMountBind(ctx =>
                     refreshFeedsBus --> { page =>
-                        bindFeeds(getChannelsAndFeedsRequest(page), ctx.owner)
+                        bindFeeds(
+                            getChannelsAndFeedsRequest(page),
+                            activeFilterGeneration.now(),
+                            page,
+                            ctx.owner
+                        )
                     }
                 ),
                 div(
@@ -92,8 +106,11 @@ object Home:
                 div(
                     onMountBind(ctx =>
                         refreshUnreadCountBus --> { _ =>
-                            val response = getUnreadCountRequest()
-                            response.addObserver(unreadCountObserver)(ctx.owner)
+                            bindUnreadCount(
+                                getUnreadCountRequest(),
+                                activeFilterGeneration.now(),
+                                ctx.owner
+                            )
                         }
                     )
                 )
@@ -119,13 +136,16 @@ object Home:
         )
 
     private def feeds(): Element =
+        val gen = activeFilterGeneration.now()
         val stream = getChannelsAndFeedsRequest(1)
         val unreadCountResponse = getUnreadCountRequest()
         UList(
-            onMountCallback(ctx => bindFeeds(stream, ctx.owner)),
+            onMountCallback { ctx =>
+                bindFeeds(stream, gen, 1, ctx.owner)
+                bindUnreadCount(unreadCountResponse, gen, ctx.owner)
+            },
             _.noDataText := "Nothing to read",
-            children <-- feedSignal.split(_.link)(renderItem),
-            unreadCountResponse --> unreadCountObserver
+            children <-- feedSignal.split(_.link)(renderItem)
         )
 
     private def renderItem(
