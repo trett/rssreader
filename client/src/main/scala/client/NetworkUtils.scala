@@ -49,15 +49,18 @@ object NetworkUtils {
       * Pass it as `excludedImage` to drop the inline copy.
       */
     def unsafeParseToHtmlFragment(html: String, excludedImage: Option[String] = None): HtmlElement =
+        val container = dom.document.createElement("div")
         val nodes = DomApi.unsafeParseHtmlStringIntoNodeArray(html)
-        excludedImage.filter(_.nonEmpty).foreach(url => nodes.foreach(removeImage(_, url)))
+        nodes.foreach(container.appendChild)
+        excludedImage.filter(_.nonEmpty).foreach(url => removeImage(container, url))
+        val remainingNodes = (0 until container.childNodes.length).map(container.childNodes(_))
         div(
-            nodes
+            remainingNodes
                 .flatMap {
                     case el: dom.html.Element => Some(el)
                     case raw                  => Some(div(raw.textContent).ref)
                 }
-                .filter(node => node.textContent.nonEmpty || hasMedia(node))
+                .filter(node => node.textContent.trim.nonEmpty || hasMedia(node))
                 .map(foreignHtmlElement)
         )
 
@@ -65,32 +68,31 @@ object NetworkUtils {
         case img: dom.html.Image => img.getAttribute("src") == url || img.src == url
         case _                   => false
 
-    private def removeImage(node: dom.Node, url: String): Unit =
-        if isImage(node, url) then dropWithEmptyWrappers(node)
-        else
-            node match
-                case el: dom.html.Element =>
-                    el.querySelectorAll("img")
-                        .filter(isImage(_, url))
-                        .foreach(dropWithEmptyWrappers)
-                case _ => ()
+    private def removeImage(container: dom.Element, url: String): Unit =
+        container
+            .querySelectorAll("img")
+            .filter(isImage(_, url))
+            .foreach(dropWithEmptyWrappers(_, container))
 
     /** Feeds often wrap the lead image in layout scaffolding — linux.org.ru, for one, uses a
       * `figure` whose `padding-bottom` reserves the image's aspect ratio. Dropping just the `img`
       * would leave that spacer behind as a tall empty block, so take the emptied wrappers too.
       */
-    private def dropWithEmptyWrappers(node: dom.Node): Unit =
+    private def dropWithEmptyWrappers(node: dom.Node, root: dom.Node): Unit =
         val parent = Option(node.parentNode)
         parent.foreach(_.removeChild(node))
-        parent.filter(isEmptyWrapper).foreach(dropWithEmptyWrappers)
+        parent
+            .filter(p => p != root && isEmptyWrapper(p))
+            .foreach(dropWithEmptyWrappers(_, root))
 
     private def isEmptyWrapper(node: dom.Node): Boolean = node match
         case el: dom.html.Element => el.textContent.trim.isEmpty && !hasMedia(el)
         case _                    => false
 
     private def hasMedia(node: dom.Node): Boolean = node match
-        case el: dom.html.Element => el.querySelectorAll("img, video, iframe").nonEmpty
-        case _                    => false
+        case el: dom.html.Element =>
+            el.matches("img, video, iframe") || el.querySelectorAll("img, video, iframe").nonEmpty
+        case _ => false
 
     import Decoders.given
 
