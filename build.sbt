@@ -9,10 +9,10 @@ import scala.sys.process.*
 
 lazy val projectVersion = "2.4.4-gcr"
 lazy val organizationName = "ru.trett"
-lazy val scala3Version = "3.7.4"
-lazy val circeVersion = "0.14.15"
-lazy val htt4sVersion = "1.0.0-M45"
-lazy val logs4catVersion = "2.7.1"
+lazy val scala3Version = "3.9.0"
+lazy val circeVersion = "0.14.16"
+lazy val htt4sVersion = "1.0.0-M47"
+lazy val logs4catVersion = "2.8.0"
 lazy val doobieVersion = "1.0.0-RC12"
 lazy val customScalaOptions = Seq("-Wunused:imports", "-rewrite", "-source:3.4-migration")
 
@@ -66,8 +66,8 @@ lazy val client = project
         libraryDependencies ++= Seq(
             "org.scala-js" %%% "scalajs-dom" % "2.8.1",
             "com.raquo" %%% "laminar" % "17.2.1",
-            "be.doeraene" %%% "web-components-ui5" % "2.12.1",
-            "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
+            "be.doeraene" %%% "web-components-ui5" % "2.12.2",
+            "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.7.0"
         ),
         libraryDependencies ++= Seq(
             "io.circe" %%% "circe-core",
@@ -89,7 +89,6 @@ lazy val server = project
         // GraalVM Native Image Settings
         graalVMNativeImageOptions ++= Seq(
             "--no-fallback",
-            "--strict-image-heap",
             "-H:+ReportExceptionStackTraces",
             "--verbose",
             "-march=x86-64-v3",
@@ -139,13 +138,13 @@ lazy val server = project
         },
         // Dependencies
         libraryDependencies ++= Seq(
-            "org.typelevel" %% "cats-effect" % "3.6.3",
-            "com.github.cb372" %% "cats-retry" % "3.1.3",
-            "org.slf4j" % "slf4j-api" % "2.0.17",
-            "org.slf4j" % "slf4j-simple" % "2.0.17",
-            "com.github.pureconfig" %% "pureconfig-core" % "0.17.9",
-            "org.jsoup" % "jsoup" % "1.21.2",
-            "com.github.jwt-scala" %% "jwt-circe" % "10.0.1"
+            "org.typelevel" %% "cats-effect" % "3.7.1",
+            "com.github.cb372" %% "cats-retry" % "4.0.0",
+            "org.slf4j" % "slf4j-api" % "2.0.19",
+            "org.slf4j" % "slf4j-simple" % "2.0.19",
+            "com.github.pureconfig" %% "pureconfig-core" % "0.17.10",
+            "org.jsoup" % "jsoup" % "1.23.2",
+            "com.github.jwt-scala" %% "jwt-circe" % "11.0.4"
         ),
         libraryDependencies ++= Seq(
             "org.http4s" %% "http4s-ember-server",
@@ -168,13 +167,13 @@ lazy val server = project
             "org.tpolecat" %% "doobie-postgres",
             "org.tpolecat" %% "doobie-postgres-circe"
         ).map(_ % doobieVersion),
-        dependencyOverrides += "org.postgresql" % "postgresql" % "42.7.11",
+        dependencyOverrides += "org.postgresql" % "postgresql" % "42.7.13",
         libraryDependencies ++= Seq(
-            "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-            "org.scalamock" %% "scalamock" % "7.5.2" % Test,
-            "org.testcontainers" % "testcontainers" % "2.0.2" % Test,
-            "org.testcontainers" % "postgresql" % "1.21.3" % Test,
-            "org.postgresql" % "postgresql" % "42.7.11" % Test
+            "org.scalatest" %% "scalatest" % "3.2.20" % Test,
+            "org.scalamock" %% "scalamock" % "7.5.5" % Test,
+            "org.testcontainers" % "testcontainers" % "2.0.5" % Test,
+            "org.testcontainers" % "postgresql" % "1.21.4" % Test,
+            "org.postgresql" % "postgresql" % "42.7.13" % Test
         )
     )
 

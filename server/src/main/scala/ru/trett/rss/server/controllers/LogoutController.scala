@@ -7,6 +7,7 @@ import org.http4s.AuthedRoutes
 import org.typelevel.log4cats.LoggerFactory
 import ru.trett.rss.server.models.User
 import org.http4s.ResponseCookie
+import org.http4s.SameSite
 
 class LogoutController[F[_]: Async: LoggerFactory] extends Http4sDsl[F] {
 
@@ -24,7 +25,8 @@ class LogoutController[F[_]: Async: LoggerFactory] extends Http4sDsl[F] {
                             path = Some("/"),
                             maxAge = Some(-1),
                             httpOnly = true,
-                            secure = true
+                            secure = true,
+                            sameSite = Some(SameSite.Lax)
                         )
                     )
                 )

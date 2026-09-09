@@ -12,10 +12,16 @@ class FeedService(feedRepository: FeedRepository):
     def markAsRead(links: List[String], user: User): IO[Int] =
         feedRepository.markFeedAsRead(links, user)
 
-    def getUnreadCount(channelId: Long, userId: String): IO[Int] =
-        feedRepository.getUnreadCount(channelId, userId)
+    def getUnreadCount(channelId: Long, user: User, importantOnly: Boolean = false): IO[Int] =
+        feedRepository.getUnreadCount(channelId, user, importantOnly)
 
-    def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
+    def getUnreadCount(channelId: Long, userId: String, importantOnly: Boolean): IO[Int] =
+        feedRepository.getUnreadCount(channelId, userId, importantOnly)
+
+    def getTotalUnreadCount(user: User, importantOnly: Boolean = false): IO[Int] =
+        feedRepository.getTotalUnreadCount(user, importantOnly)
+
+    def getTotalUnreadCount(userId: String, importantOnly: Boolean): IO[Int] =
         feedRepository.getTotalUnreadCount(userId, importantOnly)
 
     /** All channels' important news in the range, grouped by channel (newest first within each),

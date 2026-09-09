@@ -5,7 +5,6 @@ import be.doeraene.webcomponents.ui5.configkeys.*
 import client.NetworkUtils.*
 import client.NotifyComponent.infoMessage
 import com.raquo.laminar.api.L.*
-import com.raquo.laminar.nodes.ReactiveHtmlElement
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
 import io.circe.syntax.*

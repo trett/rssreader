@@ -102,6 +102,20 @@ class MultiUserIntegrationSpec
         (users.map(_.id) should contain).allOf(user1.id, user2.id, user3.id)
     }
 
+    test("Signing up again with an existing account is a no-op, not an error") {
+        val result = for {
+            first <- userRepository.get.insertUser(user1)
+            second <- userRepository.get.insertUser(user1)
+            allUsers <- userRepository.get.findUsers()
+        } yield (first, second, allUsers)
+
+        val (first, second, users) = result.unsafeRunSync()
+
+        first shouldBe Right(1)
+        second shouldBe Right(0)
+        users.count(_.id == user1.id) shouldBe 1
+    }
+
     test("Users can be retrieved by ID") {
         val result = for {
             _ <- setupUsers(user1, user2)

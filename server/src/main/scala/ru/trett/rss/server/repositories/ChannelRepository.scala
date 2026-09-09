@@ -97,7 +97,8 @@ class ChannelRepository(xa: Transactor[IO]):
         user: User,
         limit: Int,
         offset: Int,
-        importantOnly: Boolean = false
+        importantOnly: Boolean = false,
+        channelId: Option[Long] = None
     ): IO[List[(Channel, Feed, Boolean)]] =
         val query = fr"""
           SELECT c.id, c.title, c.link,
@@ -117,7 +118,9 @@ class ChannelRepository(xa: Transactor[IO]):
             if importantOnly && user.settings.bannedCategories.nonEmpty then
                 fr"AND (uc.highlighted = true OR NOT (f.categories && ${user.settings.bannedCategories}::text[]))"
             else fr""
-        (query ++ hideReadFilter ++ importantFilter ++ bannedFilter ++
+        val channelFilter =
+            channelId.fold(fr"")(id => fr"AND c.id = $id")
+        (query ++ hideReadFilter ++ importantFilter ++ bannedFilter ++ channelFilter ++
             fr"ORDER BY f.pub_date DESC LIMIT $limit OFFSET $offset")
             .query[(Channel, Feed, Boolean)]
             .to[List]

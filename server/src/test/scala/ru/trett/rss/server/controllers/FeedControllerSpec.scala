@@ -19,12 +19,17 @@ class FeedControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
     private val mockFeedService: FeedService =
         new FeedService(mock[FeedRepository]) {
-            override def getTotalUnreadCount(userId: String, importantOnly: Boolean): IO[Int] =
+            override def getTotalUnreadCount(user: User, importantOnly: Boolean): IO[Int] =
                 IO.pure(42)
 
-            override def getUnreadCount(channelId: Long, userId: String): IO[Int] =
-                if (channelId == 1L) IO.pure(10)
-                else IO.pure(0)
+            override def getUnreadCount(
+                channelId: Long,
+                user: User,
+                importantOnly: Boolean
+            ): IO[Int] =
+                if (channelId == 1L) {
+                    if (importantOnly) IO.pure(5) else IO.pure(10)
+                } else IO.pure(0)
 
             override def markAsRead(links: List[String], user: User): IO[Int] =
                 IO.pure(links.size)
@@ -51,6 +56,20 @@ class FeedControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
         response.status.shouldBe(Status.Ok)
         response.as[Int].unsafeRunSync().shouldBe(10)
+    }
+
+    test(
+        "GET /api/feeds/channel/{channelId}/unread with filter=important should return filtered unread count"
+    ) {
+        val request =
+            AuthedRequest(
+                user,
+                Request[IO](Method.GET, uri"/api/feeds/channel/1/unread?filter=important")
+            )
+        val response = authedRoutes.run(request).value.unsafeRunSync().get
+
+        response.status.shouldBe(Status.Ok)
+        response.as[Int].unsafeRunSync().shouldBe(5)
     }
 
     test("POST /api/feeds/read should mark feeds as read") {

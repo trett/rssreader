@@ -10,14 +10,14 @@
   },
   "devDependencies": {
     "@scala-js/vite-plugin-scalajs": "^1.1.0",
-    "vite": "^7.3.2"
+    "vite": "^7.3.6"
   },
   "dependencies": {
-    "@ui5/webcomponents": "^2.12.0",
-    "@ui5/webcomponents-fiori": "^2.12.0",
-    "@ui5/webcomponents-icons": "^2.12.0"
+    "@ui5/webcomponents": "^2.26.0",
+    "@ui5/webcomponents-fiori": "^2.26.0",
+    "@ui5/webcomponents-icons": "^2.26.0"
   },
   "overrides": {
-    "esbuild": "0.28.1"
+    "esbuild": "0.28.2"
   }
 }

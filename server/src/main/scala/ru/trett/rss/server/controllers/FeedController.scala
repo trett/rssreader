@@ -24,9 +24,13 @@ object FeedController:
 
             case GET -> Root / "api" / "feeds" / "channel" / LongVar(
                     channelId
-                ) / "unread" as user =>
+                ) / "unread" :? FilterQueryParamMatcher(filter) as user =>
                 for {
-                    count <- feedService.getUnreadCount(channelId, user.id)
+                    count <- feedService.getUnreadCount(
+                        channelId,
+                        user,
+                        filter.contains("important")
+                    )
                     response <- Ok(count)
                 } yield response
 
@@ -34,7 +38,7 @@ object FeedController:
                     filter
                 ) as user =>
                 for {
-                    count <- feedService.getTotalUnreadCount(user.id, filter.contains("important"))
+                    count <- feedService.getTotalUnreadCount(user, filter.contains("important"))
                     response <- Ok(count)
                 } yield response
         }

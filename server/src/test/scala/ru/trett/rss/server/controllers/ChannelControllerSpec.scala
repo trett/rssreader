@@ -35,7 +35,8 @@ class ChannelControllerSpec extends AnyFunSuite with Matchers with MockFactory {
                 user: User,
                 page: Int,
                 limit: Int,
-                importantOnly: Boolean
+                importantOnly: Boolean,
+                channelId: Option[Long]
             ): IO[List[FeedItemData]] =
                 IO.pure(
                     List(

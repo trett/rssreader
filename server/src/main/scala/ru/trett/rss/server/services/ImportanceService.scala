@@ -97,14 +97,16 @@ class ImportanceService(client: Client[IO])(using loggerFactory: LoggerFactory[I
             logger.info(
                 s"[Importance] Sending batch of ${batch.size} items to Gemini (channelId=${batch.head.channelId})"
             ) *>
-                retryingOnSomeErrors(
+                retryingOnErrors(callGeminiBatch(prompt, batch, apiKey, bannedCategories))(
                     policy = retryPolicy,
-                    isWorthRetrying = (e: Throwable) => IO.pure(isRetryable(e)),
-                    onError = (e: Throwable, details: RetryDetails) =>
-                        logger.warn(
-                            s"[Importance] Gemini batch call failed ($details): ${e.getMessage}"
-                        )
-                )(callGeminiBatch(prompt, batch, apiKey, bannedCategories))
+                    errorHandler = ResultHandler.retryOnSomeErrors[IO, List[Feed]](
+                        isWorthRetrying = isRetryable,
+                        log = (e: Throwable, details: RetryDetails) =>
+                            logger.warn(
+                                s"[Importance] Gemini batch call failed ($details): ${e.getMessage}"
+                            )
+                    )
+                )
                     .handleErrorWith { e =>
                         logger.warn(
                             s"[Importance] Gemini batch permanently failed — defaulting to not-important: ${e.getMessage}"

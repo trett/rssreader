@@ -1,10 +1,12 @@
 package client
 
 import be.doeraene.webcomponents.ui5.Avatar
+import be.doeraene.webcomponents.ui5.Button
 import be.doeraene.webcomponents.ui5.Icon
 import be.doeraene.webcomponents.ui5.Popover
 import be.doeraene.webcomponents.ui5.ShellBar
 import be.doeraene.webcomponents.ui5.UList
+import be.doeraene.webcomponents.ui5.configkeys.ButtonDesign
 import be.doeraene.webcomponents.ui5.configkeys.IconName
 import be.doeraene.webcomponents.ui5.configkeys.ListSeparator
 import be.doeraene.webcomponents.ui5.configkeys.PopoverPlacementType
@@ -30,9 +32,20 @@ object NavBar {
             ),
             _.showNotifications <-- unreadCountSignal.map(_ > 0),
             _.slots.profile := Avatar(_.icon := IconName.customer, idAttr := profileId),
-            _.slots.logo := Icon(_.name := IconName.home),
+            _.slots.logo := Icon(_.name := IconName.feed),
+            _.slots.startButton := Button(
+                cls := "sidebar-toggle",
+                _.design := ButtonDesign.Transparent,
+                _.icon := IconName.menu2,
+                _.tooltip := "Show feeds",
+                hidden <-- Router.currentPageVar.signal.map(!_.contains(HomeRoute)),
+                onClick
+                    .filter(_ => Router.currentPageVar.now().contains(HomeRoute))
+                    .mapTo(!sidebarOpenSignal.now()) --> sidebarOpenVar
+            ),
             _.events.onProfileClick.map(item => Some(item.detail.targetRef)) --> popoverBus.writer,
             _.events.onLogoClick.mapTo(()) --> { _ =>
+                sidebarOpenVar.set(false)
                 if settingsSignal.now().isDefined then Router.toMainPage()
                 else Router.currentPageVar.set(Some(LoginRoute))
             },
@@ -41,6 +54,7 @@ object NavBar {
             }
         ),
         Popover(
+            cls := "nav-menu",
             _.openerId := profileId,
             _.showAtAndCloseFromEvents(popoverBus.events),
             _.placement := PopoverPlacementType.Bottom,
@@ -50,7 +64,10 @@ object NavBar {
                     _.item(
                         _.icon := IconName.settings,
                         "Settings",
-                        onClick.mapTo(()) --> { Router.currentPageVar.set(Some(SettingsRoute)) }
+                        onClick.mapTo(()) --> {
+                            sidebarOpenVar.set(false)
+                            Router.currentPageVar.set(Some(SettingsRoute))
+                        }
                     ),
                     _.item(
                         _.icon := IconName.refresh,
@@ -69,6 +86,7 @@ object NavBar {
                         _.icon := IconName.log,
                         "Sign out",
                         onClick.flatMap(_ => NetworkUtils.logout()) --> { _ =>
+                            sidebarOpenVar.set(false)
                             Router.currentPageVar.set(Some(LoginRoute))
                         }
                     )

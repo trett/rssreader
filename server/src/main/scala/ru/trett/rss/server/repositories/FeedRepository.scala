@@ -22,19 +22,52 @@ class FeedRepository(xa: Transactor[IO]):
             .updateMany(links.map(link => (link, user.id)))
             .transact(xa)
 
-    def getUnreadCount(channelId: Long, userId: String): IO[Int] =
-        sql"""
-      SELECT COUNT(*)
-      FROM feeds
-      WHERE channel_id = $channelId AND user_id = $userId AND read = false
-    """.query[Int].unique.transact(xa)
+    private def bannedCategoriesFilter(user: User): Fragment =
+        if user.settings.bannedCategories.nonEmpty then
+            fr"AND (uc.highlighted = true OR NOT (f.categories && ${user.settings.bannedCategories}::text[]))"
+        else fr""
 
-    def getTotalUnreadCount(userId: String, importantOnly: Boolean = false): IO[Int] =
-        val importantFilter = if importantOnly then fr"AND important = true" else fr""
-        (fr"SELECT COUNT(*) FROM feeds WHERE user_id = $userId AND read = false" ++ importantFilter)
-            .query[Int]
-            .unique
-            .transact(xa)
+    def getUnreadCount(channelId: Long, user: User, importantOnly: Boolean = false): IO[Int] =
+        if !importantOnly then sql"""
+              SELECT COUNT(*)
+              FROM feeds
+              WHERE channel_id = $channelId AND user_id = ${user.id} AND read = false
+            """.query[Int].unique.transact(xa)
+        else
+            (fr"""
+              SELECT COUNT(*)
+              FROM feeds f
+              JOIN user_channels uc ON f.channel_id = uc.channel_id AND uc.user_id = ${user.id}
+              WHERE f.channel_id = $channelId AND f.user_id = ${user.id} AND f.read = false
+                AND (f.important = true OR uc.highlighted = true)
+            """ ++ bannedCategoriesFilter(user))
+                .query[Int]
+                .unique
+                .transact(xa)
+
+    def getUnreadCount(channelId: Long, userId: String, importantOnly: Boolean): IO[Int] =
+        getUnreadCount(channelId, User(userId, "", "", User.Settings()), importantOnly)
+
+    def getTotalUnreadCount(user: User, importantOnly: Boolean = false): IO[Int] =
+        if !importantOnly then sql"""
+              SELECT COUNT(*)
+              FROM feeds
+              WHERE user_id = ${user.id} AND read = false
+            """.query[Int].unique.transact(xa)
+        else
+            (fr"""
+              SELECT COUNT(*)
+              FROM feeds f
+              JOIN user_channels uc ON f.channel_id = uc.channel_id AND uc.user_id = ${user.id}
+              WHERE f.user_id = ${user.id} AND f.read = false
+                AND (f.important = true OR uc.highlighted = true)
+            """ ++ bannedCategoriesFilter(user))
+                .query[Int]
+                .unique
+                .transact(xa)
+
+    def getTotalUnreadCount(userId: String, importantOnly: Boolean): IO[Int] =
+        getTotalUnreadCount(User(userId, "", "", User.Settings()), importantOnly)
 
     def getUnreadFeeds(user: User, limit: Int): IO[List[Feed]] =
         getUnreadFeeds(user, limit, 0)
