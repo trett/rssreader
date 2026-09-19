@@ -41,6 +41,7 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
 
     private val AccessTokenTtl: FiniteDuration = 30.days
     private val RefreshTokenTtl: FiniteDuration = 90.days
+    private val AuthCodeTtl: FiniteDuration = 5.minutes
     private val corsHeader = Header.Raw(ci"Access-Control-Allow-Origin", "*")
     private val noStoreHeader = Header.Raw(ci"Cache-Control", "no-store")
     private val noCacheHeader = Header.Raw(ci"Pragma", "no-cache")
@@ -52,7 +53,11 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
             Ok(protectedResourceMetadata(getBaseUrl(req)), corsHeader)
         case req @ GET -> Root / ".well-known" / "oauth-authorization-server" =>
             Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
+        case req @ GET -> Root / ".well-known" / "oauth-authorization-server" / "mcp" =>
+            Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
         case req @ GET -> Root / ".well-known" / "openid-configuration" =>
+            Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
+        case req @ GET -> Root / ".well-known" / "openid-configuration" / "mcp" =>
             Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
         case req @ OPTIONS -> Root / ".well-known" / "oauth-protected-resource" =>
             corsPreflight
@@ -60,7 +65,15 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
             corsPreflight
         case req @ OPTIONS -> Root / ".well-known" / "oauth-authorization-server" =>
             corsPreflight
+        case req @ OPTIONS -> Root / ".well-known" / "oauth-authorization-server" / "mcp" =>
+            corsPreflight
         case req @ OPTIONS -> Root / ".well-known" / "openid-configuration" =>
+            corsPreflight
+        case req @ OPTIONS -> Root / ".well-known" / "openid-configuration" / "mcp" =>
+            corsPreflight
+        case req @ GET -> Root / "oauth" / "authorize" =>
+            handleAuthorizeRequest(req)
+        case req @ OPTIONS -> Root / "oauth" / "authorize" =>
             corsPreflight
         case req @ POST -> Root / "oauth" / "token" =>
             handleTokenRequest(req)
@@ -99,11 +112,17 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private def authorizationServerMetadata(baseUrl: String): Json =
         Json.obj(
             "issuer" -> baseUrl.asJson,
+            "authorization_endpoint" -> s"$baseUrl/oauth/authorize".asJson,
             "token_endpoint" -> s"$baseUrl/oauth/token".asJson,
             "token_endpoint_auth_methods_supported" -> Json
-                .arr("client_secret_basic".asJson, "client_secret_post".asJson),
-            "grant_types_supported" -> Json
-                .arr("client_credentials".asJson, "refresh_token".asJson),
+                .arr("client_secret_basic".asJson, "client_secret_post".asJson, "none".asJson),
+            "grant_types_supported" -> Json.arr(
+                "authorization_code".asJson,
+                "client_credentials".asJson,
+                "refresh_token".asJson
+            ),
+            "response_types_supported" -> Json.arr("code".asJson),
+            "code_challenge_methods_supported" -> Json.arr("S256".asJson, "plain".asJson),
             "scopes_supported" -> Json.arr("read".asJson, "mcp".asJson)
         )
 
@@ -289,6 +308,142 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                                 unauthorizedClient("Invalid client credentials")
                         }
 
+                case "authorization_code" =>
+                    params.get("code") match
+                        case None =>
+                            BadRequest(
+                                oauthError("invalid_request", "Missing code parameter"),
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
+                            )
+                        case Some(code) =>
+                            jwtManager.verifyToken(code) match
+                                case Right(session) if session.userEmail.startsWith("code:") =>
+                                    val rawPayload = session.userEmail.stripPrefix("code:")
+                                    val parsedOpt = Try {
+                                        val jsonStr = new String(
+                                            Base64.getUrlDecoder.decode(rawPayload),
+                                            StandardCharsets.UTF_8
+                                        )
+                                        io.circe.parser.parse(jsonStr).toOption
+                                    }.toOption.flatten
+
+                                    val (
+                                        email,
+                                        codeClientIdOpt,
+                                        codeChallengeOpt,
+                                        codeChallengeMethodOpt
+                                    ) =
+                                        parsedOpt match
+                                            case Some(json) =>
+                                                val c = json.hcursor
+                                                (
+                                                    c.get[String]("email").getOrElse(""),
+                                                    c.get[String]("client_id").toOption,
+                                                    c.get[String]("code_challenge").toOption,
+                                                    c.get[String]("code_challenge_method").toOption
+                                                )
+                                            case None =>
+                                                (rawPayload, None, None, None)
+
+                                    if email.isEmpty then
+                                        BadRequest(
+                                            oauthError(
+                                                "invalid_grant",
+                                                "Invalid authorization code payload"
+                                            ),
+                                            corsHeader,
+                                            noStoreHeader,
+                                            noCacheHeader
+                                        )
+                                    else
+                                        userService.getUserByEmail(email).flatMap {
+                                            case Some(user) =>
+                                                val clientMatches =
+                                                    codeClientIdOpt.forall(cid =>
+                                                        user.settings.mcpClientId.contains(cid)
+                                                    ) &&
+                                                        (clientId.isEmpty || user.settings.mcpClientId
+                                                            .contains(clientId)) &&
+                                                        (codeClientIdOpt.isEmpty || clientId.isEmpty || codeClientIdOpt
+                                                            .contains(clientId))
+
+                                                val secretMatches =
+                                                    clientSecret.nonEmpty && user.settings.mcpClientSecret
+                                                        .exists(constantTimeEquals(_, clientSecret))
+
+                                                val pkceMatches =
+                                                    (
+                                                        codeChallengeOpt,
+                                                        params.get("code_verifier")
+                                                    ) match
+                                                        case (Some(challenge), Some(verifier)) =>
+                                                            val method =
+                                                                codeChallengeMethodOpt
+                                                                    .getOrElse("plain")
+                                                                    .toUpperCase
+                                                            if method == "S256" then
+                                                                val sha256 =
+                                                                    MessageDigest.getInstance(
+                                                                        "SHA-256"
+                                                                    )
+                                                                val expected = Base64.getUrlEncoder.withoutPadding
+                                                                    .encodeToString(
+                                                                        sha256.digest(
+                                                                            verifier.getBytes(
+                                                                                StandardCharsets.US_ASCII
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                constantTimeEquals(
+                                                                    expected,
+                                                                    challenge
+                                                                )
+                                                            else if method == "PLAIN" then
+                                                                constantTimeEquals(
+                                                                    verifier,
+                                                                    challenge
+                                                                )
+                                                            else false
+                                                        case _ => false
+
+                                                val isAuthorized = clientMatches && (
+                                                    secretMatches ||
+                                                        pkceMatches ||
+                                                        (codeChallengeOpt.isEmpty && user.settings.mcpClientSecret.isEmpty)
+                                                )
+
+                                                if isAuthorized then
+                                                    logger.info(
+                                                        s"Issued MCP OAuth token via authorization_code for ${user.email}"
+                                                    ) *>
+                                                        tokenSuccessResponse(user)
+                                                else
+                                                    unauthorizedClient(
+                                                        "Invalid client credentials or code verifier"
+                                                    )
+
+                                            case None =>
+                                                BadRequest(
+                                                    oauthError("invalid_grant", "User not found"),
+                                                    corsHeader,
+                                                    noStoreHeader,
+                                                    noCacheHeader
+                                                )
+                                        }
+
+                                case _ =>
+                                    BadRequest(
+                                        oauthError(
+                                            "invalid_grant",
+                                            "Invalid or expired authorization code"
+                                        ),
+                                        corsHeader,
+                                        noStoreHeader,
+                                        noCacheHeader
+                                    )
+
                 case "refresh_token" =>
                     params.get("refresh_token") match
                         case None =>
@@ -332,6 +487,109 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                         noCacheHeader
                     )
         }
+
+    private def handleAuthorizeRequest(req: org.http4s.Request[IO]): IO[org.http4s.Response[IO]] =
+        val params = req.uri.query.params
+        val clientId = params.getOrElse("client_id", "")
+        val redirectUri = params.get("redirect_uri")
+        val state = params.get("state")
+        val responseType = params.getOrElse("response_type", "code")
+        val codeChallenge = params.get("code_challenge")
+        val codeChallengeMethod = params.get("code_challenge_method")
+
+        if responseType != "code" then
+            BadRequest(
+                oauthError(
+                    "unsupported_response_type",
+                    s"Response type '$responseType' is not supported"
+                ),
+                corsHeader,
+                noStoreHeader,
+                noCacheHeader
+            )
+        else if clientId.isEmpty then
+            BadRequest(
+                oauthError("invalid_request", "Missing client_id parameter"),
+                corsHeader,
+                noStoreHeader,
+                noCacheHeader
+            )
+        else
+            redirectUri match
+                case None =>
+                    BadRequest(
+                        oauthError("invalid_request", "Missing redirect_uri parameter"),
+                        corsHeader,
+                        noStoreHeader,
+                        noCacheHeader
+                    )
+                case Some(redirect) =>
+                    org.http4s.Uri.fromString(redirect) match
+                        case Left(failure) =>
+                            BadRequest(
+                                oauthError(
+                                    "invalid_request",
+                                    s"Invalid redirect_uri: ${failure.details}"
+                                ),
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
+                            )
+                        case Right(targetUri) =>
+                            if targetUri.scheme.isEmpty || targetUri.scheme.exists(s =>
+                                    s.value == ci"javascript" || s.value == ci"data"
+                                )
+                            then
+                                BadRequest(
+                                    oauthError(
+                                        "invalid_request",
+                                        "Invalid redirect_uri: absolute URI required"
+                                    ),
+                                    corsHeader,
+                                    noStoreHeader,
+                                    noCacheHeader
+                                )
+                            else
+                                userService.getUserByMcpClientId(clientId).flatMap {
+                                    case None =>
+                                        BadRequest(
+                                            oauthError(
+                                                "invalid_client",
+                                                s"Invalid client_id: $clientId"
+                                            ),
+                                            corsHeader,
+                                            noStoreHeader,
+                                            noCacheHeader
+                                        )
+                                    case Some(user) =>
+                                        val payload = Json
+                                            .obj(
+                                                "email" -> user.email.asJson,
+                                                "client_id" -> clientId.asJson,
+                                                "code_challenge" -> codeChallenge
+                                                    .map(_.asJson)
+                                                    .getOrElse(Json.Null),
+                                                "code_challenge_method" -> codeChallengeMethod
+                                                    .map(_.asJson)
+                                                    .getOrElse(Json.Null)
+                                            )
+                                            .noSpaces
+                                        val encodedPayload = Base64.getUrlEncoder.withoutPadding
+                                            .encodeToString(
+                                                payload.getBytes(StandardCharsets.UTF_8)
+                                            )
+                                        val authCode = jwtManager.createToken(
+                                            SessionData(s"code:$encodedPayload"),
+                                            AuthCodeTtl
+                                        )
+                                        val uriWithCode =
+                                            targetUri.withQueryParam("code", authCode)
+                                        val finalUri = state.fold(uriWithCode)(s =>
+                                            uriWithCode.withQueryParam("state", s)
+                                        )
+                                        Found(org.http4s.headers.Location(finalUri))
+                                            .map(_.putHeaders(corsHeader))
+                                }
 
     private def handle(user: User, request: Json): IO[org.http4s.Response[IO]] =
         val cursor = request.hcursor

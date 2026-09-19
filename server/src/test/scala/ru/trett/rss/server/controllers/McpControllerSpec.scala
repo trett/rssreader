@@ -136,6 +136,16 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         json.hcursor.get[String]("token_endpoint").toOption shouldBe Some(
             "http://localhost:8080/oauth/token"
         )
+        json.hcursor.get[String]("authorization_endpoint").toOption shouldBe Some(
+            "http://localhost:8080/oauth/authorize"
+        )
+        val responseTypes = json.hcursor
+            .downField("response_types_supported")
+            .values
+            .toList
+            .flatten
+            .flatMap(_.asString)
+        responseTypes should contain("code")
         val grantTypes = json.hcursor
             .downField("grant_types_supported")
             .values
@@ -143,7 +153,8 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             .flatten
             .flatMap(_.asString)
         grantTypes should contain("client_credentials")
-        grantTypes should not contain "authorization_code"
+        grantTypes should contain("authorization_code")
+        grantTypes should contain("refresh_token")
     }
 
     test("POST /oauth/token with client_credentials issues access token and accesses /mcp") {
@@ -215,13 +226,124 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         response.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some("*")
     }
 
-    test("rejects /oauth/authorize with 404 Not Found") {
+    test("GET /oauth/authorize redirects with authorization code and state") {
         val request = Request[IO](
             Method.GET,
             uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback&state=xyz"
         )
         val response = controller.routes.orNotFound.run(request).unsafeRunSync()
-        response.status shouldBe Status.NotFound
+        response.status shouldBe Status.Found
+        val location = response.headers.get[org.http4s.headers.Location].map(_.uri.toString)
+        location shouldBe defined
+        location.get should startWith("http://localhost:3000/callback")
+        location.get should include("code=")
+        location.get should include("state=xyz")
+    }
+
+    test("GET /oauth/authorize validates parameters and rejects open redirects") {
+        val badClient = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=nonexistent&redirect_uri=http://localhost:3000/callback"
+        )
+        controller.routes.orNotFound
+            .run(badClient)
+            .unsafeRunSync()
+            .status shouldBe Status.BadRequest
+
+        val missingRedirect = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id"
+        )
+        controller.routes.orNotFound
+            .run(missingRedirect)
+            .unsafeRunSync()
+            .status shouldBe Status.BadRequest
+
+        val maliciousRedirect = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=javascript:alert(1)"
+        )
+        controller.routes.orNotFound
+            .run(maliciousRedirect)
+            .unsafeRunSync()
+            .status shouldBe Status.BadRequest
+    }
+
+    test("POST /oauth/token with authorization_code and client_secret exchanges for token") {
+        val authReq = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback"
+        )
+        val authResp = controller.routes.orNotFound.run(authReq).unsafeRunSync()
+        authResp.status shouldBe Status.Found
+        val loc = authResp.headers.get[org.http4s.headers.Location].get.uri
+        val code = loc.query.params("code")
+
+        val tokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        val tokenResp = controller.routes.orNotFound.run(tokenReq).unsafeRunSync()
+        tokenResp.status shouldBe Status.Ok
+        val json = tokenResp.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("token_type").toOption shouldBe Some("Bearer")
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+        json.hcursor.get[String]("refresh_token").toOption shouldBe defined
+    }
+
+    test(
+        "POST /oauth/token with authorization_code and PKCE (S256) exchanges for token without client_secret"
+    ) {
+        val verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+        val sha256 = java.security.MessageDigest.getInstance("SHA-256")
+        val challenge = java.util.Base64.getUrlEncoder.withoutPadding
+            .encodeToString(
+                sha256.digest(verifier.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
+            )
+
+        val authReq = Request[IO](
+            Method.GET,
+            Uri.unsafeFromString(
+                s"/oauth/authorize?response_type=code&client_id=$testClientId&redirect_uri=http://localhost:3000/callback&code_challenge=$challenge&code_challenge_method=S256"
+            )
+        )
+        val authResp = controller.routes.orNotFound.run(authReq).unsafeRunSync()
+        authResp.status shouldBe Status.Found
+        val loc = authResp.headers.get[org.http4s.headers.Location].get.uri
+        val code = loc.query.params("code")
+
+        // Valid verifier exchanges code
+        val tokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "code_verifier" -> verifier
+                )
+            )
+        val tokenResp = controller.routes.orNotFound.run(tokenReq).unsafeRunSync()
+        tokenResp.status shouldBe Status.Ok
+        val json = tokenResp.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+
+        // Invalid verifier is rejected
+        val badTokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "code_verifier" -> "wrong_verifier"
+                )
+            )
+        val badResp = controller.routes.orNotFound.run(badTokenReq).unsafeRunSync()
+        badResp.status shouldBe Status.Unauthorized
     }
 
     test("initialize returns server info and echoes the protocol version") {
