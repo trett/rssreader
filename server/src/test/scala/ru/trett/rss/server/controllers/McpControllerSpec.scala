@@ -11,6 +11,7 @@ import org.http4s.implicits.*
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.ci.*
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 import ru.trett.rss.models.{ChannelNews, FeedItemData}
@@ -25,7 +26,14 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
     implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
-    private val user = User("user-id", "Test User", "test@example.com", User.Settings())
+    private val testClientId = "mcp_test_client_id"
+    private val testClientSecret = "mcp_test_client_secret"
+    private val user = User(
+        "user-id",
+        "Test User",
+        "test@example.com",
+        User.Settings(mcpClientId = Some(testClientId), mcpClientSecret = Some(testClientSecret))
+    )
     private val jwtManager = new JwtManager("test-secret")
     private val token = jwtManager.createToken(SessionData(user.email))
 
@@ -45,6 +53,8 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val userService = new UserService(mock[UserRepository]) {
             override def getUserByEmail(email: String): IO[Option[User]] =
                 IO.pure(if email == user.email then Some(user) else None)
+            override def getUserByMcpClientId(clientId: String): IO[Option[User]] =
+                IO.pure(if clientId == testClientId then Some(user) else None)
         }
         val feedService = new FeedService(mock[FeedRepository]) {
             override def getNewsByDateGrouped(
@@ -72,37 +82,130 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             "params" -> params
         )
 
-    test("rejects request without a token") {
-        post(rpc("tools/list"), withToken = false).status shouldBe Status.Forbidden
+    test("rejects request without a token with 401 and WWW-Authenticate header") {
+        val response = post(rpc("tools/list"), withToken = false)
+        response.status shouldBe Status.Unauthorized
+        val authHeader = response.headers.get(ci"WWW-Authenticate").map(_.head.value)
+        authHeader shouldBe defined
+        authHeader.get should include("Bearer resource_metadata=")
+        authHeader.get should include(".well-known/oauth-protected-resource")
     }
 
-    test("rejects request with an invalid token") {
+    test("rejects request with an invalid token with 401 and error=invalid_token") {
         val request = Request[IO](Method.POST, uri"/mcp")
             .withEntity(rpc("tools/list"))
             .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, "garbage")))
-        controller.routes.orNotFound.run(request).unsafeRunSync().status shouldBe Status.Forbidden
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Unauthorized
+        val authHeader = response.headers.get(ci"WWW-Authenticate").map(_.head.value)
+        authHeader shouldBe defined
+        authHeader.get should include("error=\"invalid_token\"")
     }
 
-    test("authenticates via a token in the URL path (web custom connector)") {
+    test("rejects requests to URL path /mcp/:token with 404 Not Found") {
         val request = Request[IO](Method.POST, uri"/mcp" / token).withEntity(rpc("tools/list"))
         val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.NotFound
+    }
+
+    test("GET /.well-known/oauth-protected-resource returns RFC 9728 metadata") {
+        val request =
+            Request[IO](Method.GET, uri"http://localhost:8080/.well-known/oauth-protected-resource")
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
         response.status shouldBe Status.Ok
-        val names = response
-            .as[Json]
-            .unsafeRunSync()
-            .hcursor
-            .downField("result")
-            .downField("tools")
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("resource").toOption shouldBe Some("http://localhost:8080/mcp")
+        val authServers = json.hcursor
+            .downField("authorization_servers")
             .values
             .toList
             .flatten
-            .flatMap(_.hcursor.get[String]("name").toOption)
-        names should contain("get_news_by_date")
+            .flatMap(_.asString)
+        authServers should contain("http://localhost:8080")
     }
 
-    test("rejects an invalid token in the URL path") {
-        val request = Request[IO](Method.POST, uri"/mcp" / "garbage").withEntity(rpc("tools/list"))
-        controller.routes.orNotFound.run(request).unsafeRunSync().status shouldBe Status.Forbidden
+    test("GET /.well-known/oauth-authorization-server returns RFC 8414 metadata") {
+        val request = Request[IO](
+            Method.GET,
+            uri"http://localhost:8080/.well-known/oauth-authorization-server"
+        )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("token_endpoint").toOption shouldBe Some(
+            "http://localhost:8080/oauth/token"
+        )
+        val grantTypes = json.hcursor
+            .downField("grant_types_supported")
+            .values
+            .toList
+            .flatten
+            .flatMap(_.asString)
+        (grantTypes should contain).allOf("client_credentials", "authorization_code")
+    }
+
+    test("POST /oauth/token with client_credentials issues access token and accesses /mcp") {
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "client_credentials",
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("token_type").toOption shouldBe Some("Bearer")
+        val accessToken = json.hcursor.get[String]("access_token").toOption
+        accessToken shouldBe defined
+
+        // Use the issued access token to call /mcp
+        val mcpRequest = Request[IO](Method.POST, uri"/mcp")
+            .withEntity(rpc("tools/list"))
+            .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.get)))
+        val mcpResponse = controller.routes.orNotFound.run(mcpRequest).unsafeRunSync()
+        mcpResponse.status shouldBe Status.Ok
+    }
+
+    test("POST /oauth/token with Basic auth issues access token") {
+        val basicAuth = java.util.Base64.getEncoder.encodeToString(
+            s"$testClientId:$testClientSecret".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        )
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(UrlForm("grant_type" -> "client_credentials"))
+            .withHeaders(Authorization(Credentials.Token(ci"Basic", basicAuth)))
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+    }
+
+    test("POST /oauth/token rejects invalid client credentials") {
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "client_credentials",
+                    "client_id" -> testClientId,
+                    "client_secret" -> "wrong_secret"
+                )
+            )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Unauthorized
+    }
+
+    test("GET /oauth/authorize redirects with authorization code") {
+        val request = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback&state=xyz"
+        )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.SeeOther
+        val location = response.headers.get[org.http4s.headers.Location].map(_.uri.toString)
+        location shouldBe defined
+        location.get should startWith("http://localhost:3000/callback")
+        location.get should include("code=")
+        location.get should include("state=xyz")
     }
 
     test("initialize returns server info and echoes the protocol version") {

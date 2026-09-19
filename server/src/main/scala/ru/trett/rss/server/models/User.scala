@@ -19,7 +19,17 @@ object User:
             keywordRules <- c.getOrElse[List[String]]("keywordRules")(List.empty)
             geminiApiKey <- c.getOrElse[Option[String]]("geminiApiKey")(None)
             filterNews <- c.getOrElse[Boolean]("filterNews")(false)
-        yield Settings(hideRead, bannedCategories, keywordRules, geminiApiKey, filterNews)
+            mcpClientId <- c.getOrElse[Option[String]]("mcpClientId")(None)
+            mcpClientSecret <- c.getOrElse[Option[String]]("mcpClientSecret")(None)
+        yield Settings(
+            hideRead,
+            bannedCategories,
+            keywordRules,
+            geminiApiKey,
+            filterNews,
+            mcpClientId,
+            mcpClientSecret
+        )
     }
 
     case class Settings(
@@ -27,8 +37,11 @@ object User:
         bannedCategories: List[String] = List.empty,
         keywordRules: List[String] = List.empty,
         geminiApiKey: Option[String] = None,
-        filterNews: Boolean = false
+        filterNews: Boolean = false,
+        mcpClientId: Option[String] = None,
+        mcpClientSecret: Option[String] = None
     ):
         override def toString: String =
             s"Settings(hideRead=$hideRead, bannedCategories=$bannedCategories, keywordRules=$keywordRules, geminiApiKey=${geminiApiKey
-                    .map(_ => "<redacted>")}, filterNews=$filterNews)"
+                    .map(_ => "<redacted>")}, filterNews=$filterNews, mcpClientId=$mcpClientId, mcpClientSecret=${mcpClientSecret
+                    .map(_ => "<redacted>")})"

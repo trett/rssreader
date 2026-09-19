@@ -215,7 +215,7 @@ object Server extends IOApp:
         logoutController: LogoutController[IO]
     ): AuthedRoutes[User, IO] =
         ChannelController.routes(channelService)
-            <+> UserController.routes(userService, cacheUpdater, jwtManager)
+            <+> UserController.routes(userService, cacheUpdater)
             <+> FeedController.routes(feedService)
             <+> logoutController.routes
 

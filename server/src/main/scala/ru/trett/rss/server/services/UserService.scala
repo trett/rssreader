@@ -31,7 +31,9 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
                         user.settings.bannedCategories,
                         user.settings.keywordRules,
                         user.settings.geminiApiKey,
-                        user.settings.filterNews
+                        user.settings.filterNews,
+                        user.settings.mcpClientId,
+                        user.settings.mcpClientSecret
                     )
                 )
             )
@@ -46,6 +48,9 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
             case Left(err) =>
                 logger.error(err)(s"User with email $email not found") *> IO.none
         }
+
+    def getUserByMcpClientId(clientId: String): IO[Option[User]] =
+        userRepository.findUserByMcpClientId(clientId)
 
     def updateUserSettings(user: User): IO[Int] =
         userRepository.updateUserSettings(user)
