@@ -1,6 +1,6 @@
 package ru.trett.rss.server.controllers
 
-import cats.effect.IO
+import cats.effect.{IO, Ref}
 import io.circe.Json
 import io.circe.generic.auto.*
 import io.circe.syntax.*
@@ -46,13 +46,16 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private val noStoreHeader = Header.Raw(ci"Cache-Control", "no-store")
     private val noCacheHeader = Header.Raw(ci"Pragma", "no-cache")
 
-    private val consumedAuthCodes = new java.util.concurrent.ConcurrentHashMap[String, Long]()
+    private val consumedAuthCodes: Ref[IO, Map[String, Long]] =
+        Ref.unsafe[IO, Map[String, Long]](Map.empty)
 
-    private def isCodeConsumed(code: String): Boolean =
-        val now = System.currentTimeMillis()
-        if consumedAuthCodes.size() > 100 then
-            consumedAuthCodes.entrySet().removeIf(_.getValue < now)
-        Option(consumedAuthCodes.putIfAbsent(code, now + AuthCodeTtl.toMillis)).isDefined
+    private def isCodeConsumed(code: String): IO[Boolean] =
+        consumedAuthCodes.modify { codes =>
+            val now = System.currentTimeMillis()
+            val cleaned = if codes.size > 1000 then codes.filter(_._2 >= now) else codes
+            if cleaned.contains(code) then (cleaned, true)
+            else (cleaned.updated(code, now + AuthCodeTtl.toMillis), false)
+        }
 
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
         case req @ GET -> Root / ".well-known" / "oauth-protected-resource" =>
@@ -321,142 +324,163 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                                 noStoreHeader,
                                 noCacheHeader
                             )
-                        case Some(code) if isCodeConsumed(code) =>
-                            BadRequest(
-                                oauthError(
-                                    "invalid_grant",
-                                    "Authorization code has already been used"
-                                ),
-                                corsHeader,
-                                noStoreHeader,
-                                noCacheHeader
-                            )
                         case Some(code) =>
-                            jwtManager.verifyToken(code) match
-                                case Right(session) if session.userEmail.startsWith("code:") =>
-                                    val rawPayload = session.userEmail.stripPrefix("code:")
-                                    val parsedOpt = Try {
-                                        val jsonStr = new String(
-                                            Base64.getUrlDecoder.decode(rawPayload),
-                                            StandardCharsets.UTF_8
-                                        )
-                                        io.circe.parser.parse(jsonStr).toOption
-                                    }.toOption.flatten
-
-                                    val (
-                                        email,
-                                        codeClientIdOpt,
-                                        codeChallengeOpt,
-                                        codeChallengeMethodOpt
-                                    ) =
-                                        parsedOpt match
-                                            case Some(json) =>
-                                                val c = json.hcursor
-                                                (
-                                                    c.get[String]("email").getOrElse(""),
-                                                    c.get[String]("client_id").toOption,
-                                                    c.get[String]("code_challenge").toOption,
-                                                    c.get[String]("code_challenge_method").toOption
-                                                )
-                                            case None =>
-                                                (rawPayload, None, None, None)
-
-                                    if email.isEmpty then
-                                        BadRequest(
-                                            oauthError(
-                                                "invalid_grant",
-                                                "Invalid authorization code payload"
-                                            ),
-                                            corsHeader,
-                                            noStoreHeader,
-                                            noCacheHeader
-                                        )
-                                    else
-                                        userService.getUserByEmail(email).flatMap {
-                                            case Some(user) =>
-                                                val clientMatches =
-                                                    codeClientIdOpt.forall(cid =>
-                                                        user.settings.mcpClientId.contains(cid)
-                                                    ) &&
-                                                        (clientId.isEmpty || user.settings.mcpClientId
-                                                            .contains(clientId)) &&
-                                                        (codeClientIdOpt.isEmpty || clientId.isEmpty || codeClientIdOpt
-                                                            .contains(clientId))
-
-                                                val secretMatches =
-                                                    clientSecret.nonEmpty && user.settings.mcpClientSecret
-                                                        .exists(constantTimeEquals(_, clientSecret))
-
-                                                val pkceMatches =
-                                                    (
-                                                        codeChallengeOpt,
-                                                        params.get("code_verifier")
-                                                    ) match
-                                                        case (Some(challenge), Some(verifier)) =>
-                                                            val method =
-                                                                codeChallengeMethodOpt
-                                                                    .getOrElse("plain")
-                                                                    .toUpperCase
-                                                            if method == "S256" then
-                                                                val sha256 =
-                                                                    MessageDigest.getInstance(
-                                                                        "SHA-256"
-                                                                    )
-                                                                val expected = Base64.getUrlEncoder.withoutPadding
-                                                                    .encodeToString(
-                                                                        sha256.digest(
-                                                                            verifier.getBytes(
-                                                                                StandardCharsets.US_ASCII
-                                                                            )
-                                                                        )
-                                                                    )
-                                                                constantTimeEquals(
-                                                                    expected,
-                                                                    challenge
-                                                                )
-                                                            else if method == "PLAIN" then
-                                                                constantTimeEquals(
-                                                                    verifier,
-                                                                    challenge
-                                                                )
-                                                            else false
-                                                        case _ => false
-
-                                                val isAuthorized = clientMatches && (
-                                                    secretMatches ||
-                                                        pkceMatches ||
-                                                        (codeChallengeOpt.isEmpty && user.settings.mcpClientSecret.isEmpty)
-                                                )
-
-                                                if isAuthorized then
-                                                    logger.info(
-                                                        s"Issued MCP OAuth token via authorization_code for ${user.email}"
-                                                    ) *>
-                                                        tokenSuccessResponse(user)
-                                                else
-                                                    unauthorizedClient(
-                                                        "Invalid client credentials or code verifier"
-                                                    )
-
-                                            case None =>
-                                                BadRequest(
-                                                    oauthError("invalid_grant", "User not found"),
-                                                    corsHeader,
-                                                    noStoreHeader,
-                                                    noCacheHeader
-                                                )
-                                        }
-
-                                case _ =>
+                            isCodeConsumed(code).flatMap {
+                                case true =>
                                     BadRequest(
                                         oauthError(
                                             "invalid_grant",
-                                            "Invalid or expired authorization code"
+                                            "Authorization code has already been used"
                                         ),
                                         corsHeader,
                                         noStoreHeader,
                                         noCacheHeader
                                     )
+                                case false =>
+                                    jwtManager.verifyToken(code) match {
+                                        case Right(session)
+                                            if session.userEmail.startsWith("code:") =>
+                                            val rawPayload = session.userEmail.stripPrefix("code:")
+                                            val parsedOpt = Try {
+                                                val jsonStr = new String(
+                                                    Base64.getUrlDecoder.decode(rawPayload),
+                                                    StandardCharsets.UTF_8
+                                                )
+                                                io.circe.parser.parse(jsonStr).toOption
+                                            }.toOption.flatten
+
+                                            val (
+                                                email,
+                                                codeClientIdOpt,
+                                                codeChallengeOpt,
+                                                codeChallengeMethodOpt
+                                            ) =
+                                                parsedOpt match
+                                                    case Some(json) =>
+                                                        val c = json.hcursor
+                                                        (
+                                                            c.get[String]("email").getOrElse(""),
+                                                            c.get[String]("client_id").toOption,
+                                                            c.get[String]("code_challenge")
+                                                                .toOption,
+                                                            c.get[String]("code_challenge_method")
+                                                                .toOption
+                                                        )
+                                                    case None =>
+                                                        (rawPayload, None, None, None)
+
+                                            if email.isEmpty then
+                                                BadRequest(
+                                                    oauthError(
+                                                        "invalid_grant",
+                                                        "Invalid authorization code payload"
+                                                    ),
+                                                    corsHeader,
+                                                    noStoreHeader,
+                                                    noCacheHeader
+                                                )
+                                            else
+                                                userService.getUserByEmail(email).flatMap {
+                                                    case Some(user) =>
+                                                        val clientMatches =
+                                                            codeClientIdOpt.forall(cid =>
+                                                                user.settings.mcpClientId
+                                                                    .contains(cid)
+                                                            ) &&
+                                                                (clientId.isEmpty || user.settings.mcpClientId
+                                                                    .contains(clientId)) &&
+                                                                (codeClientIdOpt.isEmpty || clientId.isEmpty || codeClientIdOpt
+                                                                    .contains(clientId))
+
+                                                        val secretMatches =
+                                                            clientSecret.nonEmpty && user.settings.mcpClientSecret
+                                                                .exists(
+                                                                    constantTimeEquals(
+                                                                        _,
+                                                                        clientSecret
+                                                                    )
+                                                                )
+
+                                                        val pkceMatches =
+                                                            (
+                                                                codeChallengeOpt,
+                                                                params.get("code_verifier")
+                                                            ) match
+                                                                case (
+                                                                        Some(challenge),
+                                                                        Some(verifier)
+                                                                    ) =>
+                                                                    val method =
+                                                                        codeChallengeMethodOpt
+                                                                            .getOrElse("plain")
+                                                                            .toUpperCase
+                                                                    if method == "S256" then
+                                                                        val sha256 =
+                                                                            MessageDigest
+                                                                                .getInstance(
+                                                                                    "SHA-256"
+                                                                                )
+                                                                        val expected =
+                                                                            Base64.getUrlEncoder.withoutPadding
+                                                                                .encodeToString(
+                                                                                    sha256.digest(
+                                                                                        verifier.getBytes(
+                                                                                            StandardCharsets.US_ASCII
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                        constantTimeEquals(
+                                                                            expected,
+                                                                            challenge
+                                                                        )
+                                                                    else if method == "PLAIN" then
+                                                                        constantTimeEquals(
+                                                                            verifier,
+                                                                            challenge
+                                                                        )
+                                                                    else false
+                                                                case _ => false
+
+                                                        val isAuthorized = clientMatches && (
+                                                            secretMatches ||
+                                                                pkceMatches ||
+                                                                (codeChallengeOpt.isEmpty && user.settings.mcpClientSecret.isEmpty)
+                                                        )
+
+                                                        if isAuthorized then
+                                                            logger.info(
+                                                                s"Issued MCP OAuth token via authorization_code for ${user.email}"
+                                                            ) *>
+                                                                tokenSuccessResponse(user)
+                                                        else
+                                                            unauthorizedClient(
+                                                                "Invalid client credentials or code verifier"
+                                                            )
+
+                                                    case None =>
+                                                        BadRequest(
+                                                            oauthError(
+                                                                "invalid_grant",
+                                                                "User not found"
+                                                            ),
+                                                            corsHeader,
+                                                            noStoreHeader,
+                                                            noCacheHeader
+                                                        )
+                                                }
+
+                                        case _ =>
+                                            BadRequest(
+                                                oauthError(
+                                                    "invalid_grant",
+                                                    "Invalid or expired authorization code"
+                                                ),
+                                                corsHeader,
+                                                noStoreHeader,
+                                                noCacheHeader
+                                            )
+                                    }
+                            }
 
                 case "refresh_token" =>
                     params.get("refresh_token") match
