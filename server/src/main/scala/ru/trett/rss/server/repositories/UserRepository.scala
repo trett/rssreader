@@ -58,12 +58,7 @@ class UserRepository(xa: HikariTransactor[IO]):
 
     def findUserByMcpClientId(clientId: String): IO[Option[User]] =
         sql"SELECT id, name, email, settings::json FROM users WHERE settings->>'mcpClientId' = $clientId"
-            .query[(String, String, String, Json)]
+            .query[Option[User]]
             .option
             .transact(xa)
-            .map(_.flatMap { case (id, name, email, settings) =>
-                decode[User.Settings](settings.noSpaces) match {
-                    case Right(decodedSettings) => Some(User(id, name, email, decodedSettings))
-                    case Left(_)                => None
-                }
-            })
+            .map(_.flatten)

@@ -3,6 +3,7 @@ package ru.trett.rss.server.controllers
 import cats.effect.*
 import cats.effect.unsafe.implicits.global
 import io.circe.Json
+import io.circe.syntax.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
@@ -141,7 +142,8 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             .toList
             .flatten
             .flatMap(_.asString)
-        (grantTypes should contain).allOf("client_credentials", "authorization_code")
+        grantTypes should contain("client_credentials")
+        grantTypes should not contain "authorization_code"
     }
 
     test("POST /oauth/token with client_credentials issues access token and accesses /mcp") {
@@ -166,6 +168,23 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.get)))
         val mcpResponse = controller.routes.orNotFound.run(mcpRequest).unsafeRunSync()
         mcpResponse.status shouldBe Status.Ok
+        mcpResponse.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some(
+            "*"
+        )
+    }
+
+    test("POST /oauth/token with JSON body issues access token") {
+        val jsonBody = Json.obj(
+            "grant_type" -> "client_credentials".asJson,
+            "client_id" -> testClientId.asJson,
+            "client_secret" -> testClientSecret.asJson
+        )
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(jsonBody)
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
     }
 
     test("POST /oauth/token with Basic auth issues access token") {
@@ -181,7 +200,7 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         json.hcursor.get[String]("access_token").toOption shouldBe defined
     }
 
-    test("POST /oauth/token rejects invalid client credentials") {
+    test("POST /oauth/token rejects invalid client credentials with Cache-Control no-store") {
         val request = Request[IO](Method.POST, uri"/oauth/token")
             .withEntity(
                 UrlForm(
@@ -192,26 +211,24 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             )
         val response = controller.routes.orNotFound.run(request).unsafeRunSync()
         response.status shouldBe Status.Unauthorized
+        response.headers.get(ci"Cache-Control").map(_.head.value) shouldBe Some("no-store")
+        response.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some("*")
     }
 
-    test("GET /oauth/authorize redirects with authorization code") {
+    test("rejects /oauth/authorize with 404 Not Found") {
         val request = Request[IO](
             Method.GET,
             uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback&state=xyz"
         )
         val response = controller.routes.orNotFound.run(request).unsafeRunSync()
-        response.status shouldBe Status.SeeOther
-        val location = response.headers.get[org.http4s.headers.Location].map(_.uri.toString)
-        location shouldBe defined
-        location.get should startWith("http://localhost:3000/callback")
-        location.get should include("code=")
-        location.get should include("state=xyz")
+        response.status shouldBe Status.NotFound
     }
 
     test("initialize returns server info and echoes the protocol version") {
         val response =
             post(rpc("initialize", Json.obj("protocolVersion" -> Json.fromString("2025-06-18"))))
         response.status shouldBe Status.Ok
+        response.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some("*")
         val body = response.as[Json].unsafeRunSync()
         val result = body.hcursor.downField("result")
         result.get[String]("protocolVersion").toOption shouldBe Some("2025-06-18")

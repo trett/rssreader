@@ -55,14 +55,12 @@ object UserController {
                 for {
                     settings <- req.req.as[UserSettings]
                     updatedUser = user.copy(settings =
-                        User.Settings(
-                            settings.hideRead,
-                            settings.bannedCategories,
-                            settings.keywordRules,
-                            settings.geminiApiKey,
-                            settings.filterNews,
-                            settings.mcpClientId,
-                            settings.mcpClientSecret
+                        user.settings.copy(
+                            hideRead = settings.hideRead,
+                            bannedCategories = settings.bannedCategories,
+                            keywordRules = settings.keywordRules,
+                            geminiApiKey = settings.geminiApiKey,
+                            filterNews = settings.filterNews
                         )
                     )
                     result <- userService.updateUserSettings(updatedUser)

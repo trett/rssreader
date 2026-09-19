@@ -283,8 +283,16 @@ object SettingsPage {
             .mapSuccess(_.get)
 
     private def copyToClipboard(text: String, label: String): Unit =
-        org.scalajs.dom.window.navigator.clipboard.writeText(text)
-        infoMessage(s"$label copied to clipboard")
+        import scala.concurrent.ExecutionContext.Implicits.global
+        org.scalajs.dom.window.navigator.clipboard
+            .writeText(text)
+            .toFuture
+            .onComplete {
+                case scala.util.Success(_) =>
+                    infoMessage(s"$label copied to clipboard")
+                case scala.util.Failure(ex) =>
+                    handleError(new Exception(s"Failed to copy $label: ${ex.getMessage}"))
+            }
 
     private def mcpCredentialsSection(): HtmlElement = {
         val serverUrl = org.scalajs.dom.window.location.origin + "/mcp"
@@ -369,9 +377,13 @@ object SettingsPage {
                                     _.design := ButtonDesign.Attention,
                                     "Regenerate MCP credentials",
                                     _.icon := IconName.refresh,
-                                    onClick.flatMap(_ =>
-                                        generateMcpRequest()
-                                    ) --> generateMcpObserver
+                                    onClick
+                                        .filter(_ =>
+                                            org.scalajs.dom.window.confirm(
+                                                "Regenerate MCP credentials? Any connected AI clients will need the new credentials."
+                                            )
+                                        )
+                                        .flatMap(_ => generateMcpRequest()) --> generateMcpObserver
                                 )
                             )
                         )

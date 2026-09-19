@@ -17,6 +17,7 @@ import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.{FeedService, UserService}
 
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.time.{Duration, LocalDate, LocalTime, OffsetDateTime, ZoneOffset}
 import java.util.Base64
 import scala.concurrent.duration.*
@@ -40,8 +41,9 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
 
     private val AccessTokenTtl: FiniteDuration = 30.days
     private val RefreshTokenTtl: FiniteDuration = 90.days
-    private val AuthCodeTtl: FiniteDuration = 5.minutes
     private val corsHeader = Header.Raw(ci"Access-Control-Allow-Origin", "*")
+    private val noStoreHeader = Header.Raw(ci"Cache-Control", "no-store")
+    private val noCacheHeader = Header.Raw(ci"Pragma", "no-cache")
 
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
         case req @ GET -> Root / ".well-known" / "oauth-protected-resource" =>
@@ -64,8 +66,6 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
             handleTokenRequest(req)
         case req @ OPTIONS -> Root / "oauth" / "token" =>
             corsPreflight
-        case req @ GET -> Root / "oauth" / "authorize" =>
-            handleAuthorizeRequest(req)
         case req @ GET -> Root / "mcp" =>
             respondGet(req)
         case req @ POST -> Root / "mcp" =>
@@ -99,17 +99,11 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private def authorizationServerMetadata(baseUrl: String): Json =
         Json.obj(
             "issuer" -> baseUrl.asJson,
-            "authorization_endpoint" -> s"$baseUrl/oauth/authorize".asJson,
             "token_endpoint" -> s"$baseUrl/oauth/token".asJson,
             "token_endpoint_auth_methods_supported" -> Json
                 .arr("client_secret_basic".asJson, "client_secret_post".asJson),
-            "grant_types_supported" -> Json.arr(
-                "client_credentials".asJson,
-                "authorization_code".asJson,
-                "refresh_token".asJson
-            ),
-            "response_types_supported" -> Json.arr("code".asJson),
-            "code_challenge_methods_supported" -> Json.arr("S256".asJson),
+            "grant_types_supported" -> Json
+                .arr("client_credentials".asJson, "refresh_token".asJson),
             "scopes_supported" -> Json.arr("read".asJson, "mcp".asJson)
         )
 
@@ -122,13 +116,13 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
             .orElse {
                 val scheme = req.headers
                     .get(ci"X-Forwarded-Proto")
-                    .map(_.head.value)
+                    .map(_.head.value.split(",").head.trim)
                     .orElse(if req.isSecure.getOrElse(false) then Some("https") else None)
                     .getOrElse("http")
                 val host = req.headers
                     .get(ci"X-Forwarded-Host")
-                    .map(_.head.value)
-                    .orElse(req.headers.get(ci"Host").map(_.head.value))
+                    .map(_.head.value.split(",").head.trim)
+                    .orElse(req.headers.get(ci"Host").map(_.head.value.trim))
                 host.map(h => s"$scheme://$h")
             }
             .getOrElse("http://localhost:8080")
@@ -226,29 +220,47 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
             }
             .flatten
 
+    private def constantTimeEquals(a: String, b: String): Boolean =
+        MessageDigest.isEqual(
+            a.getBytes(StandardCharsets.UTF_8),
+            b.getBytes(StandardCharsets.UTF_8)
+        )
+
+    private def extractJsonParams(json: Json): Map[String, String] =
+        json.asObject
+            .map(_.toMap.collect {
+                case (k, v) if v.isString => k -> v.asString.get
+                case (k, v) if v.isNumber => k -> v.toString
+            })
+            .getOrElse(Map.empty)
+
     private def extractParams(req: org.http4s.Request[IO]): IO[Map[String, String]] =
-        req.as[UrlForm]
-            .map { form =>
-                form.values.view.mapValues(_.headOption.getOrElse("")).toMap
-            }
-            .handleErrorWith { _ =>
-                req.as[Json]
-                    .map { json =>
-                        json.asObject
-                            .map(_.toMap.collect {
-                                case (k, v) if v.isString => k -> v.asString.get
-                                case (k, v) if v.isNumber => k -> v.toString
-                            })
-                            .getOrElse(Map.empty)
+        req.contentType.map(_.mediaType) match
+            case Some(org.http4s.MediaType.application.json) =>
+                req.as[Json].map(extractJsonParams).handleError(_ => Map.empty)
+            case Some(org.http4s.MediaType.application.`x-www-form-urlencoded`) =>
+                req.as[UrlForm]
+                    .map(_.values.view.mapValues(_.headOption.getOrElse("")).toMap)
+                    .handleError(_ => Map.empty)
+            case _ =>
+                req.as[UrlForm]
+                    .map(_.values.view.mapValues(_.headOption.getOrElse("")).toMap)
+                    .handleErrorWith { _ =>
+                        req.as[Json]
+                            .map(extractJsonParams)
+                            .handleError(_ => req.uri.query.params)
                     }
-                    .handleError(_ => req.uri.query.params)
-            }
 
     private def unauthorizedClient(description: String): IO[org.http4s.Response[IO]] =
         IO.pure(
             org.http4s
                 .Response[IO](org.http4s.Status.Unauthorized)
-                .putHeaders(Header.Raw(ci"WWW-Authenticate", """Basic realm="mcp""""), corsHeader)
+                .putHeaders(
+                    Header.Raw(ci"WWW-Authenticate", """Basic realm="mcp""""),
+                    corsHeader,
+                    noStoreHeader,
+                    noCacheHeader
+                )
                 .withEntity(oauthError("invalid_client", description))
         )
 
@@ -267,7 +279,8 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                     else
                         userService.getUserByMcpClientId(clientId).flatMap {
                             case Some(user)
-                                if user.settings.mcpClientSecret.contains(clientSecret) =>
+                                if user.settings.mcpClientSecret
+                                    .exists(constantTimeEquals(_, clientSecret)) =>
                                 logger.info(
                                     s"Issued MCP OAuth token via client_credentials for ${user.email}"
                                 ) *>
@@ -276,39 +289,14 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                                 unauthorizedClient("Invalid client credentials")
                         }
 
-                case "authorization_code" =>
-                    params.get("code") match
-                        case None =>
-                            BadRequest(
-                                oauthError("invalid_request", "Missing code parameter"),
-                                corsHeader
-                            )
-                        case Some(code) =>
-                            jwtManager.verifyToken(code) match
-                                case Right(session) if session.userEmail.startsWith("code:") =>
-                                    val email = session.userEmail.stripPrefix("code:")
-                                    userService.getUserByEmail(email).flatMap {
-                                        case Some(user)
-                                            if clientId.nonEmpty && user.settings.mcpClientId
-                                                .contains(clientId) &&
-                                                clientSecret.nonEmpty && user.settings.mcpClientSecret
-                                                    .contains(clientSecret) =>
-                                            tokenSuccessResponse(user)
-                                        case _ =>
-                                            unauthorizedClient("Invalid client credentials or code")
-                                    }
-                                case _ =>
-                                    BadRequest(
-                                        oauthError("invalid_grant", "Invalid authorization code"),
-                                        corsHeader
-                                    )
-
                 case "refresh_token" =>
                     params.get("refresh_token") match
                         case None =>
                             BadRequest(
                                 oauthError("invalid_request", "Missing refresh_token parameter"),
-                                corsHeader
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
                             )
                         case Some(rt) =>
                             jwtManager.verifyToken(rt) match
@@ -320,13 +308,17 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                                         case None =>
                                             BadRequest(
                                                 oauthError("invalid_grant", "User not found"),
-                                                corsHeader
+                                                corsHeader,
+                                                noStoreHeader,
+                                                noCacheHeader
                                             )
                                     }
                                 case _ =>
                                     BadRequest(
                                         oauthError("invalid_grant", "Invalid refresh token"),
-                                        corsHeader
+                                        corsHeader,
+                                        noStoreHeader,
+                                        noCacheHeader
                                     )
 
                 case other =>
@@ -335,51 +327,29 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                             "unsupported_grant_type",
                             s"Grant type '$other' is not supported"
                         ),
-                        corsHeader
+                        corsHeader,
+                        noStoreHeader,
+                        noCacheHeader
                     )
         }
-
-    private def handleAuthorizeRequest(req: org.http4s.Request[IO]): IO[org.http4s.Response[IO]] =
-        val params = req.uri.query.params
-        val clientId = params.getOrElse("client_id", "")
-        val redirectUri = params.get("redirect_uri")
-        val state = params.get("state")
-        if clientId.isEmpty then BadRequest("Missing client_id", corsHeader)
-        else
-            redirectUri match
-                case None => BadRequest("Missing redirect_uri", corsHeader)
-                case Some(redirect) =>
-                    userService.getUserByMcpClientId(clientId).flatMap {
-                        case None => BadRequest(s"Invalid client_id: $clientId", corsHeader)
-                        case Some(user) =>
-                            val authCode = jwtManager.createToken(
-                                SessionData(s"code:${user.email}"),
-                                AuthCodeTtl
-                            )
-                            val targetUri = org.http4s.Uri
-                                .unsafeFromString(redirect)
-                                .withQueryParam("code", authCode)
-                            val finalUri =
-                                state.fold(targetUri)(s => targetUri.withQueryParam("state", s))
-                            SeeOther(org.http4s.headers.Location(finalUri))
-                    }
 
     private def handle(user: User, request: Json): IO[org.http4s.Response[IO]] =
         val cursor = request.hcursor
         val method = cursor.get[String]("method").getOrElse("")
         logger.info(s"MCP request: method=$method, user=${user.email}") *> {
             // A JSON-RPC notification has no `id` and expects no response body.
-            if !cursor.downField("id").succeeded then Accepted()
+            if !cursor.downField("id").succeeded then Accepted().map(_.putHeaders(corsHeader))
             else
                 val id = cursor.get[Json]("id").getOrElse(Json.Null)
                 method match
-                    case "initialize" => Ok(success(id, initializeResult(request)))
-                    case "ping"       => Ok(success(id, Json.obj()))
-                    case "tools/list" => Ok(success(id, toolsListResult))
-                    case "tools/call" => toolsCall(user, request).flatMap(r => Ok(success(id, r)))
+                    case "initialize" => Ok(success(id, initializeResult(request)), corsHeader)
+                    case "ping"       => Ok(success(id, Json.obj()), corsHeader)
+                    case "tools/list" => Ok(success(id, toolsListResult), corsHeader)
+                    case "tools/call" =>
+                        toolsCall(user, request).flatMap(r => Ok(success(id, r), corsHeader))
                     case other =>
                         logger.warn(s"MCP unknown method '$other' from ${user.email}") *>
-                            Ok(error(id, -32601, s"Method not found: $other"))
+                            Ok(error(id, -32601, s"Method not found: $other"), corsHeader)
         }
 
     private def initializeResult(request: Json): Json =
