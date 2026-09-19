@@ -420,4 +420,95 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         )
         post(notification).status shouldBe Status.Accepted
     }
+
+    test("POST /oauth/token enforces single-use of authorization code (replay protection)") {
+        val ctrl = controller
+        val authReq = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback"
+        )
+        val authResp = ctrl.routes.orNotFound.run(authReq).unsafeRunSync()
+        val loc = authResp.headers.get[org.http4s.headers.Location].get.uri
+        val code = loc.query.params("code")
+
+        def makeTokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        // First exchange succeeds
+        val resp1 = ctrl.routes.orNotFound.run(makeTokenReq).unsafeRunSync()
+        resp1.status shouldBe Status.Ok
+
+        // Replaying the same code is rejected
+        val resp2 = ctrl.routes.orNotFound.run(makeTokenReq).unsafeRunSync()
+        resp2.status shouldBe Status.BadRequest
+        val json2 = resp2.as[Json].unsafeRunSync()
+        json2.hcursor.get[String]("error").toOption shouldBe Some("invalid_grant")
+        json2.hcursor
+            .get[String]("error_description")
+            .toOption
+            .get should include("already been used")
+    }
+
+    test("POST /oauth/token with refresh_token exchanges for new token pair") {
+        val authReq = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback"
+        )
+        val authResp = controller.routes.orNotFound.run(authReq).unsafeRunSync()
+        val code =
+            authResp.headers.get[org.http4s.headers.Location].get.uri.query.params("code")
+
+        val tokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        val tokenResp = controller.routes.orNotFound.run(tokenReq).unsafeRunSync()
+        val refreshToken =
+            tokenResp.as[Json].unsafeRunSync().hcursor.get[String]("refresh_token").toOption.get
+
+        // Exchange refresh token
+        val refreshReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(UrlForm("grant_type" -> "refresh_token", "refresh_token" -> refreshToken))
+        val refreshResp = controller.routes.orNotFound.run(refreshReq).unsafeRunSync()
+        refreshResp.status shouldBe Status.Ok
+        val refreshJson = refreshResp.as[Json].unsafeRunSync()
+        refreshJson.hcursor.get[String]("access_token").toOption shouldBe defined
+        refreshJson.hcursor.get[String]("refresh_token").toOption shouldBe defined
+
+        // Invalid refresh token is rejected
+        val badReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm("grant_type" -> "refresh_token", "refresh_token" -> "invalid_token")
+            )
+        val badResp = controller.routes.orNotFound.run(badReq).unsafeRunSync()
+        badResp.status shouldBe Status.BadRequest
+    }
+
+    test("POST /oauth/token with URL-encoded Basic Auth credentials issues access token") {
+        val encodedId =
+            java.net.URLEncoder.encode(testClientId, java.nio.charset.StandardCharsets.UTF_8)
+        val encodedSecret =
+            java.net.URLEncoder.encode(testClientSecret, java.nio.charset.StandardCharsets.UTF_8)
+        val basicAuth = java.util.Base64.getEncoder.encodeToString(
+            s"$encodedId:$encodedSecret".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        )
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(UrlForm("grant_type" -> "client_credentials"))
+            .withHeaders(Authorization(Credentials.Token(ci"Basic", basicAuth)))
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+    }
 }

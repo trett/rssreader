@@ -46,30 +46,28 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private val noStoreHeader = Header.Raw(ci"Cache-Control", "no-store")
     private val noCacheHeader = Header.Raw(ci"Pragma", "no-cache")
 
+    private val consumedAuthCodes = new java.util.concurrent.ConcurrentHashMap[String, Long]()
+
+    private def isCodeConsumed(code: String): Boolean =
+        val now = System.currentTimeMillis()
+        if consumedAuthCodes.size() > 100 then
+            consumedAuthCodes.entrySet().removeIf(_.getValue < now)
+        Option(consumedAuthCodes.putIfAbsent(code, now + AuthCodeTtl.toMillis)).isDefined
+
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
         case req @ GET -> Root / ".well-known" / "oauth-protected-resource" =>
             Ok(protectedResourceMetadata(getBaseUrl(req)), corsHeader)
-        case req @ GET -> Root / ".well-known" / "oauth-protected-resource" / "mcp" =>
+        case req @ GET -> Root / ".well-known" / "oauth-protected-resource" / _ =>
             Ok(protectedResourceMetadata(getBaseUrl(req)), corsHeader)
-        case req @ GET -> Root / ".well-known" / "oauth-authorization-server" =>
+        case req @ GET -> Root / ".well-known" / endpoint
+            if endpoint == "oauth-authorization-server" || endpoint == "openid-configuration" =>
             Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
-        case req @ GET -> Root / ".well-known" / "oauth-authorization-server" / "mcp" =>
+        case req @ GET -> Root / ".well-known" / endpoint / _
+            if endpoint == "oauth-authorization-server" || endpoint == "openid-configuration" =>
             Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
-        case req @ GET -> Root / ".well-known" / "openid-configuration" =>
-            Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
-        case req @ GET -> Root / ".well-known" / "openid-configuration" / "mcp" =>
-            Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
-        case req @ OPTIONS -> Root / ".well-known" / "oauth-protected-resource" =>
+        case req @ OPTIONS -> Root / ".well-known" / _ =>
             corsPreflight
-        case req @ OPTIONS -> Root / ".well-known" / "oauth-protected-resource" / "mcp" =>
-            corsPreflight
-        case req @ OPTIONS -> Root / ".well-known" / "oauth-authorization-server" =>
-            corsPreflight
-        case req @ OPTIONS -> Root / ".well-known" / "oauth-authorization-server" / "mcp" =>
-            corsPreflight
-        case req @ OPTIONS -> Root / ".well-known" / "openid-configuration" =>
-            corsPreflight
-        case req @ OPTIONS -> Root / ".well-known" / "openid-configuration" / "mcp" =>
+        case req @ OPTIONS -> Root / ".well-known" / _ / _ =>
             corsPreflight
         case req @ GET -> Root / "oauth" / "authorize" =>
             handleAuthorizeRequest(req)
@@ -234,7 +232,13 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                         val decoded =
                             new String(Base64.getDecoder.decode(encoded), StandardCharsets.UTF_8)
                         val parts = decoded.split(":", 2)
-                        if parts.length == 2 then Some((parts(0), parts(1))) else None
+                        if parts.length == 2 then
+                            val clientId =
+                                java.net.URLDecoder.decode(parts(0), StandardCharsets.UTF_8)
+                            val clientSecret =
+                                java.net.URLDecoder.decode(parts(1), StandardCharsets.UTF_8)
+                            Some((clientId, clientSecret))
+                        else None
                     }.toOption.flatten
             }
             .flatten
@@ -313,6 +317,16 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                         case None =>
                             BadRequest(
                                 oauthError("invalid_request", "Missing code parameter"),
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
+                            )
+                        case Some(code) if isCodeConsumed(code) =>
+                            BadRequest(
+                                oauthError(
+                                    "invalid_grant",
+                                    "Authorization code has already been used"
+                                ),
                                 corsHeader,
                                 noStoreHeader,
                                 noCacheHeader

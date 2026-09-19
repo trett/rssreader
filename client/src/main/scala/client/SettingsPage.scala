@@ -284,15 +284,21 @@ object SettingsPage {
 
     private def copyToClipboard(text: String, label: String): Unit =
         import scala.concurrent.ExecutionContext.Implicits.global
-        org.scalajs.dom.window.navigator.clipboard
-            .writeText(text)
-            .toFuture
-            .onComplete {
-                case scala.util.Success(_) =>
-                    infoMessage(s"$label copied to clipboard")
-                case scala.util.Failure(ex) =>
-                    handleError(new Exception(s"Failed to copy $label: ${ex.getMessage}"))
-            }
+        val clipboardOpt = Option(org.scalajs.dom.window.navigator.clipboard)
+            .filterNot(scala.scalajs.js.isUndefined)
+        clipboardOpt match
+            case Some(clipboard) =>
+                clipboard
+                    .writeText(text)
+                    .toFuture
+                    .onComplete {
+                        case scala.util.Success(_) =>
+                            infoMessage(s"$label copied to clipboard")
+                        case scala.util.Failure(ex) =>
+                            handleError(new Exception(s"Failed to copy $label: ${ex.getMessage}"))
+                    }
+            case None =>
+                infoMessage(s"$label: $text")
 
     private def mcpCredentialsSection(): HtmlElement = {
         val serverUrl = org.scalajs.dom.window.location.origin + "/mcp"
