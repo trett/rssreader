@@ -1,27 +1,30 @@
 package ru.trett.rss.server.controllers
 
-import cats.effect.IO
+import cats.effect.{IO, Ref}
 import io.circe.Json
 import io.circe.generic.auto.*
 import io.circe.syntax.*
+import org.http4s.Header
 import org.http4s.HttpRoutes
+import org.http4s.UrlForm
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.io.*
 import org.typelevel.ci.*
 import org.typelevel.log4cats.{Logger, LoggerFactory}
-import ru.trett.rss.server.authorization.JwtManager
+import ru.trett.rss.server.authorization.{JwtManager, SessionData}
 import ru.trett.rss.server.models.User
 import ru.trett.rss.server.services.{FeedService, UserService}
 
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.time.{Duration, LocalDate, LocalTime, OffsetDateTime, ZoneOffset}
+import java.util.Base64
+import scala.concurrent.duration.*
 import scala.util.Try
 
-/** Minimal Model Context Protocol (JSON-RPC 2.0) endpoint so Claude can query news by date. Two
-  * ways in, both carrying a per-user JWT: Claude Desktop reaches `/mcp` through the `mcp-remote`
-  * bridge, which forwards an `Authorization: Bearer <jwt>` header; the claude.ai web custom
-  * connector cannot set a header, so it hits `/mcp/<jwt>` with the token in the path. Lives in the
-  * unprotected route group because it authenticates itself rather than via the session cookie.
+/** Minimal Model Context Protocol (JSON-RPC 2.0) endpoint supporting OAuth 2.0 / RFC 9728 discovery
+  * so Gemini Desktop App, Claude, and other MCP clients can securely query news by date.
   */
 class McpController(feedService: FeedService, userService: UserService, jwtManager: JwtManager)(
     using loggerFactory: LoggerFactory[IO]
@@ -36,23 +39,153 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
     private val DefaultLimit = 100
     private val MaxRange = Duration.ofHours(24)
 
+    private val AccessTokenTtl: FiniteDuration = 30.days
+    private val RefreshTokenTtl: FiniteDuration = 90.days
+    private val AuthCodeTtl: FiniteDuration = 5.minutes
+    private val corsHeader = Header.Raw(ci"Access-Control-Allow-Origin", "*")
+    private val noStoreHeader = Header.Raw(ci"Cache-Control", "no-store")
+    private val noCacheHeader = Header.Raw(ci"Pragma", "no-cache")
+
+    private val consumedAuthCodes: Ref[IO, Map[String, Long]] =
+        Ref.unsafe[IO, Map[String, Long]](Map.empty)
+
+    private def isCodeConsumed(code: String): IO[Boolean] =
+        consumedAuthCodes.modify { codes =>
+            val now = System.currentTimeMillis()
+            val cleaned = if codes.size > 1000 then codes.filter(_._2 >= now) else codes
+            if cleaned.contains(code) then (cleaned, true)
+            else (cleaned.updated(code, now + AuthCodeTtl.toMillis), false)
+        }
+
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
+        case req @ GET -> Root / ".well-known" / "oauth-protected-resource" =>
+            Ok(protectedResourceMetadata(getBaseUrl(req)), corsHeader)
+        case req @ GET -> Root / ".well-known" / "oauth-protected-resource" / _ =>
+            Ok(protectedResourceMetadata(getBaseUrl(req)), corsHeader)
+        case req @ GET -> Root / ".well-known" / endpoint
+            if endpoint == "oauth-authorization-server" || endpoint == "openid-configuration" =>
+            Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
+        case req @ GET -> Root / ".well-known" / endpoint / _
+            if endpoint == "oauth-authorization-server" || endpoint == "openid-configuration" =>
+            Ok(authorizationServerMetadata(getBaseUrl(req)), corsHeader)
+        case req @ OPTIONS -> Root / ".well-known" / _ =>
+            corsPreflight
+        case req @ OPTIONS -> Root / ".well-known" / _ / _ =>
+            corsPreflight
+        case req @ GET -> Root / "oauth" / "authorize" =>
+            handleAuthorizeRequest(req)
+        case req @ OPTIONS -> Root / "oauth" / "authorize" =>
+            corsPreflight
+        case req @ POST -> Root / "oauth" / "token" =>
+            handleTokenRequest(req)
+        case req @ OPTIONS -> Root / "oauth" / "token" =>
+            corsPreflight
+        case req @ GET -> Root / "mcp" =>
+            respondGet(req)
         case req @ POST -> Root / "mcp" =>
-            respond(bearerToken(req), req)
-        case req @ POST -> Root / "mcp" / token =>
-            respond(Some(token), req)
+            respond(req)
+        case req @ OPTIONS -> Root / "mcp" =>
+            corsPreflight
     }
 
-    private def respond(
-        token: Option[String],
-        req: org.http4s.Request[IO]
+    private def corsPreflight: IO[org.http4s.Response[IO]] =
+        IO.pure(
+            org.http4s
+                .Response[IO](org.http4s.Status.NoContent)
+                .putHeaders(
+                    corsHeader,
+                    Header.Raw(ci"Access-Control-Allow-Methods", "GET, POST, OPTIONS"),
+                    Header.Raw(
+                        ci"Access-Control-Allow-Headers",
+                        "Authorization, Content-Type, Accept"
+                    )
+                )
+        )
+
+    private def protectedResourceMetadata(baseUrl: String): Json =
+        Json.obj(
+            "resource" -> s"$baseUrl/mcp".asJson,
+            "authorization_servers" -> Json.arr(baseUrl.asJson),
+            "scopes_supported" -> Json.arr("read".asJson, "mcp".asJson),
+            "bearer_methods_supported" -> Json.arr("header".asJson)
+        )
+
+    private def authorizationServerMetadata(baseUrl: String): Json =
+        Json.obj(
+            "issuer" -> baseUrl.asJson,
+            "authorization_endpoint" -> s"$baseUrl/oauth/authorize".asJson,
+            "token_endpoint" -> s"$baseUrl/oauth/token".asJson,
+            "token_endpoint_auth_methods_supported" -> Json
+                .arr("client_secret_basic".asJson, "client_secret_post".asJson, "none".asJson),
+            "grant_types_supported" -> Json.arr(
+                "authorization_code".asJson,
+                "client_credentials".asJson,
+                "refresh_token".asJson
+            ),
+            "response_types_supported" -> Json.arr("code".asJson),
+            "code_challenge_methods_supported" -> Json.arr("S256".asJson, "plain".asJson),
+            "scopes_supported" -> Json.arr("read".asJson, "mcp".asJson)
+        )
+
+    private def getBaseUrl(req: org.http4s.Request[IO]): String =
+        req.uri.scheme
+            .map(_.value)
+            .flatMap { scheme =>
+                req.uri.authority.map(auth => s"$scheme://$auth")
+            }
+            .orElse {
+                val scheme = req.headers
+                    .get(ci"X-Forwarded-Proto")
+                    .map(_.head.value.split(",").head.trim)
+                    .orElse(if req.isSecure.getOrElse(false) then Some("https") else None)
+                    .getOrElse("http")
+                val host = req.headers
+                    .get(ci"X-Forwarded-Host")
+                    .map(_.head.value.split(",").head.trim)
+                    .orElse(req.headers.get(ci"Host").map(_.head.value.trim))
+                host.map(h => s"$scheme://$h")
+            }
+            .getOrElse("http://localhost:8080")
+
+    private def unauthorizedChallenge(
+        req: org.http4s.Request[IO],
+        invalidToken: Boolean
     ): IO[org.http4s.Response[IO]] =
-        resolveUser(token).flatMap {
-            case None =>
-                logger.warn("Unauthorized MCP request") *> Forbidden("Invalid or missing token")
-            case Some(user) =>
-                req.as[Json].flatMap(handle(user, _))
-        }
+        val baseUrl = getBaseUrl(req)
+        val metadataUrl = s"$baseUrl/.well-known/oauth-protected-resource"
+        val challenge =
+            if invalidToken then
+                s"""Bearer error="invalid_token", error_description="The access token is invalid or expired", resource_metadata="$metadataUrl""""
+            else s"""Bearer resource_metadata="$metadataUrl""""
+        logger.warn(s"Unauthorized MCP request") *>
+            IO.pure(
+                org.http4s
+                    .Response[IO](org.http4s.Status.Unauthorized)
+                    .putHeaders(Header.Raw(ci"WWW-Authenticate", challenge), corsHeader)
+                    .withEntity("Unauthorized: OAuth Bearer token required")
+            )
+
+    private def respond(req: org.http4s.Request[IO]): IO[org.http4s.Response[IO]] =
+        bearerToken(req) match
+            case None => unauthorizedChallenge(req, invalidToken = false)
+            case Some(t) =>
+                resolveUser(t).flatMap {
+                    case None       => unauthorizedChallenge(req, invalidToken = true)
+                    case Some(user) => req.as[Json].flatMap(handle(user, _))
+                }
+
+    private def respondGet(req: org.http4s.Request[IO]): IO[org.http4s.Response[IO]] =
+        bearerToken(req) match
+            case None => unauthorizedChallenge(req, invalidToken = false)
+            case Some(t) =>
+                resolveUser(t).flatMap {
+                    case None => unauthorizedChallenge(req, invalidToken = true)
+                    case Some(user) =>
+                        Ok(
+                            Json.obj("status" -> "ok".asJson, "user" -> user.email.asJson),
+                            corsHeader
+                        )
+                }
 
     private def bearerToken(req: org.http4s.Request[IO]): Option[String] =
         req.headers
@@ -62,30 +195,457 @@ class McpController(feedService: FeedService, userService: UserService, jwtManag
                 case header if header.startsWith("Bearer ") => header.stripPrefix("Bearer ")
             }
 
-    private def resolveUser(token: Option[String]): IO[Option[User]] =
-        token match
-            case Some(t) =>
-                jwtManager.verifyToken(t) match
-                    case Right(session) => userService.getUserByEmail(session.userEmail)
-                    case Left(_)        => IO.none
-            case None => IO.none
+    private def resolveUser(token: String): IO[Option[User]] =
+        jwtManager.verifyToken(token) match
+            case Right(session)
+                if !session.userEmail
+                    .startsWith("code:") && !session.userEmail.startsWith("refresh:") =>
+                userService.getUserByEmail(session.userEmail)
+            case _ => IO.none
+
+    private def oauthError(error: String, description: String): Json =
+        Json.obj("error" -> error.asJson, "error_description" -> description.asJson)
+
+    private def tokenSuccessResponse(user: User): IO[org.http4s.Response[IO]] =
+        val accessToken = jwtManager.createToken(SessionData(user.email), AccessTokenTtl)
+        val refreshToken =
+            jwtManager.createToken(SessionData(s"refresh:${user.email}"), RefreshTokenTtl)
+        val body = Json.obj(
+            "access_token" -> accessToken.asJson,
+            "token_type" -> "Bearer".asJson,
+            "expires_in" -> AccessTokenTtl.toSeconds.asJson,
+            "refresh_token" -> refreshToken.asJson,
+            "scope" -> "read mcp".asJson
+        )
+        Ok(
+            body,
+            corsHeader,
+            Header.Raw(ci"Cache-Control", "no-store"),
+            Header.Raw(ci"Pragma", "no-cache")
+        )
+
+    private def extractBasicCredentials(req: org.http4s.Request[IO]): Option[(String, String)] =
+        req.headers
+            .get(ci"Authorization")
+            .map(_.head.value)
+            .collect {
+                case header if header.startsWith("Basic ") =>
+                    val encoded = header.stripPrefix("Basic ").trim
+                    Try {
+                        val decoded =
+                            new String(Base64.getDecoder.decode(encoded), StandardCharsets.UTF_8)
+                        val parts = decoded.split(":", 2)
+                        if parts.length == 2 then
+                            val clientId =
+                                java.net.URLDecoder.decode(parts(0), StandardCharsets.UTF_8)
+                            val clientSecret =
+                                java.net.URLDecoder.decode(parts(1), StandardCharsets.UTF_8)
+                            Some((clientId, clientSecret))
+                        else None
+                    }.toOption.flatten
+            }
+            .flatten
+
+    private def constantTimeEquals(a: String, b: String): Boolean =
+        MessageDigest.isEqual(
+            a.getBytes(StandardCharsets.UTF_8),
+            b.getBytes(StandardCharsets.UTF_8)
+        )
+
+    private def extractJsonParams(json: Json): Map[String, String] =
+        json.asObject
+            .map(_.toMap.collect {
+                case (k, v) if v.isString => k -> v.asString.get
+                case (k, v) if v.isNumber => k -> v.toString
+            })
+            .getOrElse(Map.empty)
+
+    private def extractParams(req: org.http4s.Request[IO]): IO[Map[String, String]] =
+        req.contentType.map(_.mediaType) match
+            case Some(org.http4s.MediaType.application.json) =>
+                req.as[Json].map(extractJsonParams).handleError(_ => Map.empty)
+            case Some(org.http4s.MediaType.application.`x-www-form-urlencoded`) =>
+                req.as[UrlForm]
+                    .map(_.values.view.mapValues(_.headOption.getOrElse("")).toMap)
+                    .handleError(_ => Map.empty)
+            case _ =>
+                req.as[UrlForm]
+                    .map(_.values.view.mapValues(_.headOption.getOrElse("")).toMap)
+                    .handleErrorWith { _ =>
+                        req.as[Json]
+                            .map(extractJsonParams)
+                            .handleError(_ => req.uri.query.params)
+                    }
+
+    private def unauthorizedClient(description: String): IO[org.http4s.Response[IO]] =
+        IO.pure(
+            org.http4s
+                .Response[IO](org.http4s.Status.Unauthorized)
+                .putHeaders(
+                    Header.Raw(ci"WWW-Authenticate", """Basic realm="mcp""""),
+                    corsHeader,
+                    noStoreHeader,
+                    noCacheHeader
+                )
+                .withEntity(oauthError("invalid_client", description))
+        )
+
+    private def handleTokenRequest(req: org.http4s.Request[IO]): IO[org.http4s.Response[IO]] =
+        extractParams(req).flatMap { params =>
+            val basicCreds = extractBasicCredentials(req)
+            val clientId = basicCreds.map(_._1).orElse(params.get("client_id")).getOrElse("")
+            val clientSecret =
+                basicCreds.map(_._2).orElse(params.get("client_secret")).getOrElse("")
+            val grantType = params.getOrElse("grant_type", "")
+
+            grantType match
+                case "client_credentials" =>
+                    if clientId.isEmpty || clientSecret.isEmpty then
+                        unauthorizedClient("Missing client credentials")
+                    else
+                        userService.getUserByMcpClientId(clientId).flatMap {
+                            case Some(user)
+                                if user.settings.mcpClientSecret
+                                    .exists(constantTimeEquals(_, clientSecret)) =>
+                                logger.info(
+                                    s"Issued MCP OAuth token via client_credentials for ${user.email}"
+                                ) *>
+                                    tokenSuccessResponse(user)
+                            case _ =>
+                                unauthorizedClient("Invalid client credentials")
+                        }
+
+                case "authorization_code" =>
+                    params.get("code") match
+                        case None =>
+                            BadRequest(
+                                oauthError("invalid_request", "Missing code parameter"),
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
+                            )
+                        case Some(code) =>
+                            isCodeConsumed(code).flatMap {
+                                case true =>
+                                    BadRequest(
+                                        oauthError(
+                                            "invalid_grant",
+                                            "Authorization code has already been used"
+                                        ),
+                                        corsHeader,
+                                        noStoreHeader,
+                                        noCacheHeader
+                                    )
+                                case false =>
+                                    jwtManager.verifyToken(code) match {
+                                        case Right(session)
+                                            if session.userEmail.startsWith("code:") =>
+                                            val rawPayload = session.userEmail.stripPrefix("code:")
+                                            val parsedOpt = Try {
+                                                val jsonStr = new String(
+                                                    Base64.getUrlDecoder.decode(rawPayload),
+                                                    StandardCharsets.UTF_8
+                                                )
+                                                io.circe.parser.parse(jsonStr).toOption
+                                            }.toOption.flatten
+
+                                            val (
+                                                email,
+                                                codeClientIdOpt,
+                                                codeChallengeOpt,
+                                                codeChallengeMethodOpt
+                                            ) =
+                                                parsedOpt match
+                                                    case Some(json) =>
+                                                        val c = json.hcursor
+                                                        (
+                                                            c.get[String]("email").getOrElse(""),
+                                                            c.get[String]("client_id").toOption,
+                                                            c.get[String]("code_challenge")
+                                                                .toOption,
+                                                            c.get[String]("code_challenge_method")
+                                                                .toOption
+                                                        )
+                                                    case None =>
+                                                        (rawPayload, None, None, None)
+
+                                            if email.isEmpty then
+                                                BadRequest(
+                                                    oauthError(
+                                                        "invalid_grant",
+                                                        "Invalid authorization code payload"
+                                                    ),
+                                                    corsHeader,
+                                                    noStoreHeader,
+                                                    noCacheHeader
+                                                )
+                                            else
+                                                userService.getUserByEmail(email).flatMap {
+                                                    case Some(user) =>
+                                                        val clientMatches =
+                                                            codeClientIdOpt.forall(cid =>
+                                                                user.settings.mcpClientId
+                                                                    .contains(cid)
+                                                            ) &&
+                                                                (clientId.isEmpty || user.settings.mcpClientId
+                                                                    .contains(clientId)) &&
+                                                                (codeClientIdOpt.isEmpty || clientId.isEmpty || codeClientIdOpt
+                                                                    .contains(clientId))
+
+                                                        val secretMatches =
+                                                            clientSecret.nonEmpty && user.settings.mcpClientSecret
+                                                                .exists(
+                                                                    constantTimeEquals(
+                                                                        _,
+                                                                        clientSecret
+                                                                    )
+                                                                )
+
+                                                        val pkceMatches =
+                                                            (
+                                                                codeChallengeOpt,
+                                                                params.get("code_verifier")
+                                                            ) match
+                                                                case (
+                                                                        Some(challenge),
+                                                                        Some(verifier)
+                                                                    ) =>
+                                                                    val method =
+                                                                        codeChallengeMethodOpt
+                                                                            .getOrElse("plain")
+                                                                            .toUpperCase
+                                                                    if method == "S256" then
+                                                                        val sha256 =
+                                                                            MessageDigest
+                                                                                .getInstance(
+                                                                                    "SHA-256"
+                                                                                )
+                                                                        val expected =
+                                                                            Base64.getUrlEncoder.withoutPadding
+                                                                                .encodeToString(
+                                                                                    sha256.digest(
+                                                                                        verifier.getBytes(
+                                                                                            StandardCharsets.US_ASCII
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                        constantTimeEquals(
+                                                                            expected,
+                                                                            challenge
+                                                                        )
+                                                                    else if method == "PLAIN" then
+                                                                        constantTimeEquals(
+                                                                            verifier,
+                                                                            challenge
+                                                                        )
+                                                                    else false
+                                                                case _ => false
+
+                                                        val isAuthorized = clientMatches && (
+                                                            secretMatches ||
+                                                                pkceMatches ||
+                                                                (codeChallengeOpt.isEmpty && user.settings.mcpClientSecret.isEmpty)
+                                                        )
+
+                                                        if isAuthorized then
+                                                            logger.info(
+                                                                s"Issued MCP OAuth token via authorization_code for ${user.email}"
+                                                            ) *>
+                                                                tokenSuccessResponse(user)
+                                                        else
+                                                            unauthorizedClient(
+                                                                "Invalid client credentials or code verifier"
+                                                            )
+
+                                                    case None =>
+                                                        BadRequest(
+                                                            oauthError(
+                                                                "invalid_grant",
+                                                                "User not found"
+                                                            ),
+                                                            corsHeader,
+                                                            noStoreHeader,
+                                                            noCacheHeader
+                                                        )
+                                                }
+
+                                        case _ =>
+                                            BadRequest(
+                                                oauthError(
+                                                    "invalid_grant",
+                                                    "Invalid or expired authorization code"
+                                                ),
+                                                corsHeader,
+                                                noStoreHeader,
+                                                noCacheHeader
+                                            )
+                                    }
+                            }
+
+                case "refresh_token" =>
+                    params.get("refresh_token") match
+                        case None =>
+                            BadRequest(
+                                oauthError("invalid_request", "Missing refresh_token parameter"),
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
+                            )
+                        case Some(rt) =>
+                            jwtManager.verifyToken(rt) match
+                                case Right(session) if session.userEmail.startsWith("refresh:") =>
+                                    val email = session.userEmail.stripPrefix("refresh:")
+                                    userService.getUserByEmail(email).flatMap {
+                                        case Some(user) =>
+                                            tokenSuccessResponse(user)
+                                        case None =>
+                                            BadRequest(
+                                                oauthError("invalid_grant", "User not found"),
+                                                corsHeader,
+                                                noStoreHeader,
+                                                noCacheHeader
+                                            )
+                                    }
+                                case _ =>
+                                    BadRequest(
+                                        oauthError("invalid_grant", "Invalid refresh token"),
+                                        corsHeader,
+                                        noStoreHeader,
+                                        noCacheHeader
+                                    )
+
+                case other =>
+                    BadRequest(
+                        oauthError(
+                            "unsupported_grant_type",
+                            s"Grant type '$other' is not supported"
+                        ),
+                        corsHeader,
+                        noStoreHeader,
+                        noCacheHeader
+                    )
+        }
+
+    private def handleAuthorizeRequest(req: org.http4s.Request[IO]): IO[org.http4s.Response[IO]] =
+        val params = req.uri.query.params
+        val clientId = params.getOrElse("client_id", "")
+        val redirectUri = params.get("redirect_uri")
+        val state = params.get("state")
+        val responseType = params.getOrElse("response_type", "code")
+        val codeChallenge = params.get("code_challenge")
+        val codeChallengeMethod = params.get("code_challenge_method")
+
+        if responseType != "code" then
+            BadRequest(
+                oauthError(
+                    "unsupported_response_type",
+                    s"Response type '$responseType' is not supported"
+                ),
+                corsHeader,
+                noStoreHeader,
+                noCacheHeader
+            )
+        else if clientId.isEmpty then
+            BadRequest(
+                oauthError("invalid_request", "Missing client_id parameter"),
+                corsHeader,
+                noStoreHeader,
+                noCacheHeader
+            )
+        else
+            redirectUri match
+                case None =>
+                    BadRequest(
+                        oauthError("invalid_request", "Missing redirect_uri parameter"),
+                        corsHeader,
+                        noStoreHeader,
+                        noCacheHeader
+                    )
+                case Some(redirect) =>
+                    org.http4s.Uri.fromString(redirect) match
+                        case Left(failure) =>
+                            BadRequest(
+                                oauthError(
+                                    "invalid_request",
+                                    s"Invalid redirect_uri: ${failure.details}"
+                                ),
+                                corsHeader,
+                                noStoreHeader,
+                                noCacheHeader
+                            )
+                        case Right(targetUri) =>
+                            if targetUri.scheme.isEmpty || targetUri.scheme.exists(s =>
+                                    s.value == ci"javascript" || s.value == ci"data"
+                                )
+                            then
+                                BadRequest(
+                                    oauthError(
+                                        "invalid_request",
+                                        "Invalid redirect_uri: absolute URI required"
+                                    ),
+                                    corsHeader,
+                                    noStoreHeader,
+                                    noCacheHeader
+                                )
+                            else
+                                userService.getUserByMcpClientId(clientId).flatMap {
+                                    case None =>
+                                        BadRequest(
+                                            oauthError(
+                                                "invalid_client",
+                                                s"Invalid client_id: $clientId"
+                                            ),
+                                            corsHeader,
+                                            noStoreHeader,
+                                            noCacheHeader
+                                        )
+                                    case Some(user) =>
+                                        val payload = Json
+                                            .obj(
+                                                "email" -> user.email.asJson,
+                                                "client_id" -> clientId.asJson,
+                                                "code_challenge" -> codeChallenge
+                                                    .map(_.asJson)
+                                                    .getOrElse(Json.Null),
+                                                "code_challenge_method" -> codeChallengeMethod
+                                                    .map(_.asJson)
+                                                    .getOrElse(Json.Null)
+                                            )
+                                            .noSpaces
+                                        val encodedPayload = Base64.getUrlEncoder.withoutPadding
+                                            .encodeToString(
+                                                payload.getBytes(StandardCharsets.UTF_8)
+                                            )
+                                        val authCode = jwtManager.createToken(
+                                            SessionData(s"code:$encodedPayload"),
+                                            AuthCodeTtl
+                                        )
+                                        val uriWithCode =
+                                            targetUri.withQueryParam("code", authCode)
+                                        val finalUri = state.fold(uriWithCode)(s =>
+                                            uriWithCode.withQueryParam("state", s)
+                                        )
+                                        Found(org.http4s.headers.Location(finalUri))
+                                            .map(_.putHeaders(corsHeader))
+                                }
 
     private def handle(user: User, request: Json): IO[org.http4s.Response[IO]] =
         val cursor = request.hcursor
         val method = cursor.get[String]("method").getOrElse("")
         logger.info(s"MCP request: method=$method, user=${user.email}") *> {
             // A JSON-RPC notification has no `id` and expects no response body.
-            if !cursor.downField("id").succeeded then Accepted()
+            if !cursor.downField("id").succeeded then Accepted().map(_.putHeaders(corsHeader))
             else
                 val id = cursor.get[Json]("id").getOrElse(Json.Null)
                 method match
-                    case "initialize" => Ok(success(id, initializeResult(request)))
-                    case "ping"       => Ok(success(id, Json.obj()))
-                    case "tools/list" => Ok(success(id, toolsListResult))
-                    case "tools/call" => toolsCall(user, request).flatMap(r => Ok(success(id, r)))
+                    case "initialize" => Ok(success(id, initializeResult(request)), corsHeader)
+                    case "ping"       => Ok(success(id, Json.obj()), corsHeader)
+                    case "tools/list" => Ok(success(id, toolsListResult), corsHeader)
+                    case "tools/call" =>
+                        toolsCall(user, request).flatMap(r => Ok(success(id, r), corsHeader))
                     case other =>
                         logger.warn(s"MCP unknown method '$other' from ${user.email}") *>
-                            Ok(error(id, -32601, s"Method not found: $other"))
+                            Ok(error(id, -32601, s"Method not found: $other"), corsHeader)
         }
 
     private def initializeResult(request: Json): Json =

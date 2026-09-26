@@ -3,6 +3,7 @@ package ru.trett.rss.server.controllers
 import cats.effect.*
 import cats.effect.unsafe.implicits.global
 import io.circe.Json
+import io.circe.syntax.*
 import org.http4s.*
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
@@ -11,6 +12,7 @@ import org.http4s.implicits.*
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.ci.*
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 import ru.trett.rss.models.{ChannelNews, FeedItemData}
@@ -25,7 +27,14 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
     implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
-    private val user = User("user-id", "Test User", "test@example.com", User.Settings())
+    private val testClientId = "mcp_test_client_id"
+    private val testClientSecret = "mcp_test_client_secret"
+    private val user = User(
+        "user-id",
+        "Test User",
+        "test@example.com",
+        User.Settings(mcpClientId = Some(testClientId), mcpClientSecret = Some(testClientSecret))
+    )
     private val jwtManager = new JwtManager("test-secret")
     private val token = jwtManager.createToken(SessionData(user.email))
 
@@ -45,6 +54,8 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
         val userService = new UserService(mock[UserRepository]) {
             override def getUserByEmail(email: String): IO[Option[User]] =
                 IO.pure(if email == user.email then Some(user) else None)
+            override def getUserByMcpClientId(clientId: String): IO[Option[User]] =
+                IO.pure(if clientId == testClientId then Some(user) else None)
         }
         val feedService = new FeedService(mock[FeedRepository]) {
             override def getNewsByDateGrouped(
@@ -72,43 +83,274 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             "params" -> params
         )
 
-    test("rejects request without a token") {
-        post(rpc("tools/list"), withToken = false).status shouldBe Status.Forbidden
+    test("rejects request without a token with 401 and WWW-Authenticate header") {
+        val response = post(rpc("tools/list"), withToken = false)
+        response.status shouldBe Status.Unauthorized
+        val authHeader = response.headers.get(ci"WWW-Authenticate").map(_.head.value)
+        authHeader shouldBe defined
+        authHeader.get should include("Bearer resource_metadata=")
+        authHeader.get should include(".well-known/oauth-protected-resource")
     }
 
-    test("rejects request with an invalid token") {
+    test("rejects request with an invalid token with 401 and error=invalid_token") {
         val request = Request[IO](Method.POST, uri"/mcp")
             .withEntity(rpc("tools/list"))
             .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, "garbage")))
-        controller.routes.orNotFound.run(request).unsafeRunSync().status shouldBe Status.Forbidden
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Unauthorized
+        val authHeader = response.headers.get(ci"WWW-Authenticate").map(_.head.value)
+        authHeader shouldBe defined
+        authHeader.get should include("error=\"invalid_token\"")
     }
 
-    test("authenticates via a token in the URL path (web custom connector)") {
+    test("rejects requests to URL path /mcp/:token with 404 Not Found") {
         val request = Request[IO](Method.POST, uri"/mcp" / token).withEntity(rpc("tools/list"))
         val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.NotFound
+    }
+
+    test("GET /.well-known/oauth-protected-resource returns RFC 9728 metadata") {
+        val request =
+            Request[IO](Method.GET, uri"http://localhost:8080/.well-known/oauth-protected-resource")
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
         response.status shouldBe Status.Ok
-        val names = response
-            .as[Json]
-            .unsafeRunSync()
-            .hcursor
-            .downField("result")
-            .downField("tools")
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("resource").toOption shouldBe Some("http://localhost:8080/mcp")
+        val authServers = json.hcursor
+            .downField("authorization_servers")
             .values
             .toList
             .flatten
-            .flatMap(_.hcursor.get[String]("name").toOption)
-        names should contain("get_news_by_date")
+            .flatMap(_.asString)
+        authServers should contain("http://localhost:8080")
     }
 
-    test("rejects an invalid token in the URL path") {
-        val request = Request[IO](Method.POST, uri"/mcp" / "garbage").withEntity(rpc("tools/list"))
-        controller.routes.orNotFound.run(request).unsafeRunSync().status shouldBe Status.Forbidden
+    test("GET /.well-known/oauth-authorization-server returns RFC 8414 metadata") {
+        val request = Request[IO](
+            Method.GET,
+            uri"http://localhost:8080/.well-known/oauth-authorization-server"
+        )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("token_endpoint").toOption shouldBe Some(
+            "http://localhost:8080/oauth/token"
+        )
+        json.hcursor.get[String]("authorization_endpoint").toOption shouldBe Some(
+            "http://localhost:8080/oauth/authorize"
+        )
+        val responseTypes = json.hcursor
+            .downField("response_types_supported")
+            .values
+            .toList
+            .flatten
+            .flatMap(_.asString)
+        responseTypes should contain("code")
+        val grantTypes = json.hcursor
+            .downField("grant_types_supported")
+            .values
+            .toList
+            .flatten
+            .flatMap(_.asString)
+        grantTypes should contain("client_credentials")
+        grantTypes should contain("authorization_code")
+        grantTypes should contain("refresh_token")
+    }
+
+    test("POST /oauth/token with client_credentials issues access token and accesses /mcp") {
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "client_credentials",
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("token_type").toOption shouldBe Some("Bearer")
+        val accessToken = json.hcursor.get[String]("access_token").toOption
+        accessToken shouldBe defined
+
+        // Use the issued access token to call /mcp
+        val mcpRequest = Request[IO](Method.POST, uri"/mcp")
+            .withEntity(rpc("tools/list"))
+            .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.get)))
+        val mcpResponse = controller.routes.orNotFound.run(mcpRequest).unsafeRunSync()
+        mcpResponse.status shouldBe Status.Ok
+        mcpResponse.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some(
+            "*"
+        )
+    }
+
+    test("POST /oauth/token with JSON body issues access token") {
+        val jsonBody = Json.obj(
+            "grant_type" -> "client_credentials".asJson,
+            "client_id" -> testClientId.asJson,
+            "client_secret" -> testClientSecret.asJson
+        )
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(jsonBody)
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+    }
+
+    test("POST /oauth/token with Basic auth issues access token") {
+        val basicAuth = java.util.Base64.getEncoder.encodeToString(
+            s"$testClientId:$testClientSecret".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        )
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(UrlForm("grant_type" -> "client_credentials"))
+            .withHeaders(Authorization(Credentials.Token(ci"Basic", basicAuth)))
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+    }
+
+    test("POST /oauth/token rejects invalid client credentials with Cache-Control no-store") {
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "client_credentials",
+                    "client_id" -> testClientId,
+                    "client_secret" -> "wrong_secret"
+                )
+            )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Unauthorized
+        response.headers.get(ci"Cache-Control").map(_.head.value) shouldBe Some("no-store")
+        response.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some("*")
+    }
+
+    test("GET /oauth/authorize redirects with authorization code and state") {
+        val request = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback&state=xyz"
+        )
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Found
+        val location = response.headers.get[org.http4s.headers.Location].map(_.uri.toString)
+        location shouldBe defined
+        location.get should startWith("http://localhost:3000/callback")
+        location.get should include("code=")
+        location.get should include("state=xyz")
+    }
+
+    test("GET /oauth/authorize validates parameters and rejects open redirects") {
+        val badClient = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=nonexistent&redirect_uri=http://localhost:3000/callback"
+        )
+        controller.routes.orNotFound
+            .run(badClient)
+            .unsafeRunSync()
+            .status shouldBe Status.BadRequest
+
+        val missingRedirect = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id"
+        )
+        controller.routes.orNotFound
+            .run(missingRedirect)
+            .unsafeRunSync()
+            .status shouldBe Status.BadRequest
+
+        val maliciousRedirect = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=javascript:alert(1)"
+        )
+        controller.routes.orNotFound
+            .run(maliciousRedirect)
+            .unsafeRunSync()
+            .status shouldBe Status.BadRequest
+    }
+
+    test("POST /oauth/token with authorization_code and client_secret exchanges for token") {
+        val authReq = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback"
+        )
+        val authResp = controller.routes.orNotFound.run(authReq).unsafeRunSync()
+        authResp.status shouldBe Status.Found
+        val loc = authResp.headers.get[org.http4s.headers.Location].get.uri
+        val code = loc.query.params("code")
+
+        val tokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        val tokenResp = controller.routes.orNotFound.run(tokenReq).unsafeRunSync()
+        tokenResp.status shouldBe Status.Ok
+        val json = tokenResp.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("token_type").toOption shouldBe Some("Bearer")
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+        json.hcursor.get[String]("refresh_token").toOption shouldBe defined
+    }
+
+    test(
+        "POST /oauth/token with authorization_code and PKCE (S256) exchanges for token without client_secret"
+    ) {
+        val verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+        val sha256 = java.security.MessageDigest.getInstance("SHA-256")
+        val challenge = java.util.Base64.getUrlEncoder.withoutPadding
+            .encodeToString(
+                sha256.digest(verifier.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
+            )
+
+        val authReq = Request[IO](
+            Method.GET,
+            Uri.unsafeFromString(
+                s"/oauth/authorize?response_type=code&client_id=$testClientId&redirect_uri=http://localhost:3000/callback&code_challenge=$challenge&code_challenge_method=S256"
+            )
+        )
+        val authResp = controller.routes.orNotFound.run(authReq).unsafeRunSync()
+        authResp.status shouldBe Status.Found
+        val loc = authResp.headers.get[org.http4s.headers.Location].get.uri
+        val code = loc.query.params("code")
+
+        // Valid verifier exchanges code
+        val tokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "code_verifier" -> verifier
+                )
+            )
+        val tokenResp = controller.routes.orNotFound.run(tokenReq).unsafeRunSync()
+        tokenResp.status shouldBe Status.Ok
+        val json = tokenResp.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
+
+        // Invalid verifier is rejected
+        val badTokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "code_verifier" -> "wrong_verifier"
+                )
+            )
+        val badResp = controller.routes.orNotFound.run(badTokenReq).unsafeRunSync()
+        badResp.status shouldBe Status.Unauthorized
     }
 
     test("initialize returns server info and echoes the protocol version") {
         val response =
             post(rpc("initialize", Json.obj("protocolVersion" -> Json.fromString("2025-06-18"))))
         response.status shouldBe Status.Ok
+        response.headers.get(ci"Access-Control-Allow-Origin").map(_.head.value) shouldBe Some("*")
         val body = response.as[Json].unsafeRunSync()
         val result = body.hcursor.downField("result")
         result.get[String]("protocolVersion").toOption shouldBe Some("2025-06-18")
@@ -177,5 +419,96 @@ class McpControllerSpec extends AnyFunSuite with Matchers with MockFactory {
             "method" -> Json.fromString("notifications/initialized")
         )
         post(notification).status shouldBe Status.Accepted
+    }
+
+    test("POST /oauth/token enforces single-use of authorization code (replay protection)") {
+        val ctrl = controller
+        val authReq = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback"
+        )
+        val authResp = ctrl.routes.orNotFound.run(authReq).unsafeRunSync()
+        val loc = authResp.headers.get[org.http4s.headers.Location].get.uri
+        val code = loc.query.params("code")
+
+        def makeTokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        // First exchange succeeds
+        val resp1 = ctrl.routes.orNotFound.run(makeTokenReq).unsafeRunSync()
+        resp1.status shouldBe Status.Ok
+
+        // Replaying the same code is rejected
+        val resp2 = ctrl.routes.orNotFound.run(makeTokenReq).unsafeRunSync()
+        resp2.status shouldBe Status.BadRequest
+        val json2 = resp2.as[Json].unsafeRunSync()
+        json2.hcursor.get[String]("error").toOption shouldBe Some("invalid_grant")
+        json2.hcursor
+            .get[String]("error_description")
+            .toOption
+            .get should include("already been used")
+    }
+
+    test("POST /oauth/token with refresh_token exchanges for new token pair") {
+        val authReq = Request[IO](
+            Method.GET,
+            uri"/oauth/authorize?response_type=code&client_id=mcp_test_client_id&redirect_uri=http://localhost:3000/callback"
+        )
+        val authResp = controller.routes.orNotFound.run(authReq).unsafeRunSync()
+        val code =
+            authResp.headers.get[org.http4s.headers.Location].get.uri.query.params("code")
+
+        val tokenReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm(
+                    "grant_type" -> "authorization_code",
+                    "code" -> code,
+                    "client_id" -> testClientId,
+                    "client_secret" -> testClientSecret
+                )
+            )
+        val tokenResp = controller.routes.orNotFound.run(tokenReq).unsafeRunSync()
+        val refreshToken =
+            tokenResp.as[Json].unsafeRunSync().hcursor.get[String]("refresh_token").toOption.get
+
+        // Exchange refresh token
+        val refreshReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(UrlForm("grant_type" -> "refresh_token", "refresh_token" -> refreshToken))
+        val refreshResp = controller.routes.orNotFound.run(refreshReq).unsafeRunSync()
+        refreshResp.status shouldBe Status.Ok
+        val refreshJson = refreshResp.as[Json].unsafeRunSync()
+        refreshJson.hcursor.get[String]("access_token").toOption shouldBe defined
+        refreshJson.hcursor.get[String]("refresh_token").toOption shouldBe defined
+
+        // Invalid refresh token is rejected
+        val badReq = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(
+                UrlForm("grant_type" -> "refresh_token", "refresh_token" -> "invalid_token")
+            )
+        val badResp = controller.routes.orNotFound.run(badReq).unsafeRunSync()
+        badResp.status shouldBe Status.BadRequest
+    }
+
+    test("POST /oauth/token with URL-encoded Basic Auth credentials issues access token") {
+        val encodedId =
+            java.net.URLEncoder.encode(testClientId, java.nio.charset.StandardCharsets.UTF_8)
+        val encodedSecret =
+            java.net.URLEncoder.encode(testClientSecret, java.nio.charset.StandardCharsets.UTF_8)
+        val basicAuth = java.util.Base64.getEncoder.encodeToString(
+            s"$encodedId:$encodedSecret".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        )
+        val request = Request[IO](Method.POST, uri"/oauth/token")
+            .withEntity(UrlForm("grant_type" -> "client_credentials"))
+            .withHeaders(Authorization(Credentials.Token(ci"Basic", basicAuth)))
+        val response = controller.routes.orNotFound.run(request).unsafeRunSync()
+        response.status shouldBe Status.Ok
+        val json = response.as[Json].unsafeRunSync()
+        json.hcursor.get[String]("access_token").toOption shouldBe defined
     }
 }

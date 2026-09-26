@@ -162,6 +162,7 @@ object SettingsPage {
                                 )
                             )
                     ),
+                    mcpCredentialsSection(),
                     div(
                         paddingTop.px := 10,
                         Button(
@@ -257,6 +258,154 @@ object SettingsPage {
                 }
             )
         )
+
+    private case class McpCredentials(clientId: String, clientSecret: String)
+    private given Decoder[McpCredentials] = deriveDecoder[McpCredentials]
+
+    private val generateMcpObserver = Observer[Try[McpCredentials]] {
+        case Success(creds) =>
+            settingsVar.update(
+                _.map(
+                    _.copy(
+                        mcpClientId = Some(creds.clientId),
+                        mcpClientSecret = Some(creds.clientSecret)
+                    )
+                )
+            )
+            infoMessage("MCP OAuth credentials generated")
+        case Failure(err) => handleError(err)
+    }
+
+    private def generateMcpRequest(): EventStream[Try[McpCredentials]] =
+        FetchStream
+            .withDecoder(responseDecoder[McpCredentials])
+            .post("/api/user/mcp-credentials", _.headers(JSON_ACCEPT, JSON_CONTENT_TYPE))
+            .mapSuccess(_.get)
+
+    private def copyToClipboard(text: String, label: String): Unit =
+        import scala.concurrent.ExecutionContext.Implicits.global
+        val clipboardOpt = Option(org.scalajs.dom.window.navigator.clipboard)
+            .filterNot(scala.scalajs.js.isUndefined)
+        clipboardOpt match
+            case Some(clipboard) =>
+                clipboard
+                    .writeText(text)
+                    .toFuture
+                    .onComplete {
+                        case scala.util.Success(_) =>
+                            infoMessage(s"$label copied to clipboard")
+                        case scala.util.Failure(ex) =>
+                            handleError(new Exception(s"Failed to copy $label: ${ex.getMessage}"))
+                    }
+            case None =>
+                infoMessage(s"$label: $text")
+
+    private def mcpCredentialsSection(): HtmlElement = {
+        val serverUrl = org.scalajs.dom.window.location.origin + "/mcp"
+        div(
+            marginTop.px := 24,
+            paddingTop.px := 16,
+            borderTop := "1px solid #E0E0E0",
+            Label("Model Context Protocol (MCP) OAuth", _.showColon := false),
+            p(
+                fontSize := "0.85em",
+                color := "#666",
+                "Use these OAuth credentials to connect Gemini MCP desktop app or other AI clients."
+            ),
+            div(
+                formBlockStyle,
+                marginTop.px := 12,
+                Label("MCP Server URL", _.showColon := true),
+                div(
+                    display.flex,
+                    alignItems.center,
+                    gap.px := 8,
+                    Input(_.readonly := true, _.value := serverUrl, width.px := 260),
+                    Button(
+                        _.design := ButtonDesign.Transparent,
+                        _.icon := IconName.copy,
+                        title := "Copy URL",
+                        onClick --> { _ => copyToClipboard(serverUrl, "MCP Server URL") }
+                    )
+                )
+            ),
+            child <-- settingsSignal.map { opt =>
+                val clientIdOpt = opt.flatMap(_.mcpClientId)
+                val secretOpt = opt.flatMap(_.mcpClientSecret)
+                clientIdOpt match {
+                    case Some(cid) =>
+                        val secret = secretOpt.getOrElse("")
+                        div(
+                            div(
+                                formBlockStyle,
+                                marginTop.px := 12,
+                                Label("Client ID", _.showColon := true),
+                                div(
+                                    display.flex,
+                                    alignItems.center,
+                                    gap.px := 8,
+                                    Input(_.readonly := true, _.value := cid, width.px := 260),
+                                    Button(
+                                        _.design := ButtonDesign.Transparent,
+                                        _.icon := IconName.copy,
+                                        title := "Copy Client ID",
+                                        onClick --> { _ => copyToClipboard(cid, "Client ID") }
+                                    )
+                                )
+                            ),
+                            div(
+                                formBlockStyle,
+                                marginTop.px := 12,
+                                Label("Client secret", _.showColon := true),
+                                div(
+                                    display.flex,
+                                    alignItems.center,
+                                    gap.px := 8,
+                                    Input(
+                                        _.tpe := InputType.Password,
+                                        _.readonly := true,
+                                        _.value := secret,
+                                        width.px := 260
+                                    ),
+                                    Button(
+                                        _.design := ButtonDesign.Transparent,
+                                        _.icon := IconName.copy,
+                                        title := "Copy Client Secret",
+                                        onClick --> { _ =>
+                                            copyToClipboard(secret, "Client Secret")
+                                        }
+                                    )
+                                )
+                            ),
+                            div(
+                                marginTop.px := 12,
+                                Button(
+                                    _.design := ButtonDesign.Attention,
+                                    "Regenerate MCP credentials",
+                                    _.icon := IconName.refresh,
+                                    onClick
+                                        .filter(_ =>
+                                            org.scalajs.dom.window.confirm(
+                                                "Regenerate MCP credentials? Any connected AI clients will need the new credentials."
+                                            )
+                                        )
+                                        .flatMap(_ => generateMcpRequest()) --> generateMcpObserver
+                                )
+                            )
+                        )
+                    case None =>
+                        div(
+                            marginTop.px := 12,
+                            Button(
+                                _.design := ButtonDesign.Positive,
+                                "Generate MCP credentials",
+                                onClick.flatMap(_ => generateMcpRequest()) --> generateMcpObserver
+                            )
+                        )
+                }
+            }
+        )
+    }
 
     private def updateSettingsRequest(settings: Option[UserSettings]): EventStream[Try[Unit]] = {
         settings match

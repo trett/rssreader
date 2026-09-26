@@ -6,5 +6,7 @@ final case class UserSettings(
     bannedCategories: List[String] = List.empty,
     keywordRules: List[String] = List.empty,
     geminiApiKey: Option[String] = None,
-    filterNews: Boolean = false
+    filterNews: Boolean = false,
+    mcpClientId: Option[String] = None,
+    mcpClientSecret: Option[String] = None
 )

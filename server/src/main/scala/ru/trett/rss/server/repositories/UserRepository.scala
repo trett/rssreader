@@ -55,3 +55,10 @@ class UserRepository(xa: HikariTransactor[IO]):
     def updateUserSettings(user: User): IO[Int] =
         sql"UPDATE users SET settings = ${user.settings.asJson}::jsonb WHERE id = ${user.id}".update.run
             .transact(xa)
+
+    def findUserByMcpClientId(clientId: String): IO[Option[User]] =
+        sql"SELECT id, name, email, settings::json FROM users WHERE settings->>'mcpClientId' = $clientId"
+            .query[Option[User]]
+            .option
+            .transact(xa)
+            .map(_.flatten)
