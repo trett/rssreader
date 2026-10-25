@@ -33,10 +33,11 @@ jobs:
       # CVE-2026-91403 / CVE-2026-114820: Native Image embeds the build JDK's
       # cacerts into the binary, and GraalVM CE has no fixed release yet.
       # Remove the roots that chain to the compromised eMudhra intermediates,
-      # per the GraalVM Native Image advisory (Oct 2026).
+      # per the GraalVM Native Image advisory (Oct 2026), plus emSign G1/G2
+      # to match Oracle JDK .0.3 builds (CVE-2026-114820).
       - name: Distrust eMudhra roots (CVE-2026-91403)
         run: |
-          for alias in "emsigneccrootcag3 [jdk]" "comodoaaaca [jdk]"; do
+          for alias in "emsigneccrootcag3 [jdk]" "emsignrootcag1 [jdk]" "emsignrootcag2 [jdk]" "comodoaaaca [jdk]"; do
             keytool -delete -cacerts -storepass changeit -alias "$alias" || true
             if keytool -list -cacerts -storepass changeit -alias "$alias" >/dev/null 2>&1; then
               echo "::error::$alias is still present in cacerts"
