@@ -10,7 +10,8 @@ case class AppConfig(
     oauth: OAuthConfig,
     cors: CorsConfig,
     jobs: JobConfig,
-    jwt: JwtConfig
+    jwt: JwtConfig,
+    digest: DigestConfig = DigestConfig()
 ) derives ConfigReader
 
 case class ServerConfig(port: Int, host: String = "0.0.0.0") derives ConfigReader
@@ -27,3 +28,6 @@ case class CorsConfig(allowedOrigin: String, allowCredentials: Boolean, maxAge: 
 case class JobConfig(token: String) derives ConfigReader
 
 case class JwtConfig(secret: String) derives ConfigReader
+
+case class DigestConfig(smtpUsername: String = "", smtpPassword: String = "") derives ConfigReader:
+    override def toString: String = "DigestConfig(<redacted>)"

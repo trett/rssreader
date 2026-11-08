@@ -8,5 +8,6 @@ final case class UserSettings(
     geminiApiKey: Option[String] = None,
     filterNews: Boolean = false,
     mcpClientId: Option[String] = None,
-    mcpClientSecret: Option[String] = None
+    mcpClientSecret: Option[String] = None,
+    digestEmail: Option[String] = None
 )

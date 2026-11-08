@@ -11,12 +11,25 @@ import ru.trett.rss.server.services.ChannelService
 import ru.trett.rss.server.services.UserService
 import org.typelevel.ci.*
 
-class JobController(channelService: ChannelService, userService: UserService, config: JobConfig)(
-    using loggerFactory: LoggerFactory[IO]
-):
+class JobController(
+    channelService: ChannelService,
+    userService: UserService,
+    config: JobConfig,
+    sendDigest: IO[Unit] = IO.raiseError(new IllegalStateException("Digest is not configured"))
+)(using loggerFactory: LoggerFactory[IO]):
     private val logger: Logger[IO] = loggerFactory.getLogger
 
     def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
+        case req @ POST -> Root / "api" / "jobs" / "digest" =>
+            val token = req.headers.get(ci"Authorization").map(_.head.value)
+            if config.token.isEmpty || !token.contains(s"Bearer ${config.token}") then
+                Forbidden("Invalid token")
+            else
+                sendDigest.attempt.flatMap {
+                    case Right(_) => Ok("Digest sent")
+                    case Left(_) =>
+                        logger.error("Daily digest failed") *> InternalServerError("Digest failed")
+                }
         case req @ POST -> Root / "api" / "jobs" / "update" =>
             val token = req.headers.get(ci"Authorization").map(_.head.value)
             if (config.token.isEmpty || !token.contains(s"Bearer ${config.token}")) {

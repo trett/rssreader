@@ -77,4 +77,40 @@ class JobControllerSpec extends AnyFunSuite with Matchers with MockFactory {
 
         response.status shouldBe Status.Ok
     }
+
+    test("digest rejects unauthorized requests before executing the job") {
+        val (users, channels) = createMocks()
+        val controller = new JobController(
+            channels,
+            users,
+            JobConfig("secret"),
+            IO.raiseError(new AssertionError("Must not run"))
+        )
+        List(None, Some("wrong")).foreach { token =>
+            val req = Request[IO](Method.POST, uri"/api/jobs/digest")
+            val request = token.fold(req)(v =>
+                req.withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, v)))
+            )
+            controller.routes.orNotFound
+                .run(request)
+                .unsafeRunSync()
+                .status shouldBe Status.Forbidden
+        }
+    }
+
+    test("digest runs with the update token and reports delivery failures") {
+        val (users, channels) = createMocks()
+        val req = Request[IO](Method.POST, uri"/api/jobs/digest")
+            .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, "secret")))
+        new JobController(channels, users, JobConfig("secret"), IO.unit).routes.orNotFound
+            .run(req)
+            .unsafeRunSync()
+            .status shouldBe Status.Ok
+        new JobController(
+            channels,
+            users,
+            JobConfig("secret"),
+            IO.raiseError(new RuntimeException("private"))
+        ).routes.orNotFound.run(req).unsafeRunSync().status shouldBe Status.InternalServerError
+    }
 }

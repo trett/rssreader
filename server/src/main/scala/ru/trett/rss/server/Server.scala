@@ -45,6 +45,7 @@ import ru.trett.rss.server.repositories.ChannelRepository
 import ru.trett.rss.server.repositories.FeedRepository
 import ru.trett.rss.server.repositories.UserRepository
 import ru.trett.rss.server.services.ChannelService
+import ru.trett.rss.server.services.DigestService
 import ru.trett.rss.server.services.FeedService
 import ru.trett.rss.server.services.ImportanceService
 import ru.trett.rss.server.services.UserService
@@ -89,7 +90,18 @@ object Server extends IOApp:
                     channelService =
                         ChannelService(channelRepository, feedRepository, client, importanceService)
                     authFilter <- AuthFilter[IO]
-                    jobController = new JobController(channelService, userService, appConfig.jobs)
+                    digestService = DigestService(
+                        feedService,
+                        userService,
+                        client,
+                        appConfig.digest
+                    )
+                    jobController = new JobController(
+                        channelService,
+                        userService,
+                        appConfig.jobs,
+                        digestService.send
+                    )
                     mcpController = new McpController(feedService, userService, jwtManager)
                     jarRoutes <- resourceServiceBuilder[IO]("/public").toRoutes
                     appRoutes <-

@@ -33,7 +33,8 @@ class UserService(userRepository: UserRepository)(using loggerFactory: LoggerFac
                         user.settings.geminiApiKey,
                         user.settings.filterNews,
                         user.settings.mcpClientId,
-                        user.settings.mcpClientSecret
+                        user.settings.mcpClientSecret,
+                        user.settings.digestEmail
                     )
                 )
             )

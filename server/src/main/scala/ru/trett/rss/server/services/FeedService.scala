@@ -33,15 +33,28 @@ class FeedService(feedRepository: FeedRepository):
         to: OffsetDateTime,
         limitPerChannel: Int
     ): IO[List[ChannelNews]] =
-        feedRepository.getFeedsByDateRangeAllChannels(user, from, to, limitPerChannel).map { rows =>
-            rows
-                .groupBy { case (feed, title) => (feed.channelId, title) }
-                .map { case ((channelId, title), grouped) =>
-                    ChannelNews(channelId, title, grouped.map(toItem))
-                }
-                .toList
-                .sortBy(_.items.headOption.map(_.pubDate))(Ordering[Option[OffsetDateTime]].reverse)
-        }
+        getNewsByDateGrouped(user, from, to, limitPerChannel, importantOnly = true)
+
+    def getNewsByDateGrouped(
+        user: User,
+        from: OffsetDateTime,
+        to: OffsetDateTime,
+        limitPerChannel: Int,
+        importantOnly: Boolean
+    ): IO[List[ChannelNews]] =
+        feedRepository
+            .getFeedsByDateRangeAllChannels(user, from, to, limitPerChannel, importantOnly)
+            .map { rows =>
+                rows
+                    .groupBy { case (feed, title) => (feed.channelId, title) }
+                    .map { case ((channelId, title), grouped) =>
+                        ChannelNews(channelId, title, grouped.map(toItem))
+                    }
+                    .toList
+                    .sortBy(_.items.headOption.map(_.pubDate))(
+                        Ordering[Option[OffsetDateTime]].reverse
+                    )
+            }
 
     private def toItem(row: (Feed, String)): FeedItemData =
         val (feed, channelTitle) = row
