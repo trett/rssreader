@@ -89,7 +89,8 @@ class FeedRepository(xa: Transactor[IO]):
         user: User,
         from: OffsetDateTime,
         to: OffsetDateTime,
-        limitPerChannel: Int
+        limitPerChannel: Int,
+        importantOnly: Boolean = true
     ): IO[List[(Feed, String)]] =
         sql"""
       SELECT link, user_id, channel_id, title, description, pub_date, read, image_url, categories, important,
@@ -103,7 +104,7 @@ class FeedRepository(xa: Transactor[IO]):
         JOIN user_channels uc ON uc.channel_id = f.channel_id AND uc.user_id = ${user.id}
         WHERE f.user_id = ${user.id}
           AND f.pub_date >= $from AND f.pub_date <= $to
-          AND (f.important = true OR uc.highlighted = true)
+          AND (NOT $importantOnly OR f.important = true OR uc.highlighted = true)
       ) ranked
       WHERE rn <= $limitPerChannel
       ORDER BY channel_id, pub_date DESC

@@ -121,6 +121,27 @@ object SettingsPage {
                                 .updater[Boolean]((a, b) => a.map(x => x.copy(filterNews = b)))
                         )
                     ),
+                    div(
+                        formBlockStyle,
+                        marginTop.px := 16,
+                        marginBottom.px := 16,
+                        Label(
+                            "Daily digest Gmail",
+                            _.forId := "digest-email-input",
+                            _.showColon := true
+                        ),
+                        Input(
+                            _.id := "digest-email-input",
+                            _.placeholder := "you@gmail.com (empty to disable)",
+                            _.value <-- settingsSignal.map(_.flatMap(_.digestEmail).getOrElse("")),
+                            _.events.onInput.mapToValue --> settingsVar.updater[String]((a, v) =>
+                                a.map(_.copy(digestEmail = Option(v.trim).filter(_.nonEmpty)))
+                            )
+                        ),
+                        div(
+                            "All news from the last 24 hours, translated into Russian. Requires a Gemini API key."
+                        )
+                    ),
                     tagListSection(
                         headerText = "Keyword rules",
                         subText =

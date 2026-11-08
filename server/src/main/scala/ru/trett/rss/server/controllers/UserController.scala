@@ -54,13 +54,26 @@ object UserController {
             case req @ POST -> Root / "api" / "user" / "settings" as user =>
                 for {
                     settings <- req.req.as[UserSettings]
+                    _ <-
+                        if settings.digestEmail.forall(email =>
+                                email.trim.isEmpty || email.trim
+                                    .matches("(?i)[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@gmail\\.com")
+                            )
+                        then IO.unit
+                        else
+                            IO.raiseError(
+                                org.http4s.InvalidMessageBodyFailure(
+                                    "Digest email must be a Gmail address"
+                                )
+                            )
                     updatedUser = user.copy(settings =
                         user.settings.copy(
                             hideRead = settings.hideRead,
                             bannedCategories = settings.bannedCategories,
                             keywordRules = settings.keywordRules,
                             geminiApiKey = settings.geminiApiKey,
-                            filterNews = settings.filterNews
+                            filterNews = settings.filterNews,
+                            digestEmail = settings.digestEmail.map(_.trim).filter(_.nonEmpty)
                         )
                     )
                     result <- userService.updateUserSettings(updatedUser)

@@ -188,3 +188,36 @@ To build the production image and push it to your configured container registry:
 ## License
 
 This project is licensed under the MIT License.
+
+### Daily email digest
+
+In **Settings**, set **Daily digest Gmail** to the recipient's Gmail address and
+save a **Gemini API key**. Leave the email empty to disable delivery. Each enabled
+user receives only their own news, including unimportant and already-read items.
+No database migration is needed: the optional `digestEmail` is stored in user settings.
+
+Configure the server with `SMTP_USERNAME` (the sending Google account) and
+`SMTP_PASSWORD` (a Google **App Password**, not the account's normal password).
+The server uses `smtp.gmail.com:587` with mandatory STARTTLS and certificate validation.
+SMTP credentials are server-side only; recipients configure only their Gmail address.
+
+Call the endpoint from your external cron:
+
+```sh
+curl --fail-with-body -X POST "$SERVER_URL/api/jobs/digest" \
+  -H "Authorization: Bearer $JOB_TOKEN"
+```
+
+It uses the same `JOB_TOKEN` as `/api/jobs/update`. Run the update job before the
+digest. The digest reads the rolling last 24 hours by publication time (UTC),
+groups news by channel, and translates titles and descriptions into Russian in
+batches through Gemini. Titles link to the original articles; feed HTML is
+converted to plain text and email HTML is escaped. There is no per-channel cap.
+Empty selections produce no email. News are not marked read.
+
+The request waits for translation and SMTP delivery; allow sufficient time in
+your cron HTTP client for large digests. A failed recipient does not prevent
+attempting others; any failure returns HTTP 500 with a generic message. Successful
+completion returns HTTP 200. Repeated calls resend the current 24-hour selection
+(including successful deliveries if a partially failed run is retried). No internal
+scheduler or delivery deduplication is installed.

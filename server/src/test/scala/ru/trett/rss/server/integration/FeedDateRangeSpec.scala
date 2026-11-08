@@ -132,6 +132,30 @@ class FeedDateRangeSpec extends AnyFunSuite with Matchers with BeforeAndAfterAll
         )
     }
 
+    test("digest selection includes unimportant and read items and stays scoped to the user") {
+        val repo = feedRepository.get
+        val from = OffsetDateTime.parse("2026-07-01T00:00:00Z")
+        val to = OffsetDateTime.parse("2026-07-20T00:00:00Z")
+        repo.markFeedAsRead(List("https://example.com/plain/item1"), user).unsafeRunSync()
+        val result = repo
+            .getFeedsByDateRangeAllChannels(user, from, to, Int.MaxValue, importantOnly = false)
+            .unsafeRunSync()
+        result.size shouldBe 6
+        result.find(_._1.link == "https://example.com/plain/item1").get._1.isRead shouldBe true
+        result.exists(!_._1.important) shouldBe true
+        import doobie.implicits.*
+        sql"UPDATE feeds SET read = false WHERE user_id = ${user.id}".update.run
+            .transact(transactor.get)
+            .unsafeRunSync()
+        repo.getFeedsByDateRangeAllChannels(
+            user.copy(id = "another-user"),
+            from,
+            to,
+            Int.MaxValue,
+            importantOnly = false
+        ).unsafeRunSync() shouldBe empty
+    }
+
     test("boundaries are inclusive") {
         val result = channelItems(plainChannelId, "2026-07-05T10:00:00Z", "2026-07-10T10:00:00Z")
         result.map(_._1.link) shouldBe List(

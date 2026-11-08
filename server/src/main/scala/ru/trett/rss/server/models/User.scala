@@ -20,6 +20,7 @@ object User:
             geminiApiKey <- c.getOrElse[Option[String]]("geminiApiKey")(None)
             filterNews <- c.getOrElse[Boolean]("filterNews")(false)
             mcpClientId <- c.getOrElse[Option[String]]("mcpClientId")(None)
+            digestEmail <- c.getOrElse[Option[String]]("digestEmail")(None)
             mcpClientSecret <- c.getOrElse[Option[String]]("mcpClientSecret")(None)
         yield Settings(
             hideRead,
@@ -28,7 +29,8 @@ object User:
             geminiApiKey,
             filterNews,
             mcpClientId,
-            mcpClientSecret
+            mcpClientSecret,
+            digestEmail
         )
     }
 
@@ -39,7 +41,8 @@ object User:
         geminiApiKey: Option[String] = None,
         filterNews: Boolean = false,
         mcpClientId: Option[String] = None,
-        mcpClientSecret: Option[String] = None
+        mcpClientSecret: Option[String] = None,
+        digestEmail: Option[String] = None
     ):
         override def toString: String =
             s"Settings(hideRead=$hideRead, bannedCategories=$bannedCategories, keywordRules=$keywordRules, geminiApiKey=${geminiApiKey

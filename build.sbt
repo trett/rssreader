@@ -143,6 +143,7 @@ lazy val server = project
             "org.slf4j" % "slf4j-api" % "2.0.19",
             "org.slf4j" % "slf4j-simple" % "2.0.19",
             "com.github.pureconfig" %% "pureconfig-core" % "0.17.10",
+            "org.eclipse.angus" % "jakarta.mail" % "2.0.5",
             "org.jsoup" % "jsoup" % "1.23.2",
             "com.github.jwt-scala" %% "jwt-circe" % "11.0.4"
         ),
